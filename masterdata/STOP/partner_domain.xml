@@ -1,0 +1,3 @@
+<column name="ID" type="NUMERIC" />
+<column name="DOMAIN" type="STRING" />
+<column name="PUBLIC_EVENTS" type="NUMERIC" />

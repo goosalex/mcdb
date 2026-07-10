@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION"
+"0","off","link is not monitored"
+"1","unknown","link status cannot be determined"
+"2","down","link is not operational"
+"3","up","link is operational"

@@ -1,0 +1,3 @@
+"ID","NAME","DESCRIPTION"
+"1","reviewed","Report is reviewed and thus complete"
+"2","pending","Report still has entries that need review and is therefore pending/preliminary only"

@@ -1,0 +1,18 @@
+GRANT SELECT ON "mcaudit"."record" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."mdr_filter_rule" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."mdr_signature" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."mdr_signature_group" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."mdr_signature_group_member" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_device" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_entity" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_file" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_ipv6_address" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_ipv6_prefix" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_ip_address" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_ip_network" TO "svc_xdrconvert";
+GRANT SELECT ON "nids"."nids_user" TO "svc_xdrconvert";
+GRANT SELECT ON "stop"."company" TO "svc_xdrconvert";
+GRANT USAGE ON SCHEMA "mcaudit" TO "svc_xdrconvert";
+GRANT USAGE ON SCHEMA "nids" TO "svc_xdrconvert";
+GRANT USAGE ON SCHEMA "stop" TO "svc_xdrconvert";
+GRANT  "mss_login_user" TO "svc_xdrconvert";

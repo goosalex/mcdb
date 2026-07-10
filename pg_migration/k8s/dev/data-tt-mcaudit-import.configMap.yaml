@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-ttaudit-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    MCAUDIT
+    TT
+
+  schema.dirs: |
+    MCAUDIT_INSERT
+    TT_INSERT
+
+  ora2pg.conf: |
+    # Additional Oracle to PostgreSQL migration configuration file for other schemas
+    PARALLEL_TABLES 4
+    ORACLE_COPIES 4
+    TRUNCATE_TABLE 1
+    EXCLUDE SIGNATURE
+    

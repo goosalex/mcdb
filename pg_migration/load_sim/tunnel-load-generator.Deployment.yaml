@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tunnel-load-generator
+  namespace: osdb-mcdb
+spec:
+  replicas: 4  # Changed from 3 to 4 pods
+  selector:
+    matchLabels:
+      app: tunnel-load-generator
+  template:
+    metadata:
+      labels:
+        app: tunnel-load-generator
+    spec:
+      containers:
+        - name: tunnel-load-generator
+          image: artifacts.open.ch/central-docker-dev-local/osdb/tunnel_load:latest  # Replace with your registry path
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          env:
+            - name: DB_NAME
+              value: "mcdb"  # Using the value from your script
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: host
+                  name: pgsql-postgresqladmin
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: user
+                  name: pgsql-postgresqladmin
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: pass
+                  name: pgsql-postgresqladmin
+            - name: CSV_FILE
+              value: "/app/tunnel_ids.csv"
+            - name: SLEEP_INTERVAL
+              value: "0.01"  # Adjust based on desired load
+            - name: NUM_PROCESSES  # Added environment variable to control fork processes
+              value: "20"

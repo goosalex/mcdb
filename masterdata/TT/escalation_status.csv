@@ -1,0 +1,5 @@
+"ID","DESCRIPTION"
+"0","no escalation"
+"10","escalation to os"
+"11","escalation to pikett failed -> randomly picking some MCE"
+"20","escalation to customer"

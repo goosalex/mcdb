@@ -1,0 +1,6 @@
+"ID","NAME","COMMENTS"
+"1","On-Site Intervention","Will be contacted in case an on-site intervention is required"
+"2","DNIDS Alert","Will be contacted in case of a DNIDS alert"
+"3","Shipping","Hardware will be shipped to this address rather than to the local contact"
+"4","DNIDS Escalation","Will be contacted in case of a DNIDS alert that lasts for more than 24h"
+"5","Physical Access","Contact has explicitly the right to access devices located at the associated address."

@@ -1,0 +1,4 @@
+"ID","NAME"
+"1","use local proxy service"
+"2","use automatic proxy configuration URL (PAC)"
+"3","use manual proxy"

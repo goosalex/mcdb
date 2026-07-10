@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION","OBSOLETE"
+"1","OS HW failure","a hard drive, fan or something failed","0"
+"2","OS HW end of life","hardware reached end of life","0"
+"3","Customer caused damage","the customer caused damage of the hardware","0"
+"4","other","other/unknown reason","0"

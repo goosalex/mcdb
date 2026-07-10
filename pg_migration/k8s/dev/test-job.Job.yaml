@@ -1,0 +1,41 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-export-view-ddl
+  namespace: osdb-mcdb
+spec:
+  template:
+    spec:
+      containers:
+        - name: ora2pg
+          image: artifacts.open.ch/public-docker-virtual/georgmoser/ora2pg:latest
+          command: ['ora2pg']
+          args: ['-t','VIEW','-c','/config/package_conversion.conf','-o','VIEW.pg.sql']
+          env:
+            - name: CONFIG_LOCATION
+              value: /config/package_conversion.conf
+            - name: OUTPUT_LOCATION
+              value: /data/schema_output
+            - name: TNS_ADMIN
+              value: /config
+            - name: ORACLE_HOST
+              value: dbi:Oracle:ORADVRO
+            - name: ORA2PG_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: db-password-ora
+                  key: key
+          volumeMounts:
+            - mountPath: /data/schema_output
+              name: ora2pg-output
+            - name: config-volume
+              mountPath: /config
+      restartPolicy: Never
+      volumes:
+          - name: ora2pg-output
+            persistentVolumeClaim:
+              claimName: ora2pg-output
+          - name: config-volume
+            configMap:
+              name: tnsnames-config

@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"0","Password","Password only"
+"1","Token","Password and one time token"
+"2","SMS","Password and SMS token"

@@ -1,0 +1,6 @@
+id: ch.open.osdb.mcdb.pg_migration:load_sim_mcdb_pg
+type: Makefile
+versioning: SemVer
+versions:
+  0.0.0: 1970-01-01T00:00:00Z|INIT
+  0.0.1: 2025-08-11T16:50:00Z|628ca108836d89323364f11a568094a2616f6028

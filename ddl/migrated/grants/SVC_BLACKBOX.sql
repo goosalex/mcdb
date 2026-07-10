@@ -1,0 +1,15 @@
+GRANT SELECT ON "mss"."address" TO "svc_blackbox";
+GRANT SELECT ON "mss"."city" TO "svc_blackbox";
+GRANT SELECT ON "mss"."country" TO "svc_blackbox";
+GRANT SELECT ON "mss"."host" TO "svc_blackbox";
+GRANT SELECT ON "mss"."host2service" TO "svc_blackbox";
+GRANT SELECT ON "mss"."interface" TO "svc_blackbox";
+GRANT SELECT ON "mss"."interface2isp_link" TO "svc_blackbox";
+GRANT SELECT ON "mss"."isp_link" TO "svc_blackbox";
+GRANT SELECT ON "mss"."openvpn_interface" TO "svc_blackbox";
+GRANT SELECT ON "mss"."platform_type" TO "svc_blackbox";
+GRANT SELECT ON "mss"."service" TO "svc_blackbox";
+GRANT SELECT ON "mss"."service_type" TO "svc_blackbox";
+GRANT USAGE ON SCHEMA "mss" TO "svc_blackbox";
+GRANT USAGE ON SCHEMA "sys" TO "svc_blackbox";
+GRANT  "mss_login_user" TO "svc_blackbox";

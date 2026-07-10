@@ -1,0 +1,12 @@
+GRANT EXECUTE ON "mss"."osag_dbprop" TO "mcdb_checks";
+GRANT EXECUTE ON "sys"."dbms_aq" TO "mcdb_checks";
+GRANT EXECUTE ON "sys"."dbms_crypto" TO "mcdb_checks";
+GRANT DELETE ON "mcdb_monitor"."last_consistency_check_results" TO "mcdb_checks";
+GRANT INSERT ON "mcdb_monitor"."last_consistency_check_results" TO "mcdb_checks";
+GRANT SELECT ON "mcdb_monitor"."last_consistency_check_results" TO "mcdb_checks";
+GRANT UPDATE ON "mcdb_monitor"."last_consistency_check_results" TO "mcdb_checks";
+GRANT EXECUTE ON "mcdb_monitor"."consistency_check_result_type" TO "mcdb_checks";
+GRANT USAGE ON SCHEMA "sys" TO "mcdb_checks";
+GRANT USAGE ON SCHEMA "mcdb_monitor" TO "mcdb_checks";
+GRANT USAGE ON SCHEMA "mss" TO "mcdb_checks";
+GRANT  "mss_schema_user" TO "mcdb_checks";

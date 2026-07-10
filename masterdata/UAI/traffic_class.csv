@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION","DISPLAY_NAME"
+"100","raw","Traffic not classified as anything else.","raw"
+"200","unfiltered","(Internet) traffic that must go directly to the destination (from a client endpoint) without passing through ZTNA/MEP","unfiltered"
+"300","http-no-proxy","Traffic that is http but should never go through an http proxy.","http-no-proxy"
+"400","http-proxy","Traffic that is http and is compatible with an http proxy.","http-proxy"
+"500","http-wss","Traffic is an http websocket supported by the proxy.","http-wss"

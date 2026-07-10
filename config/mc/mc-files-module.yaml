@@ -1,0 +1,36 @@
+module_name: centralinfrastructure/tnsnames
+
+# This part of the file will be applied immediately from master
+# For this please update the mc-config-api central release file with 
+#
+#  make collect
+#
+#   if you forget about it, a failing pipeline step will remind you. 
+
+deploy:
+  dev: 1.2.0
+  test: 1.2.0
+  prod: 1.2.0
+
+# This activates CBLX looking up the vault paths from this module.
+# This will be adapted by config team, please do not change it.
+vault_mapping: true
+
+default_source:
+  dev: ./dev
+  prod: ./prod
+
+write_permissions: # sourced from vaultsvn_acl
+  all_environments:
+    - scopes: [company, group, service, host]
+      subjects: ["sysadmins"]
+  prod:
+    - scopes: [service]
+      subjects: ["OS Configuration Team"]
+
+paths:
+  - type: path
+    path: "tnsnames.ora"
+    description: 'Oracle Net Services configuration file'
+    vault_path: 'mgmt/tnsnames.ora'
+    scopes: [default, service]

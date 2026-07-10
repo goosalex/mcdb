@@ -1,0 +1,4 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="DESCRIPTION" type="STRING" />
+<column name="OBSOLETE" type="NUMERIC" />

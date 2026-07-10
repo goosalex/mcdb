@@ -1,0 +1,3 @@
+<column name="ID" type="NUMERIC" />
+<column name="TYPE" type="STRING" />
+<column name="DESCRIPTION" type="STRING" />

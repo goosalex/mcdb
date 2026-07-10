@@ -1,0 +1,11 @@
+GRANT REFERENCES ON "mss"."host" TO "fyi";
+GRANT REFERENCES ON "mss"."service" TO "fyi";
+GRANT REFERENCES ON "mss"."service_type" TO "fyi";
+GRANT REFERENCES ON "stop"."company" TO "fyi";
+GRANT REFERENCES ON "stop"."company_unit" TO "fyi";
+GRANT REFERENCES ON "stop"."contact" TO "fyi";
+GRANT REFERENCES ON "tt"."ticket" TO "fyi";
+GRANT USAGE ON SCHEMA "tt" TO "fyi";
+GRANT USAGE ON SCHEMA "mss" TO "fyi";
+GRANT USAGE ON SCHEMA "stop" TO "fyi";
+GRANT  "mss_schema_user" TO "fyi";

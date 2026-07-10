@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"1","ORIG","original IP group remains"
+"2","HIDE","used for hiding NAT"
+"3","NAT","translate IP group/service"

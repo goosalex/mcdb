@@ -1,0 +1,3 @@
+<column name="ID" type="NUMERIC" />
+<column name="KEY_ID" type="NUMERIC" />
+<column name="PERMISSION_GROUP_ID" type="NUMERIC" />

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+	xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog dbchangelog-latest.xsd
+	    http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+        <!-- This is the root of the changelogs and it just includes others in the right order. -->
+	<include file="changelog-current.sql"/>
+    <include file="audit-trail-mapping.xml"/>
+        <!-- The PL/SQL code always needs to be deployed last -->
+	<include file="plsql-changelog.xml"/>
+	<include file="recompile.sql"/>
+    <include file="tests-changelog.xml"/>
+</databaseChangeLog>

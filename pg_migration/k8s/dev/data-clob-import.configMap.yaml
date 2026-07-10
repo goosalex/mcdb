@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-clob-import-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    NIDS
+
+  schema.dirs: |
+    NIDS_CLOB
+
+# file format
+  ora2pg.conf: |
+    # Additional Oracle to PostgreSQL migration configuration file for schemas with CLOBS
+    PARALLEL_TABLES 4
+
+#      printf "\n EXCLUDE TODO_ITEM TICKET EVENT_TYPE_MESSAGE SERVICE_WINDOW CHANGE_REQUEST EVENT TODO_LIST_TEMPLATE" >> /config/data_export.conf

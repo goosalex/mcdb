@@ -1,0 +1,13 @@
+GRANT EXECUTE ON "tt"."ticket_interface" TO "remato";
+GRANT SELECT ON "auth"."login" TO "remato";
+GRANT SELECT ON "stop"."company" TO "remato";
+GRANT SELECT ON "tt"."event" TO "remato";
+GRANT SELECT ON "tt"."service_window" TO "remato";
+GRANT SELECT ON "tt"."status" TO "remato";
+GRANT SELECT ON "tt"."ticket" TO "remato";
+GRANT SELECT ON "tt"."todo_item" TO "remato";
+GRANT SELECT ON "auth"."v_s_login" TO "remato";
+GRANT USAGE ON SCHEMA "auth" TO "remato";
+GRANT USAGE ON SCHEMA "stop" TO "remato";
+GRANT USAGE ON SCHEMA "tt" TO "remato";
+GRANT  "mss_login_user" TO "remato";

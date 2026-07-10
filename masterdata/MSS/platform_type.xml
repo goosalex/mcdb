@@ -1,0 +1,6 @@
+<column name="ID" type="NUMERIC" />
+<column name="INTERNAL_CODE" type="STRING" />
+<column name="DESCRIPTION" type="STRING" />
+<column name="DBCOMMENT" type="STRING" />
+<column name="DEPRECATED" type="NUMERIC" />
+<column name="DISPLAY_NAME" type="STRING" />

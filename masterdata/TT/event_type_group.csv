@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"1","Connectivity","Changes in service connectivity."
+"2","Ticket status change","Ticket status change events."
+"3","Intrusion detection","Intrusion detection events."

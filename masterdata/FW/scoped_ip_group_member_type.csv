@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"1","installation","The IP group for the according installation target is chosen."
+"2","all","The IP groups of all scopes, unified."
+"3","specific","The IP group of a fix specific scope"

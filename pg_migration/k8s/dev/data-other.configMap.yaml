@@ -1,0 +1,76 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-other-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    APPID
+    AUTH
+    BIREADER
+    BGP
+    CERTS
+    ESP
+    FW
+    FYI
+    GETNODES
+    GUMA2
+    MAIL
+    MC
+    MCDB_CHECKS
+    MSG
+    MSS
+    NIDS
+    OSAG
+    OSIXINFO
+    PRX
+    REPORT
+    RLSDEF
+    STOP
+    SVC_ZEROTRUST
+    TIM
+    TICKETEVOLUTION
+    VPN
+
+  schema.dirs: |
+    APPID_20250901
+    AUTH_20250901
+    BIREADER_20250901
+    BGP_20250901
+    CERTS_20250901
+    ESP_20250901
+    FW_20250901
+    FYI_20250901
+    GETNODES_20250901
+    GUMA2_20250901
+    MAIL_20250901
+    MC_20250901
+    MCDB_CHECKS_20250901
+    MSG_20250901
+    MSS_20250901
+    NIDS_20250901
+    OSAG_20250901
+    OSIXINFO_20250901
+    PRX_20250901
+    REPORT_20250901
+    RLSDEF_20250901
+    STOP_20250901
+    SVC_ZEROTRUST_20250901
+    TIM_20250901
+    TICKETEVOLUTION_20250901
+    VPN_20250901
+
+  oracle.scn: |
+    10361443897
+
+  ora2pg.conf: |
+    # Additional Oracle to PostgreSQL migration configuration file for other schemas
+    PARALLEL_TABLES 4
+    ORACLE_COPIES 4
+    TRUNCATE_TABLE 1
+    EXCLUDE SIGNATURE
+    

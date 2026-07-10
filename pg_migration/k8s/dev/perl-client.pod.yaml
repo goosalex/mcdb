@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: perl-client
+  labels:
+    role: perl-client
+spec:
+  containers:
+    - command:
+        - tail
+        - -f
+        - /dev/null
+      env:
+        - name: PSQL_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              key: connection-string
+              name: external-pgsql-adminsecret
+      image: artifacts.open.ch/central-docker-dev-local/osdb/tunnel_load:snapshot
+      imagePullPolicy: Always
+      name: perl
+      ports:
+        - containerPort: 5432
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /data/data_output
+          name: ora2pg-output
+          readOnly: false
+  volumes:
+    - name: ora2pg-output
+      persistentVolumeClaim:
+        claimName: ora2pg-output
+  restartPolicy: Always
+  

@@ -1,0 +1,7 @@
+"ID","NAME","DIRECTION","DESCRIPTION"
+"1","Local Overrides","src","NULL"
+"2","Global","src","NULL"
+"3","Local Exceptions","src","NULL"
+"4","Local Overrides","dst","NULL"
+"5","Global","dst","NULL"
+"6","Local Exceptions","dst","NULL"

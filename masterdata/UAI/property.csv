@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION","REGEX"
+"1000","ztna.enabled","App is enabled in ZTNA. Defaults to true if not present.","^[01]$"
+"1001","ztna.type","Type of ZTNA application","^(?:network)$"
+"1002","ztna.service_ids","Comma separated list of services where to deploy the app, or * for all","^(?:(?:[0-9]+)(?:,[0-9]+)*)|\*$"

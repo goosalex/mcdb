@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"0","none","No request pending"
+"1","requested","Pending request (not sent to maintaining party yet)"
+"2","sent","Pending request (sent to maintaining party)"

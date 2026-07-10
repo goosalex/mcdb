@@ -1,0 +1,3 @@
+<column name="ID" type="NUMERIC" />
+<column name="DESCRIPTION" type="STRING" />
+<column name="MNEMONIC" type="STRING" />

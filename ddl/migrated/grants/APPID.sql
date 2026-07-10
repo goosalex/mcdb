@@ -1,0 +1,15 @@
+GRANT REFERENCES ON "fw"."ip_protocol" TO "appid";
+GRANT REFERENCES ON "fw"."service_group" TO "appid";
+GRANT REFERENCES ON "mss"."host" TO "appid";
+GRANT REFERENCES ON "mss"."interface" TO "appid";
+GRANT REFERENCES ON "mss"."service" TO "appid";
+GRANT REFERENCES ON "stop"."company" TO "appid";
+GRANT REFERENCES ON "tt"."ticket" TO "appid";
+GRANT REFERENCES ON "vpn"."vpn" TO "appid";
+GRANT USAGE ON SCHEMA "mss" TO "appid";
+GRANT USAGE ON SCHEMA "tt" TO "appid";
+GRANT USAGE ON SCHEMA "vpn" TO "appid";
+GRANT USAGE ON SCHEMA "fw" TO "appid";
+GRANT USAGE ON SCHEMA "sys" TO "appid";
+GRANT USAGE ON SCHEMA "stop" TO "appid";
+GRANT  "mss_schema_user" TO "appid";

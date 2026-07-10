@@ -1,0 +1,17 @@
+GRANT SELECT ON "mss"."hardware" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."hardware_type" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."host" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."host2service" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."interface" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."network" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."service" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."service_type" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."static_route" TO "svc_checkhosts";
+GRANT SELECT ON "stop"."company" TO "svc_checkhosts";
+GRANT SELECT ON "vpn"."vpn_member" TO "svc_checkhosts";
+GRANT SELECT ON "mss"."v_host_key_value" TO "svc_checkhosts";
+GRANT USAGE ON SCHEMA "stop" TO "svc_checkhosts";
+GRANT USAGE ON SCHEMA "sys" TO "svc_checkhosts";
+GRANT USAGE ON SCHEMA "vpn" TO "svc_checkhosts";
+GRANT USAGE ON SCHEMA "mss" TO "svc_checkhosts";
+GRANT  "mss_login_user" TO "svc_checkhosts";

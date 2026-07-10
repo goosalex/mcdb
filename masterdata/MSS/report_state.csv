@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION"
+"1","PENDING","A report that is peding for execution"
+"2","RUNNING","The report is being generated"
+"3","FINISHED","The report was generated successfully"
+"4","FAILED","Report generation failed"

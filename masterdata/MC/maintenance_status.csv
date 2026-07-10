@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION"
+"1","unknown","Maintenance status is unknown"
+"2","active","Entity is active, no maintenance in progress"
+"3","inactive","Entity is inactive, maintenance not explicitly tracked"
+"4","maintenance","Entity is under maintenance"

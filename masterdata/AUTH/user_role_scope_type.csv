@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"0","no-scopes","Roles which do not have a scope."
+"1","default-scope","Roles which have default scope."
+"2","user-mgmt-scope","Roles which have user management scope."
+"3","company-group-scope","Roles which have company group scope."
+"4","open-systems-identity-user-mgmt-scope","Roles which have Open Systems Identity user management scope."

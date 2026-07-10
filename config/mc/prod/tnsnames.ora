@@ -1,0 +1,21 @@
+MCDB =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+            (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-a13-prod-1.open.ch)(PORT = 1521))
+            (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-i33-prod-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RW)
+    )
+  )
+ 
+MCDBRO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+            (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-i33-prod-2.open.ch)(PORT = 1521))
+            (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-a13-prod-1.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RO)
+    )
+  )

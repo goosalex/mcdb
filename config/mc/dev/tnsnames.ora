@@ -1,0 +1,51 @@
+MCDB =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (FAILOVER=on)
+      (LOAD_BALANCE=off)
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RW)
+    )
+  )
+
+MCDBRO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (FAILOVER=on)
+      (LOAD_BALANCE=off)
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RO)
+    )
+  )
+
+ORADEV =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (FAILOVER=on)
+      (LOAD_BALANCE=off)
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RW)
+    )
+  )
+
+ORADEVRO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (FAILOVER=on)
+      (LOAD_BALANCE=off)
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RO)
+    )
+  )

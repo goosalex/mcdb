@@ -1,0 +1,119 @@
+
+ALTER SYSTEM SET DB_RECOVERY_FILE_DEST_SIZE = 3G;
+ALTER SYSTEM SET DB_RECOVERY_FILE_DEST = '/oradata/fra';
+
+-- archivelog is only possible when offline:
+-- (this script is executed in sqlplus* on XE, EE will be in Archivelog mode already)
+declare
+    amode VARCHAR(30);
+begin
+    select log_mode into amode from v$database;
+    if (amode!='ARCHIVELOG') THEN
+        SHUTDOWN IMMEDIATE;
+        STARTUP MOUNT;
+
+        ALTER DATABASE ARCHIVELOG;
+        ALTER DATABASE OPEN;
+    END IF;
+end;
+
+-- Flashback for 60 minutes
+ALTER SYSTEM SET DB_FLASHBACK_RETENTION_TARGET=60 SCOPE=BOTH;
+ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+alter database flashback on;
+
+create type pipe_row_o as object (
+   XID RAW(8),
+   OPERATION VARCHAR2(32),
+   SQL_REDO VARCHAR2(4000),
+   SQL_UNDO VARCHAR2(4000)
+ );
+/
+
+create type pipe_row_t as table of pipe_row_o;
+/
+
+create or replace
+  function get_user_transactions (input_username VARCHAR2, input_scn NUMBER DEFAULT 0) return pipe_row_t pipelined IS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+begin
+  for rec in (select distinct member from V$LOGFILE where type = 'ONLINE' ) loop
+      DBMS_LOGMNR.ADD_LOGFILE(rec.member);
+    end loop;
+
+  DBMS_LOGMNR.START_LOGMNR (options => dbms_logmnr.dict_from_online_catalog);
+
+  for trans in (
+    select XID, operation, sql_redo, sql_undo, table_name
+    from v$logmnr_contents x
+    where scn >= input_scn
+      and username = input_username
+      and TABLE_SPACE = 'USERS'
+
+      and exists(select 1 from v$logmnr_contents where scn > input_scn and XID = x.XID and OPERATION = 'COMMIT')
+    ) loop
+      pipe row(pipe_row_o(
+      trans.XID,
+      trans.OPERATION,
+      trans.SQL_REDO,
+      trans.SQL_UNDO
+        ));
+    end loop;
+  DBMS_LOGMNR.END_LOGMNR();
+EXCEPTION
+  WHEN OTHERS THEN
+    DBMS_LOGMNR.END_LOGMNR();
+end get_user_transactions;
+/
+
+ALTER SESSION SET CONTAINER=XEPDB1;
+
+create or replace type varchar_array is table of varchar2(30);
+/
+
+CREATE OR REPLACE
+  PROCEDURE REWIND_USER_TRANSACTIONS(N_START_SCN NUMBER, XID_STRINGS varchar_array) IS
+  v_xids sys.XID_ARRAY := sys.xid_array();
+  i number;
+  cascade constant binary_integer := 4;
+  PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+  IF SYS_CONTEXT('userenv','con_name') NOT LIKE '?EPDB_' THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Rewinding is only allowed in local test containers');
+  end if;
+  i := 0;
+  FOR rec in  1..XID_STRINGS.count loop
+      i := i+1;
+      v_xids.extend;
+      v_xids(i) := HEXTORAW(XID_STRINGS(i));
+      dbms_output.put_line('i='||i||' xid =' || v_xids(i));
+    END LOOP;
+  IF i > 0 THEN
+    DBMS_FLASHBACK.TRANSACTION_BACKOUT(numtxns => i, xids => v_xids, options => cascade, scnhint => N_START_SCN);
+  END IF;
+  COMMIT ;
+EXCEPTION
+  WHEN OTHERS THEN
+    OSAG.OSAG_PLOG.WARNING(SQLERRM || ' while rewinding transaction for != SYS after SCN ' || N_START_SCN);
+END REWIND_USER_TRANSACTIONS;
+/
+
+CREATE OR REPLACE
+  PROCEDURE SYS.REWIND_XID_TRANSACTIONS(N_START_SCN NUMBER, v_xids sys.XID_ARRAY) IS
+  cascade constant binary_integer := 4;
+  PRAGMA AUTONOMOUS_TRANSACTION;
+  i number;
+BEGIN
+  IF SYS_CONTEXT('userenv','con_name') NOT LIKE '?EPDB_' THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Rewinding is only allowed in local test containers');
+  end if;
+  i := v_xids.count;
+  IF i > 0 THEN
+    DBMS_FLASHBACK.TRANSACTION_BACKOUT(numtxns => i, xids => v_xids, options => cascade, scnhint => N_START_SCN);
+  END IF;
+  COMMIT ;
+EXCEPTION
+  WHEN OTHERS THEN
+    OSAG.OSAG_PLOG.WARNING(SQLERRM || ' while rewinding transaction for != SYS after SCN ' || N_START_SCN);
+END REWIND_XID_TRANSACTIONS;
+/

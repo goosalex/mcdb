@@ -1,0 +1,12 @@
+GRANT SELECT ON "mss"."isplink_seq" TO "bod";
+GRANT SELECT ON "mss"."host" TO "bod";
+GRANT SELECT ON "mss"."interface" TO "bod";
+GRANT SELECT ON "mss"."interface2isp_link" TO "bod";
+GRANT DELETE ON "mss"."isp_link" TO "bod";
+GRANT INSERT ON "mss"."isp_link" TO "bod";
+GRANT SELECT ON "mss"."isp_link" TO "bod";
+GRANT UPDATE ON "mss"."isp_link" TO "bod";
+GRANT SELECT ON "mss"."isp_link_transport_media" TO "bod";
+GRANT USAGE ON SCHEMA "mss" TO "bod";
+GRANT USAGE ON SCHEMA "sys" TO "bod";
+GRANT  "mss_login_user" TO "bod";

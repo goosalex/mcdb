@@ -1,0 +1,18 @@
+GRANT SELECT ON "mc"."mon_server_connection" TO "dbdns";
+GRANT SELECT ON "mss"."host" TO "dbdns";
+GRANT SELECT ON "mss"."host2service" TO "dbdns";
+GRANT SELECT ON "mss"."interface" TO "dbdns";
+GRANT SELECT ON "mss"."interface_address" TO "dbdns";
+GRANT SELECT ON "mss"."interface_dynamic_ip_state" TO "dbdns";
+GRANT SELECT ON "mss"."ipv6_address" TO "dbdns";
+GRANT SELECT ON "mss"."network" TO "dbdns";
+GRANT SELECT ON "mss"."openvpn_interface" TO "dbdns";
+GRANT SELECT ON "vpn"."partition" TO "dbdns";
+GRANT SELECT ON "vpn"."tunnel" TO "dbdns";
+GRANT SELECT ON "vpn"."vpn" TO "dbdns";
+GRANT SELECT ON "vpn"."vpn_member" TO "dbdns";
+GRANT USAGE ON SCHEMA "mc" TO "dbdns";
+GRANT USAGE ON SCHEMA "mss" TO "dbdns";
+GRANT USAGE ON SCHEMA "vpn" TO "dbdns";
+GRANT USAGE ON SCHEMA "sys" TO "dbdns";
+GRANT  "mss_login_user" TO "dbdns";

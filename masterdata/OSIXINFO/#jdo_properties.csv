@@ -1,0 +1,5 @@
+"KEY","VALUE"
+"package.prefix","ch.open.mss.db.osixinfo"
+"V_HARDWARE.naming","none"
+"V_HOSTCLUSTERSTATE.fk.FK_VHOCLST","HARDWARE_ID:MSS.HARDWARE.ID"
+"V_LAST_UPDATE.fk.FK_VHOLU","HARDWARE_ID:MSS.HARDWARE.ID"

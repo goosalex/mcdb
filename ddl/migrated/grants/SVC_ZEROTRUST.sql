@@ -1,0 +1,13 @@
+GRANT EXECUTE ON "mcaudit"."osag_audit" TO "svc_zerotrust";
+GRANT SELECT ON "appid"."app" TO "svc_zerotrust";
+GRANT SELECT ON "appid"."quickid_dns" TO "svc_zerotrust";
+GRANT SELECT ON "appid"."quickid_net4" TO "svc_zerotrust";
+GRANT SELECT ON "appid"."quickid_net6" TO "svc_zerotrust";
+GRANT SELECT ON "mss"."cloud_region_instance" TO "svc_zerotrust";
+GRANT SELECT ON "mss"."service" TO "svc_zerotrust";
+GRANT REFERENCES ON "stop"."company" TO "svc_zerotrust";
+GRANT USAGE ON SCHEMA "stop" TO "svc_zerotrust";
+GRANT USAGE ON SCHEMA "appid" TO "svc_zerotrust";
+GRANT USAGE ON SCHEMA "mcaudit" TO "svc_zerotrust";
+GRANT USAGE ON SCHEMA "mss" TO "svc_zerotrust";
+GRANT  "mss_login_user" TO "svc_zerotrust";

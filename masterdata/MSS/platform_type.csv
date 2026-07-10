@@ -1,0 +1,5 @@
+"ID","INTERNAL_CODE","DESCRIPTION","DBCOMMENT","DEPRECATED","DISPLAY_NAME"
+"0","none","none","DB-2233","0","None"
+"1","osix","full blown open custom built os running in a vm or on a physical host","initial data of CONF-3087","0","SDP"
+"2","k8s","OSDP regional hubs serving secure service edges as introduced in 2022","initial data of CONF-3087","0","CloudSSE"
+"3","switch","switch used for redudant connectivity to ISPs","CONF-3150","0","Switch"

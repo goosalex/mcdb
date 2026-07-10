@@ -1,0 +1,5 @@
+"ID","DURATION","NAME"
+"1","86400","daily"
+"2","604800","weekly"
+"3","2592000","monthly"
+"4","259200","threeday"

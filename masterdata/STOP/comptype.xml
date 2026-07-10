@@ -1,0 +1,2 @@
+<column name="DESCRIPTION" type="STRING" />
+<column name="ID" type="NUMERIC" />

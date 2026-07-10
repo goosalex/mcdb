@@ -1,0 +1,17 @@
+GRANT SELECT ON "mss"."address" TO "stockreport";
+GRANT SELECT ON "mss"."city" TO "stockreport";
+GRANT SELECT ON "mss"."continent" TO "stockreport";
+GRANT SELECT ON "mss"."country" TO "stockreport";
+GRANT SELECT ON "mss"."hardware" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_lc_location" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_lc_state" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_lc_transit_info" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_lc_transit_state" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_lifecycle_item" TO "stockreport";
+GRANT SELECT ON "mss"."hardware_type" TO "stockreport";
+GRANT SELECT ON "mss"."host" TO "stockreport";
+GRANT SELECT ON "mss"."time_zone_data" TO "stockreport";
+GRANT SELECT ON "stop"."company" TO "stockreport";
+GRANT USAGE ON SCHEMA "mss" TO "stockreport";
+GRANT USAGE ON SCHEMA "stop" TO "stockreport";
+GRANT  "mss_login_user" TO "stockreport";

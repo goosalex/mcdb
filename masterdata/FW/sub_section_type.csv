@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"1","global","subsections that hold the global rules of a section, never have an installation target"
+"2","local_override","subsections that hold local overrides, i.e. rules that are applied before the global rules
+always have an installation target"
+"3","local","subsections that hold the local rules, i.e. rules that are applied after the global rules
+always have an installation target"

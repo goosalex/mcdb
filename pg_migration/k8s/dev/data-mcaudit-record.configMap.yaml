@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-mcaudit-record-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    MCAUDIT
+
+  schema.dirs: |
+    MCAUDIT_BULK
+
+  ora2pg.conf: |
+    # Oracle to PostgreSQL migration configuration file for MCAUDIT schema
+    # 40 parallel extraction processes => 1 Mio Rec / 10min. <= 1vCPU , 1.2GB RAM
+    ORACLE_COPIES 40
+    TRUNCATE_TABLE 0
+    DEFINED_PK RECORD:id
+    ALLOW RECORD    
+    WHERE RECORD[TIMESTAMP < DATE'2025-07-14']

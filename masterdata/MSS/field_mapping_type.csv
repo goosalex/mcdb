@@ -1,0 +1,6 @@
+"ID","NAME","SHORT"
+"1","simple value","value"
+"2","object reference","one-one"
+"3","one to many object reference","one-many"
+"4","many to many object reference","many-many"
+"5","inverse 1:1 object reference","inv-one-one"

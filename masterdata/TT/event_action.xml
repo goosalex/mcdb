@@ -1,0 +1,4 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="PROCEDURE_NAME" type="STRING" />
+<column name="PROCEDURE_KEY_ID" type="NUMERIC" />

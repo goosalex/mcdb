@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mcdb
+  labels:
+    app: mcdb
+spec:
+  containers:
+  - name: mcdb1
+    image: artifacts.open.ch/central-docker-prod-local/osdb/local_ora_mcdb:2
+    ports:
+    - containerPort: 1521

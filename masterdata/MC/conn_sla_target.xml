@@ -1,0 +1,4 @@
+<column name="ID" type="NUMERIC" />
+<column name="HOST_ESCALATION_TIMEOUT" type="NUMERIC" />
+<column name="ISP_LINE_ESCALATION_TIMEOUT" type="NUMERIC" />
+<column name="TARGET" type="NUMERIC" />

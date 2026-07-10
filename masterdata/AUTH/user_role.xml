@@ -1,0 +1,5 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="DESCRIPTION" type="STRING" />
+<column name="IS_INTERNAL" type="NUMERIC" />
+<column name="USER_ROLE_SCOPE_TYPE_ID" type="NUMERIC" />

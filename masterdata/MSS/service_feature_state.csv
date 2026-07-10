@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"0","initialized","The feature is initialized (initial state)"
+"1","operational","The feature monitored and active but not signed off"
+"2","approved","The feature monitored, active and signed off"

@@ -1,0 +1,49 @@
+--liquibase formatted sql logicalFilePath:triggers/APPID.sql
+--changeset sys:1 runOnChange:true endDelimiter:/
+CREATE OR REPLACE TRIGGER APPID.t_interface_ps_link_class_sync
+  AFTER INSERT OR UPDATE OF PATH_SELECTION_LINK_CLASS_ID ON MSS.INTERFACE
+  FOR EACH ROW
+BEGIN
+    IF UPDATING THEN
+      DELETE FROM APPID.INTERFACE_2_PS_LINK_CLASS
+      WHERE INTERFACE_ID = :NEW.ID
+        AND LINK_CLASS_ID = :OLD.PATH_SELECTION_LINK_CLASS_ID;
+    END IF;
+    IF :NEW.PATH_SELECTION_LINK_CLASS_ID IS NOT NULL THEN
+        INSERT INTO APPID.INTERFACE_2_PS_LINK_CLASS (INTERFACE_ID, LINK_CLASS_ID)
+        VALUES (:NEW.ID, :NEW.PATH_SELECTION_LINK_CLASS_ID);
+    END IF;
+
+END t_interface_ps_link_class_sync;
+/
+
+--changeset sys:2 runOnChange:true endDelimiter:/
+CREATE OR REPLACE TRIGGER APPID.t_path_override_member_link_sync
+  BEFORE INSERT OR UPDATE ON APPID.PATH_OVERRIDE_MEMBER_LINK
+  FOR EACH ROW
+DECLARE
+  v_link_class_id NUMBER;
+BEGIN
+  IF (( INSERTING AND :NEW.LINK_CLASS_ID IS NULL ) OR ( UPDATING AND :NEW.INTERFACE_ID != :OLD.INTERFACE_ID )) AND :NEW.INTERFACE_ID IS NOT NULL THEN
+
+    
+    BEGIN
+      SELECT i.PATH_SELECTION_LINK_CLASS_ID
+      INTO v_link_class_id
+      FROM MSS.INTERFACE i
+      WHERE i.ID = :NEW.INTERFACE_ID
+        AND i.PATH_SELECTION_LINK_CLASS_ID IS NOT NULL;
+
+      :NEW.LINK_CLASS_ID := v_link_class_id;
+
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        
+        
+        :NEW.LINK_CLASS_ID := NULL;
+    END;
+  END IF;
+
+END t_path_override_member_link_sync;
+/
+

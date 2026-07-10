@@ -1,0 +1,15 @@
+GRANT EXECUTE ON "esp"."osag_duty" TO "report";
+GRANT EXECUTE ON "mss"."osag_dbprop" TO "report";
+GRANT EXECUTE ON "rlsdef"."osag_webcontext" TO "report";
+GRANT EXECUTE ON "rlsdef"."osag_webcontext_state" TO "report";
+GRANT REFERENCES ON "stop"."company" TO "report";
+GRANT SELECT ON "stop"."company" TO "report";
+GRANT REFERENCES ON "stop"."contact" TO "report";
+GRANT SELECT ON "stop"."contact" TO "report";
+GRANT SELECT ON "mc"."connection_interrupt" TO "report";
+GRANT USAGE ON SCHEMA "esp" TO "report";
+GRANT USAGE ON SCHEMA "mc" TO "report";
+GRANT USAGE ON SCHEMA "rlsdef" TO "report";
+GRANT USAGE ON SCHEMA "mss" TO "report";
+GRANT USAGE ON SCHEMA "stop" TO "report";
+GRANT  "mss_schema_user" TO "report";

@@ -1,0 +1,5 @@
+"ID","NAME","DISPLAY_NAME"
+"0","ip_network","IP address/network (CIDR)"
+"1","hostname","DNS hostname"
+"2","from_addr","Sender address"
+"3","to_addr","Recipient address"

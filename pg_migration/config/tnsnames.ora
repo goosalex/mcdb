@@ -1,0 +1,54 @@
+ORADEV =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RW)
+    )
+  )
+
+ORADEVRO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RO)
+    )
+  )
+
+ORAPROD =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 11521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 12521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RW)
+    )
+  )
+
+ORAPRODRO =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 11521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 12521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = STOP1_RO)
+    )
+  )
+
+ORADEVAMER =
+ (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 13521))
+    )
+    (CONNECT_DATA =
+     (SERVER = DEDICATED)
+     (SERVICE_NAME = amer1_pdb1.sub03200857080.dbamer1devnet.oraclevcn.com)
+    )
+  )

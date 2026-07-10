@@ -1,0 +1,46 @@
+APP_USER_PASSWORD=
+BASH=/bin/bash
+BASHOPTS=cmdhist:complete_fullquote:extquote:force_fignore:hostcomplete:interactive_comments:progcomp:promptvars:sourcepath
+BASH_ALIASES=()
+BASH_ARGC=()
+BASH_ARGV=()
+BASH_CMDS=()
+BASH_LINENO=([0]="0")
+BASH_SOURCE=([0]="/container-entrypoint-initdb.d/021_flashback_setup.sh")
+BASH_VERSINFO=([0]="4" [1]="4" [2]="20" [3]="1" [4]="release" [5]="aarch64-redhat-linux-gnu")
+BASH_VERSION='4.4.20(1)-release'
+DIRSTACK=()
+EUID=54321
+GROUPS=()
+HOME=/opt/oracle
+HOSTNAME=c42e598f0d03
+HOSTTYPE=aarch64
+HTTPS_PROXY=http://proxy.open.ch:8080
+HTTP_PROXY=http://proxy.open.ch:8080
+IFS=$' \t\n'
+MACHTYPE=aarch64-redhat-linux-gnu
+NLS_LANG=.AL32UTF8
+NO_PROXY=127.0.0.1,localhost,artifacts.open.ch,.open.ch
+OPTERR=1
+OPTIND=1
+ORACLE_BASE=/opt/oracle
+ORACLE_BASE_CONFIG=/opt/oracle/product/23ai/dbhomeFree
+ORACLE_BASE_HOME=/opt/oracle/product/23ai/dbhomeFree
+ORACLE_DATABASE=XEPDB1
+ORACLE_HOME=/opt/oracle/product/23ai/dbhomeFree
+ORACLE_PASSWORD=password
+ORACLE_SID=FREE
+OSTYPE=linux-gnu
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/oracle/product/23ai/dbhomeFree/bin:/opt/oracle
+PPID=1
+PS4='+ '
+PWD=/opt/oracle
+SHELL=/bin/bash
+SHELLOPTS=braceexpand:hashall:interactive-comments
+SHLVL=2
+TERM=dumb
+UID=54321
+_=/container-entrypoint-initdb.d/021_flashback_setup.sh
+http_proxy=http://proxy.open.ch:8080
+https_proxy=http://proxy.open.ch:8080
+no_proxy=127.0.0.1,localhost,artifacts.open.ch,.open.ch

@@ -1,0 +1,282 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tnsnames-config
+  namespace: osdb-mcdb
+data:
+  tnsnames.ora: |
+    ORADEV =
+      (DESCRIPTION =
+        (ADDRESS_LIST =
+          (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+          (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+        )
+        (CONNECT_DATA =
+          (SERVICE_NAME = STOP1_RW)
+        )
+      )
+    ORADEVRO =
+      (DESCRIPTION =
+        (ADDRESS_LIST =
+          (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-1.open.ch)(PORT = 1521))
+          (ADDRESS = (PROTOCOL = TCP)(HOST = ora19-r29-dev-2.open.ch)(PORT = 1521))
+        )
+        (CONNECT_DATA =
+          (SERVICE_NAME = STOP1_RO)
+        )
+      )
+  data_export.conf: |
+    # Set Oracle database connection (datasource, user, password)
+    # ORACLE_DSN	dbi:Oracle:host=mydb.mydom.fr;sid=SIDNAME;port=1521
+    # ORACLE_USER	system
+    # ORACLE_PWD	manager
+    ORACLE_DSN	dbi:Oracle:ORADEV
+    ORACLE_USER	sys
+    # Set this to 1 if you connect as simple user and can not extract things
+    # from the DBA_... tables. It will use tables ALL_... This will not works
+    # with GRANT export, you should use an Oracle DBA username at ORACLE_USER
+    # USER_GRANTS     0
+    # Trace all to stderr
+    DEBUG		1
+    PG_VERSION  16
+    # Type of export. Values can be the following keyword:s
+    #	TABLE		Export tables, constraints, indexes, ...
+    #	PACKAGE		Export packages
+    #	INSERT		Export data from table as INSERT statement
+    #	COPY		Export data from table as COPY statement
+    TRUNCATE_TABLE 1
+    
+    TYPE		INSERT
+    #,VIEW,GRANT,SEQUENCE,SEQUENCE_VALUES
+    
+    OUTPUT		output.sql
+  
+    
+    # Base directory where all dumped files must be written
+    OUTPUT_DIR	/data/data_output
+    
+    PG_NUMERIC_TYPE 0
+    # This is a bit confusing. ORACLE NUMBER() precision=null, scale=null is actually a decimal
+    # It seems that if you specify NUMBER alone, you get NUMBER(38, 127)
+    # where both 38 (precision) and 127 (scale) are the maximum possible.
+    # However, if you specify NUMBER(p) then you get NUMBER(p, 0) where the scale is zero.
+    # So instead of the ora2pg default "bigint", numeric/decimal is correct
+    DEFAULT_NUMERIC numeric
+    # See also https://github.com/darold/ora2pg/blob/f38f685f7dc08ab704f7967a05174d5615bafa1a/doc/Ora2Pg.pod?plain=1#L2106
+    PG_INTEGER_TYPE 1
+
+    #,VIEW,GRANT,SEQUENCE,SEQUENCE_VALUES
+    OUTPUT		output.sql
+    # Base directory where all dumped files must be written
+    OUTPUT_DIR	/data/data_output
+    DATA_TYPE       NUMBER(*\,0):bigint
+    TRANSACTION     committed
+    # Allow data export to be saved in one file per table/view. The files
+    # will be named as tablename_OUTPUT. Where OUTPUT is the value of the
+    # corresponding configuration directive. You can use .gz xor .bz2
+    # extension to enable compression. Default is to save all data in one
+    # file. This is usable only during INSERT or COPY export type.
+    FILE_PER_TABLE	1
+    EXPORT_SCHEMA 1
+
+  data_additional_export.conf: |
+    # Set Oracle database connection (datasource, user, password)
+    # ORACLE_DSN	dbi:Oracle:host=mydb.mydom.fr;sid=SIDNAME;port=1521
+    # ORACLE_USER	system
+    # ORACLE_PWD	manager
+    ORACLE_DSN	dbi:Oracle:ORADEV
+    ORACLE_USER	sys
+    # Set this to 1 if you connect as simple user and can not extract things
+    # from the DBA_... tables. It will use tables ALL_... This will not works
+    # with GRANT export, you should use an Oracle DBA username at ORACLE_USER
+    # USER_GRANTS     0
+    # Trace all to stderr
+    DEBUG		1
+    PG_VERSION  16
+    # Type of export. Values can be the following keyword:s
+    #	TABLE		Export tables, constraints, indexes, ...
+    #	PACKAGE		Export packages
+    #	INSERT		Export data from table as INSERT statement
+    #	COPY		Export data from table as COPY statement
+    TRUNCATE_TABLE 0
+    
+    TYPE		INSERT
+    #,VIEW,GRANT,SEQUENCE,SEQUENCE_VALUES
+    
+    OUTPUT		output.sql
+    
+    
+    # Base directory where all dumped files must be written
+    OUTPUT_DIR	/data/data_output
+    
+    PG_NUMERIC_TYPE 0
+    # This is a bit confusing. ORACLE NUMBER() precision=null, scale=null is actually a decimal
+    # It seems that if you specify NUMBER alone, you get NUMBER(38, 127)
+    # where both 38 (precision) and 127 (scale) are the maximum possible.
+    # However, if you specify NUMBER(p) then you get NUMBER(p, 0) where the scale is zero.
+    # So instead of the ora2pg default "bigint", numeric/decimal is correct
+    DEFAULT_NUMERIC numeric
+    # See also https://github.com/darold/ora2pg/blob/f38f685f7dc08ab704f7967a05174d5615bafa1a/doc/Ora2Pg.pod?plain=1#L2106
+    PG_INTEGER_TYPE 1
+
+    #,VIEW,GRANT,SEQUENCE,SEQUENCE_VALUES
+    OUTPUT		output.sql
+    # Base directory where all dumped files must be written
+    OUTPUT_DIR	/data/data_output
+    DATA_TYPE       NUMBER(*\,0):bigint
+    TRANSACTION     committed
+    # Allow data export to be saved in one file per table/view. The files
+    # will be named as tablename_OUTPUT. Where OUTPUT is the value of the
+    # corresponding configuration directive. You can use .gz xor .bz2
+    # extension to enable compression. Default is to save all data in one
+    # file. This is usable only during INSERT or COPY export type.
+    FILE_PER_TABLE	1
+    EXPORT_SCHEMA 1
+  package_conversion.conf: |
+    ORACLE_DSN	dbi:Oracle:ORADEV
+    ORACLE_USER	sys
+    # Trace all to stderr
+    DEBUG		1
+    PG_VERSION  16
+    # Type of export. Values can be the following keyword:
+    #	TABLE		Export tables, constraints, indexes, ...
+    #	PACKAGE		Export packages
+    #	INSERT		Export data from table as INSERT statement
+    #	COPY		Export data from table as COPY statement
+    #	VIEW		Export views
+    #	GRANT		Export grants
+    #	SEQUENCE	Export sequences
+    #	TRIGGER		Export triggers
+    #	FUNCTION	Export functions
+    #	PROCEDURE	Export procedures
+    #	TABLESPACE	Export tablespace (PostgreSQL >= 8 only)
+    #	TYPE		Export user defined Oracle types
+    #	PARTITION	Export range or list partition (PostgreSQL >= v8.4)
+    #	FDW		Export table as foreign data wrapper tables
+    #	MVIEW		Export materialized view as snapshot refresh view
+    #       QUERY		Convert Oracle SQL queries from a file.
+    #       KETTLE		Generate XML ktr template files to be used by Kettle.
+    #       DBLINK		Generate oracle foreign data wrapper server to use as dblink.
+    #       SYNONYM		Export Oracle's synonyms as views on other schema's objects.
+    #       DIRECTORY	Export Oracle's directories as external_file extension objects.
+    #       LOAD		Dispatch a list of queries over multiple PostgreSQl connections.
+    #       TEST		perform a diff between Oracle and PostgreSQL database.
+    #       TEST_COUNT	perform only a row count between Oracle and PostgreSQL tables.
+    #       TEST_VIEW	perform a count on both side of number of rows returned by views
+    #       TEST_DATA	perform data validation check on rows at both sides.
+    #	SEQUENCE_VALUES export DDL to set the last values of sequences
+    TYPE		TABLE
+    #,VIEW,GRANT,SEQUENCE,SEQUENCE_VALUES
+    GRANT_OBJECT TABLE,VIEW,SEQUENCE,PROCEDURE,FUNCTION,PACKAGE BODY,TYPE,SYNONYM,DIRECTORY
+    OUTPUT		output.sql
+    FILE_PER_FKEYS	1
+    # Base directory where all dumped files must be written
+    OUTPUT_DIR	/data/schema_output
+
+  wrap_if.pl: |
+    use strict;
+    use warnings;
+    use File::Spec;
+    
+    
+    my $config_dir = '/job-config';
+    my $data_dir = '/data/data_output';
+    my $names_file = $config_dir.'/schema.names';
+    my $dirs_file  =  $config_dir.'/schema.dirs';
+    
+    sub extract_table_name {
+        my ($include_line, $schema_name) = @_;
+    
+        # Extract the path from the \i statement
+        my ($path) = $include_line =~ /\\i\s+'([^']+)'/;
+        return undef unless $path;
+    
+        # Convert to lowercase
+        my $table_name = lc($path);
+    
+        # Remove everything before and including the last slash
+        $table_name =~ s/.*\///;
+    
+        # Remove the schema name suffix and .txt extension
+        $table_name =~ s/_\Q$schema_name\E\.txt$//i;
+    
+        return $table_name;
+    }
+    
+    my $table_check_sql = <<'END_SQL';
+    CREATE OR REPLACE FUNCTION public.table_exists(schema_name_arg text, table_name_arg text)
+        RETURNS bool AS
+    $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = schema_name_arg
+              AND table_name = table_name_arg
+        ) THEN
+            return false;
+        ELSE
+            return true;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+    END_SQL
+    
+    open my $names_fh, '<', $names_file or die "Cannot open $names_file: $!";
+    open my $dirs_fh,  '<', $dirs_file  or die "Cannot open $dirs_file: $!";
+    
+    while (my $schema_name = <$names_fh>) {
+        chomp $schema_name;
+        my $schema_dir = <$dirs_fh>;
+        chomp $schema_dir;
+        next unless $schema_name && $schema_dir;
+    
+        my $control_file = "$data_dir/$schema_dir/$schema_name.txt";
+        # Read the control file
+        open my $in_fh, '<', $control_file or die "Cannot open $control_file: $!";
+        my @lines = <$in_fh>;
+        close $in_fh;
+        my $output_file = "$data_dir/$schema_dir/$schema_name.psql";
+        open my $out_fh, '>', $output_file or die "Cannot write $output_file: $!";
+        print $out_fh $table_check_sql;
+        print $out_fh "\n";
+        # Process each line
+        foreach my $line (@lines) {
+            if ($line =~ /^SET /) {
+                    print $out_fh $line; # Settings lines, keep them
+                    next;
+                }
+            if ($line =~ /^\\i\s+'([^']+)'/) {
+                my $inc_path = $1;
+    
+                # Only process included files (simulate: line starts with \i)
+                # Here, we treat every .txt file as an included file
+                # Check if file exists before attempting to open
+                if (!-e $inc_path) {
+                    warn "WARNING: Included file '$inc_path' does not exist, skipping\n";
+                    next;
+                }
+                my $include_line = $line;
+                my $table_name = extract_table_name($include_line, $schema_name);
+            my $table_check_sql = <<"END_SQL";
+    SELECT table_exists('$schema_name', '$table_name') as v_exists
+    \\gset
+    \\if :v_exists
+    BEGIN;
+    \\i '$inc_path'
+    COMMIT;
+    \\else
+        \\echo Table '$table_name' does not exist in schema '$schema_name', skipping include of '$inc_path'
+    \\endif
+    END_SQL
+            print $out_fh $table_check_sql;
+            print $out_fh "\n";
+            } else {
+                # print $out_fh $line; # Other lines, don't keep them
+            }
+    
+        }
+        close $out_fh;
+    
+    }

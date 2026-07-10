@@ -1,0 +1,5 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="SHORT" type="STRING" />
+<column name="DESCRIPTION" type="STRING" />
+<column name="SYSTEM_ID" type="NUMERIC" />

@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"100","mep-server","Mobile Entry Point"
+"110","mep-saml","Mobile Entry Point SAML authentication"
+"200","mail-smtp","Email Gateway SMTP"
+"300","ztna","Zero Trust Network Access"
+"400","proxy-sslscan","Secure Web Gateway TLS interception"

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>	
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+	xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog dbchangelog-latest.xsd
+	    http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+	<!-- 
+		This includes all PL/SQL source code in the right dependency order.
+		SQL files MUST be in liquibase formatted sql format with logicalFilePath attribute
+                and contain a single changeset with a dummy ID and attribute runOnChange:true
+
+		Paths are relative to liquibase.searchPath
+	-->
+
+    <includeAll path="src/types/" />
+	<includeAll path="src/pkg/" />
+	<includeAll path="src/proc" />
+	<includeAll path="src/pkgb" />
+	<includeAll path="src/triggers" />
+</databaseChangeLog>
+

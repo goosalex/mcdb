@@ -1,0 +1,4 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="SHARED" type="NUMERIC" />
+<column name="RELEASABLE" type="NUMERIC" />

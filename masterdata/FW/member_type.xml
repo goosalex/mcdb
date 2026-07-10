@@ -1,0 +1,4 @@
+<column name="ID" type="NUMERIC" />
+<column name="TABLE_NAME" type="STRING" />
+<column name="JAVA_CLASS_NAME" type="STRING" />
+<column name="DEFAULT_USAGE_ID" type="NUMERIC" />

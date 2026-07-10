@@ -1,0 +1,6 @@
+"KEY","VALUE"
+"MC_CENTER_CONTACT.seq.for.pk.ID","MCCENTERCONTACT_SEQ"
+"MC_CENTER.naming.inverse.ESP.FK_MC_CENTER_CONTACT_MC_CENTER","mcCenterContacts"
+"MC_CENTER.seq.for.pk.ID","MCCENTER_SEQ"
+"package.prefix","ch.open.mss.db.esp"
+"SPECIAL_DAY.naming","none"

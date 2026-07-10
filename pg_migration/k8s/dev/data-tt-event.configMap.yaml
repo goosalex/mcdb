@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-tt-event-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    TT
+
+# file format
+  ora2pg.conf: |
+    # Additional Oracle to PostgreSQL migration configuration file for TT schema
+    # ORACLE_COPIES is the number of parallel extraction processes
+    ORACLE_COPIES 40
+    # Exclude specific tables from the migration
+    # EXCLUDE EVENT
+    ALLOW EVENT,TICKET
+    DEFINED_PK EVENT:id
+    DEFINED_PK TICKET:id
+    # Alternatively: you can exclude all older event than a cutoff date - and load these later.
+    WHERE EVENT[EVENTDATE < DATE'2025-07-14']
+    WHERE TICKET[OPEN_DATE < DATE'2025-07-14']
+
+
+#      printf "\n EXCLUDE TODO_ITEM TICKET EVENT_TYPE_MESSAGE SERVICE_WINDOW CHANGE_REQUEST EVENT TODO_LIST_TEMPLATE" >> /config/data_export.conf

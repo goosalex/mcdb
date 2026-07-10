@@ -1,0 +1,6 @@
+<column name="ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="INTERNAL_CODE" type="STRING" />
+<column name="DEPRECATED" type="NUMERIC" />
+<column name="INTERNAL" type="NUMERIC" />
+<column name="DESCRIPTION" type="STRING" />

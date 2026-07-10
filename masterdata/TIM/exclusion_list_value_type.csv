@@ -1,0 +1,5 @@
+"ID","TYPE","DESCRIPTION"
+"0","ipv4","IPv4"
+"1","ipv6","IPv6"
+"2","domain","Domain"
+"3","url","Url"

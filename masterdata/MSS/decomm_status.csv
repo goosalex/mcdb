@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"0","APPROVAL_PEND","Requests needs approval before decommissioning can be performed."
+"1","DECOMM_PEND","Decommissionig process is pending."
+"2","REJECTED","Approval was declined."
+"3","COMPLETED","Decommissionig completed successfully."
+"4","FAILED","Decommissioning failed."

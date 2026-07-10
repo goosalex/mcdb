@@ -1,0 +1,6 @@
+"ID","NAME"
+"1","unknown message"
+"2","suppressed event"
+"3","quarantined event"
+"4","discarded quarantined event"
+"5","auth login osag"

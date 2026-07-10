@@ -1,0 +1,14 @@
+id: ch.open.mc-config.Configuration:centralinfrastructure/tnsnames
+type: Makefile
+metadata:
+  annotations:
+    # Run kaeter staging snapshots on changes
+    open.ch/kaeter-hook/autorelease-version: scripts/kaeter/version-from-changelogmd.sh
+versioning: AnyStringVer
+versions:
+  0.0.0: 1970-01-01T00:00:00Z|INIT
+  1.0.0: 2026-02-19T15:58:00Z|45e2f57e4e9d95d5f7f1bcfaddb267b6ed95fe43
+  1.0.1: 2026-02-23T16:10:04Z|41950f7930ccb488c4bda92a83879291817675b9
+  1.1.0: 2026-03-09T12:14:43Z|d3ce0432e43c9d86ae4c3260599d58ca71377089
+  1.1.1: 2026-04-27T11:49:40Z|eaf997f4049c5848c3ec607fca0eafd889d8aaf3
+  1.2.0: 2026-05-26T10:00:12Z|388761e1452abf3259a726463f7b1558b0dce4dc

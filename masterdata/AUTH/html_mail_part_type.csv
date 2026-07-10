@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION","MIME_TYPE"
+"1","HTML Template","The html template","text/html; charset=utf-8"
+"2","JPEG Image","A jpeg image to attach to the message","image/jpeg"
+"3","PNG Image","A png image to attach to the message","image/png"

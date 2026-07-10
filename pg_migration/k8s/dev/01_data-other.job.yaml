@@ -1,0 +1,104 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    job-name: mcdb-export-data-other
+  name: mcdb-export-data-other
+  namespace: osdb-mcdb
+spec:
+  backoffLimit: 16
+    # The number of completions is set to 27 to match the number of items in the data-other-job-items configMap.
+    # They must match to ensure all items are processed.
+  completions: 25
+    # The parallelism is set to 8 to allow for multiple pods=schemas to be processed concurrently.
+    # In DEV, the slowest schema is NIDS. The table SIGNATURE (CLOBs) takes the longesttime to process.
+    # All other schemas are processed in a reasonable time: under 15minutes.
+  parallelism: 8
+  completionMode: Indexed
+  podReplacementPolicy: TerminatingOrFailed
+  suspend: false
+  template:
+    spec:
+      initContainers:
+        - name: choose-schema
+          image: 'docker.io/library/bash'
+          volumeMounts:
+            - mountPath: /config-template
+              name: config-volume
+            - name: my-config
+              mountPath: /config
+            - name: job-config
+              mountPath: /job-config
+            - name: job-command
+              mountPath: /job-command
+            - mountPath: /data/data_output
+              name: ora2pg-output
+          command:
+            - "bash"
+            - "-c"
+            - |
+              cp /config-template/*.* /config
+              source /job-command/init_command_line
+      containers:
+        - args:
+            - -t
+            - COPY
+            - -c
+            - /config/data_export.conf
+          command:
+            - "bash"
+            - "-c"
+            - "$(cat /config/command_line)"
+          env:
+            - name: CONFIG_LOCATION
+              value: /config/data_export.conf
+            - name: TNS_ADMIN
+              value: /config
+            - name: ORACLE_HOST
+              value: dbi:Oracle:ORADVRO
+            - name: ORA2PG_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  key: key
+                  name: db-password-ora
+          image: artifacts.open.ch/public-docker-virtual/georgmoser/ora2pg:latest
+          imagePullPolicy: Always
+          name: ora2pg
+          resources:
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+            requests:
+              cpu: "1"
+              memory: "500Mi"
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/data_output
+              name: ora2pg-output
+            - name: my-config
+              mountPath: /config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: ora2pg-output
+          persistentVolumeClaim:
+            claimName: ora2pg-output
+        - configMap:
+            defaultMode: 420
+            name: tnsnames-config
+          name: config-volume
+        - name: job-config
+          configMap:
+            name: data-other-job-items
+            defaultMode: 420
+        - name: job-command
+          configMap:
+            name: data-initcontainer-command-line
+            defaultMode: 420
+        - name: my-config
+          emptyDir: {}

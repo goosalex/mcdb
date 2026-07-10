@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-mcaudit-job-items
+  namespace: osdb-mcdb
+data:
+
+
+  # file format
+  schema.names: |
+    MCAUDIT
+
+  schema.dirs: |
+    MCAUDIT
+
+  ora2pg.conf: |
+    # Oracle to PostgreSQL migration configuration file for MCAUDIT schema
+    ORACLE_COPIES 10
+    TRUNCATE_TABLE 1
+    WHERE RECORD[TIMESTAMP >= DATE'2025-07-14']

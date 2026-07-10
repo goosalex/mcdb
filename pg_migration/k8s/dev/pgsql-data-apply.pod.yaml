@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pgsql-data-apply
+  labels:
+    role: pgsql-client
+spec:
+  containers:
+    - command:
+        - tail
+        - -f
+        - /dev/null
+      env:
+        - name: PSQL_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              key: connection-string
+              name: pgsql-postgresqladmin
+      image: artifacts.open.ch/public-docker-virtual/alpine/psql
+      imagePullPolicy: IfNotPresent
+      name: pgsql
+      ports:
+        - containerPort: 5432
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /data/data_output
+          name: ora2pg-output
+          readOnly: false
+        - name: job-config
+          mountPath: /job-config
+  volumes:
+    - name: ora2pg-output
+      persistentVolumeClaim:
+        claimName: ora2pg-output
+    - name: job-config
+      configMap:
+        name: data-other-job-items
+        defaultMode: 420
+  restartPolicy: Always
+  

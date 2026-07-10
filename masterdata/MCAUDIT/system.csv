@@ -1,0 +1,6 @@
+"ID","NAME","SHORT","DESCRIPTION"
+"1","Audit","audit","Open Systems Internal Audit"
+"2","MEP Identity Service","auth","MEP Identity Service"
+"3","Billing and Accounting","billing","Billing and accounting logs"
+"4","Event Notification","notification","Event notification logs"
+"5","Open Systems Identity Service","open_systems_identity_auth","Open Systems Identity Service"

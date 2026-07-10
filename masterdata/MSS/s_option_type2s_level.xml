@@ -1,0 +1,2 @@
+<column name="SERVICE_OPTION_TYPE_ID" type="NUMERIC" />
+<column name="SERVICE_LEVEL_ID" type="NUMERIC" />

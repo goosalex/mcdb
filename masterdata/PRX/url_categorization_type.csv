@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION"
+"0","ORIGINAL","The URL categorization at the point in time when the miscategorization is reported to Cyren."
+"1","SUGGESTED","The URL categorization as suggested by MC or the customer."
+"2","UPDATED","The URL categorization which resulted after Cyren accepted the miscategorization and consequently updated the categorization accordingly."
+"3","LAST CHECKED","The URL categorization as seen at the date PRX.URL_MISCATEGORIZATION.LAST_CHECK_DATE."

@@ -1,0 +1,1 @@
+../../../applications/customer-portal/libs/java/core/src/main/sql/dxauditmapping.sql

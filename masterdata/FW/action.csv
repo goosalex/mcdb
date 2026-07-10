@@ -1,0 +1,8 @@
+"ID","NAME"
+"1","ACCEPT"
+"2","REJECT"
+"3","DROP"
+"4","CHAIN"
+"5","NAT"
+"6","AUTH-WEB"
+"7","AUTH-INLINE"

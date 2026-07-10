@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-initcontainer-command-line
+  namespace: osdb-mcdb
+data:
+
+# Input needed: "schema.names" - a list of schema names to be processed by the job.
+# Output: /config/command_line - a script that will be executed by the job to process the schema for the JobIndex.
+# init_command_line - Command for a data export Job from Oracle to a persistent volume.
+# import_command_line - Command for a data import Job from a persistent volume to PostgreSQL.
+  init_command_line: |
+    #!/bin/bash
+    echo "$JOB_COMPLETION_INDEX"
+    INDEX=$((JOB_COMPLETION_INDEX+1))
+    NUMBER_OF_SCHEMAS=$(wc -l < /job-config/schema.names)
+    if [ "${INDEX}" -lt 1 ] || [ "${INDEX}" -gt ${NUMBER_OF_SCHEMAS} ]; then
+      echo "Invalid JOB_COMPLETION_INDEX: ${JOB_COMPLETION_INDEX}. It must be between 1 and $NUMBER_OF_SCHEMAS."
+      printf "echo Invalid JOB_COMPLETION_INDEX: ( ${JOB_COMPLETION_INDEX} + 1 ) must be between 1 and NUMBER_OF_SCHEMAS." >> /config/command_line
+      exit 0
+    fi
+    SCHEMA_NAME="$(sed ${INDEX}!d /job-config/schema.names)"
+    SCHEMA_DIR="$(sed ${INDEX}!d /job-config/schema.dirs)"
+    SCHEMA_SCN_OPTION=""
+    TYPE=${TYPE:-COPY}
+    if ! [ -f /job-config/schema.dirs ]; then
+      echo "${SCHMEA_NAME} directory is not specified in the schema.names part of the configMap, assuming /data/data_output/${SCHEMA_DIR}_${TYPE}"
+      SCHEMA_DIR=${SCHEMA_NAME}_${TYPE}
+    fi        
+    if [ /job-config/oracle.scn ]; then
+      # read the SCN value for the schema from the file
+      SCN=$(cat /job-config/schema.scn)
+        if [ -n "$SCN" ]; then
+            echo "Using SCN $SCN for schema $SCHEMA_NAME"
+            SCHEMA_SCN_OPTION="--scn $SCN"
+        else
+            echo "No SCN value found in /job-config/schema.scn, proceeding without SCN option"
+        fi
+    fi
+    printf "\n SCHEMA ${SCHEMA_NAME}" >> /config/data_export.conf
+    cat /job-config/ora2pg.conf >> /config/data_export.conf
+    mkdir -p /data/data_output/"${SCHEMA_DIR}"
+    printf "ora2pg --namespace ${SCHEMA_NAME} --basedir /data/data_output/${SCHEMA_DIR} -o ${SCHEMA_NAME}.txt -t ${TYPE} ${SCHEMA_SCN_OPTION} -c /config/data_export.conf \n" >> /config/command_line
+    printf "perl /config/wrap_if.pl \n" >> /config/command_line
+    
+
+# Only difference to above is the missing basedir command line argument.
+# basedir is the directory where the output files will be stored. It's defined in the Job spec as $OUTPUT_LOCATION
+# Data is exported to /data/data_output/${SCHEMA_NAME}_BULK/${SCHEMA_NAME}.txt, so that the normal export and the bulk export don't interfere.
+# The bulk export is used for old entries of TT.EVENT and MCAUDIT.RECORD
+# They are lacking the TRUNCATE command, so that the data can be imported into the PostgreSQL database without deleting the existing data.
+  fixed_basedir_command_line: |
+    #!/bin/bash
+    echo "$JOB_COMPLETION_INDEX"
+    INDEX=$((JOB_COMPLETION_INDEX+1))
+    NUMBER_OF_SCHEMAS=$(wc -l < /job-config/schema.names)
+    OUTPUT_METHOD={TYPE:-COPY}
+    if [ "${INDEX}" -lt 1 ] || [ "${INDEX}" -gt ${NUMBER_OF_SCHEMAS} ]; then
+      echo "Invalid JOB_COMPLETION_INDEX: ${JOB_COMPLETION_INDEX}. It must be between 1 and $NUMBER_OF_SCHEMAS."
+      printf "echo Invalid JOB_COMPLETION_INDEX: ( ${JOB_COMPLETION_INDEX} + 1 ) must be between 1 and NUMBER_OF_SCHEMAS." >> /config/command_line
+      exit 0
+    fi
+    SCHEMA_NAME="$(sed ${INDEX}!d /job-config/schema.names)"
+    printf "\n SCHEMA ${SCHEMA_NAME} \n" >> /config/data_additional_export.conf
+    cat /job-config/ora2pg.conf >> /config/data_additional_export.conf
+    cat /config/data_additional_export.conf
+    mkdir -p ${OUTPUT_LOCATION}
+    printf "ora2pg --namespace ${SCHEMA_NAME} -o ${SCHEMA_NAME}.txt --basedir $OUTPUT_LOCATION -t $OUTPUT_METHOD -c /config/data_additional_export.conf \n" >> /config/command_line
+    printf "sed -i '/^TRUNCATE TABLE/d' /data/data_output/${SCHEMA_NAME}_BULK/*.txt \n" >> /config/command_line
+    printf "perl /config/wrap_if.pl \n" >> /config/command_line
+
+
+
+  import_command_line: |
+    #!/bin/bash
+    echo $JOB_COMPLETION_INDEX
+    INDEX=$((JOB_COMPLETION_INDEX+1))
+    NUMBER_OF_SCHEMAS=$(wc -l < /job-config/schema.names)
+    if [ "${INDEX}" -lt 1 ] || [ "${INDEX}" -gt ${NUMBER_OF_SCHEMAS} ]; then
+      echo "Invalid JOB_COMPLETION_INDEX: ${INDEX}. It must be between 1 and ${NUMBER_OF_SCHEMAS}."
+      printf "echo Invalid JOB_COMPLETION_INDEX: ${INDEX}. It must be between 1 and ${NUMBER_OF_SCHEMAS}." >> /config/command_line
+      exit 0
+    fi
+    SCHEMA_DIR_SUFFIX=${TYPE:-INSERT}
+    SCHEMA_NAME="$(sed ${INDEX}!d /job-config/schema.names)"
+    if ! [ -f /job-config/schema.dirs  ]; then
+      echo "${SCHMEA_NAME} directory is not specified, assuming /data/data_output/${SCHMEA_NAME}_${SCHEMA_DIR_SUFFIX}"
+      SCHEMA_DIR=${SCHEMA_NAME}_${SCHEMA_DIR_SUFFIX}
+    else
+      SCHEMA_DIR="$(sed ${INDEX}!d /job-config/schema.dirs)"
+    fi
+    if ! [ -f /data/data_output/${SCHEMA_DIR}/${SCHEMA_NAME}.txt ]; then
+      echo "Re-importing data for schema ${SCHEMA_NAME} NOT possible, because no file ${SCHEMA_DIR}/${SCHEMA_NAME}.txt found"
+      exit 1
+    else
+      echo "Re-importing data for schema ${SCHEMA_NAME} from directory ${SCHEMA_DIR}"
+      printf "psql \$PSQL_CONNECTION_STRING -f /data/data_output/${SCHEMA_DIR}/${SCHEMA_NAME}.psql mcdb" >> /config/command_line
+      echo "Preparing command line: $(cat /config/command_line)"
+    fi
+
+  import_bulk_command_line: |
+    #!/bin/bash
+    echo $JOB_COMPLETION_INDEX
+    INDEX=$((JOB_COMPLETION_INDEX+1))
+    NUMBER_OF_SCHEMAS=$(wc -l < /job-config/schema.names)
+    if [ "${INDEX}" -lt 1 ] || [ "${INDEX}" -gt ${NUMBER_OF_SCHEMAS} ]; then
+      echo "Invalid JOB_COMPLETION_INDEX: ${INDEX}. It must be between 1 and 27."
+      printf "echo Invalid JOB_COMPLETION_INDEX: ${INDEX}. It must be between 1 and 27." >> /config/command_line
+      exit 0
+    fi
+    SCHEMA_NAME="$(sed ${INDEX}!d /job-config/schema.names)"
+    if ! [ -f /data/data_output/${SCHEMA_NAME}_BULK/${SCHEMA_NAME}.txt ]; then
+      echo "Re-importing data for schema ${SCHEMA_NAME}_BULK NOT possible, because no files found"
+      exit 1
+    else
+      echo "Re-importing Bulk data for schema ${SCHEMA_NAME}"
+      printf "sed -i '/^TRUNCATE TABLE/d' /data/data_output/${SCHEMA_NAME}_BULK/*.txt \n" >> /config/command_line
+      printf "psql \$PSQL_CONNECTION_STRING -f /data/data_output/${SCHEMA_NAME}_BULK/${SCHEMA_NAME}.psql mcdb" >> /config/command_line
+      echo "Preparing command line: $(cat /config/command_line)"
+    fi
+

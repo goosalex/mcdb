@@ -1,0 +1,18 @@
+GRANT EXECUTE ON "mcaudit"."osag_audit" TO "vaultsvn";
+GRANT SELECT ON "auth"."login" TO "vaultsvn";
+GRANT SELECT ON "mss"."configuration_group" TO "vaultsvn";
+GRANT SELECT ON "mss"."host" TO "vaultsvn";
+GRANT SELECT ON "mss"."host2service" TO "vaultsvn";
+GRANT SELECT ON "mss"."service" TO "vaultsvn";
+GRANT SELECT ON "stop"."contact" TO "vaultsvn";
+GRANT SELECT ON "tt"."event" TO "vaultsvn";
+GRANT SELECT ON "vpn"."vpn" TO "vaultsvn";
+GRANT SELECT ON "auth"."v_s_login" TO "vaultsvn";
+GRANT SELECT ON "mss"."v_configuration_group_name" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "auth" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "tt" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "mss" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "stop" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "mcaudit" TO "vaultsvn";
+GRANT USAGE ON SCHEMA "vpn" TO "vaultsvn";
+GRANT  "mss_login_user" TO "vaultsvn";

@@ -1,0 +1,5 @@
+"ID","NAME","DESCRIPTION"
+"1","auth","Auth Server User and Group Download"
+"2","guma","Guma Pattern Update"
+"3","osix","OSIX Configuration Download (buildall)"
+"4","junos","JunOS Configuration Download (buildjun)"

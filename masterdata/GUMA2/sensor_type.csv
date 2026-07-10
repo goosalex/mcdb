@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"1","syslog","When the monitored host sends syslog messages to the remote sensor host"
+"2","snmp","When the monitored host answers SNMP requests of the remote sensor host"
+"3","fwlog","When the firewall log of the monitored host is streamed to the remote sensor host"

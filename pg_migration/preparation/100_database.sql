@@ -1,0 +1,3 @@
+-- DROP DATABASE "mcdb";
+-- CREATE DATABASE "mcdb"  owner postgresadmin;
+-- \connect mcdb

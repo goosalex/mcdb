@@ -1,0 +1,7 @@
+<column name="ID" type="NUMERIC" />
+<column name="CHECK_KEY" type="STRING" />
+<column name="CHECK_GROUP" type="STRING" />
+<column name="STATEMENT" type="STRING" />
+<column name="MESSAGE" type="STRING" />
+<column name="PLOGLEVEL" type="NUMERIC" />
+<column name="SLOGLEVEL" type="STRING" />

@@ -1,0 +1,4 @@
+"ID","NAME","SHORT","DESCRIPTION"
+"10","Info","info","Severity Info"
+"20","Warning","warning","Severity Warning"
+"30","Error","error","Severity Error"

@@ -1,0 +1,3 @@
+<column name="ID" type="NUMERIC" />
+<column name="DURATION" type="NUMERIC" />
+<column name="NAME" type="STRING" />

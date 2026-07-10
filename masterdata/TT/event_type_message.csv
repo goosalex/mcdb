@@ -1,0 +1,136 @@
+"ID","SUBJECT_TEMPLATE","MESSAGE_TEMPLATE"
+"1","NULL","$#EMERGENCY#$Ticket $#TICKET_ID#$ - $#EVENT_TYPE_NAME#$ on $#HOST_NAME#$ at $#EVENT_DATE#$"
+"2","$#EMERGENCY#$$#EVENT_TYPE_NAME#$ on $#HOST_NAME#$","This is an automatically generated email to inform you that the following
+event has occurred:
+
+Ticket:   $#TICKET_ID#$
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Event:    $#EVENT_TYPE_NAME#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"3","NULL","$#EMERGENCY#$New ticket ($#TICKET_ID#$) for $#HOST_NAME#$: $#TICKET_SUBJECT#$"
+"4","New ticket $#EMERGENCY#$$#TICKET_SUBJECT#$ for $#HOST_NAME#$","This is an automatically generated email to inform you that a new ticket
+was created:
+
+Ticket:   $#TICKET_ID#$
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"7","NULL","$#EMERGENCY#$Ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) is waiting for third-party action. $#EVENT_DATE#$"
+"8","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) is waiting for third-party action","This is an automatically generated email to inform you that
+ticket $#TICKET_ID#$ is waiting for more information and/or feedback
+from a third party.
+
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"9","NULL","$#EMERGENCY#$Ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) is deferred until $#STATUS_VALID_UNTIL#$"
+"10","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) for $#HOST_NAME#$ is deferred until $#STATUS_VALID_UNTIL#$","This is an automatically generated email to inform you that
+ticket $#TICKET_ID#$ is deferred until $#STATUS_VALID_UNTIL#$.
+
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"11","NULL","$#EMERGENCY#$Ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) was resolved at $#EVENT_DATE#$"
+"12","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) is resolved","This is an automatically generated email to inform you that
+ticket $#TICKET_ID#$ was resolved at $#EVENT_DATE#$.
+
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+
+To view the complete ticket in the Open Systems Customer Portal, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"13","NULL","Ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) was merged at $#EVENT_DATE#$"
+"14","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) is merged","This is an automatically generated email to inform you that
+ticket $#TICKET_ID#$ was merged with another ticket.
+
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal,
+click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"15","NULL","$#EMERGENCY#$Ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) is waiting for sign-off"
+"16","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) is waiting for sign-off","This is an automatically generated email to inform you that
+ticket $#TICKET_ID#$ requires sign-off. The ticket will not
+proceed until the request in the ticket is approved by a
+listed sign-off contact.
+
+Subject: $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:    $#HOST_NAME#$
+Date:    $#EVENT_DATE#$
+Details: $#PUBLIC_DETAILS_FIRST_LINE#$
+
+To view the complete ticket in the Open Systems Customer Portal,
+click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"17","NULL","New reports are available for download. Check ticket $#TICKET_ID#$ for details."
+"18","New reports are available for download","This is an automatically generated email to inform you
+that new reports were generated and are available
+for download at
+
+https://control.open.ch/mc/companies/$#COMPANY_ID#$/reports
+
+To view the complete ticket in the Open Systems Customer Portal,
+click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"19","NULL","$#EMERGENCY#$In ticket $#TICKET_ID#$ ($#TICKET_SUBJECT#$) a question needs to be answered. $#EVENT_DATE#$"
+"20","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) requires feedback","Ticket $#TICKET_ID#$ requires more information and/or feedback:
+
+$#QUESTION#$
+
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To update this ticket, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"21","Open Systems $#TICKET_TYPE#$: $#EVENT_TYPE_NAME#$ on $#HOST_NAME#$","Ticket $#TICKET_ID#$ was rated by the customer:
+
+$#PUBLIC_DETAILS#$
+
+To update this ticket, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"22","Open Systems $#TICKET_TYPE#$: $#EVENT_TYPE_NAME#$ on $#HOST_NAME#$","Ticket $#TICKET_ID#$ was rated by an engineer:
+
+$#PRIVATE_DETAILS#$
+
+To update this ticket, click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"23","$#EMERGENCY#$non-MCC Ticket ($#TICKET_SUBJECT#$) got hot","This is an automatically generated email to inform you that the following
+event has occurred:
+
+Ticket:   $#TICKET_ID#$
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal,
+click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"
+"26","NULL","The state of a change request from Ticket $#TICKET_ID#$: $#TICKET_SUBJECT#$ has changed."
+"27","$#EMERGENCY#$Ticket ($#TICKET_SUBJECT#$) change request state has changed","This is an automatically generated email to inform you
+that the state of change request has changed.
+This is only a informational message, no action required.
+
+Ticket:   $#TICKET_ID#$
+Subject:  $#EMERGENCY#$$#TICKET_SUBJECT#$
+Host:     $#HOST_NAME#$
+Date:     $#EVENT_DATE#$
+
+To view the complete ticket in the Open Systems Customer Portal,
+click here:
+https://control.open.ch/mc/ticket/$#TICKET_ID#$"

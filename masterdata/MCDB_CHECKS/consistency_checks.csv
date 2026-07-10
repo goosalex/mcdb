@@ -1,0 +1,362 @@
+"ID","CHECK_KEY","CHECK_GROUP","STATEMENT","MESSAGE","PLOGLEVEL","SLOGLEVEL"
+"0","TEST_Ticket_generation","test","SELECT 'foo' FROM DUAL","Test Ticket. Please inform a DBA on #dba-consulting that a Ticket was generated and then close it. Thank  you.","4","WARNING"
+"1","SEL_um_admin_no_monitor","default","select login_id, service_id from AUTH.MV_SERVICE_ACCESS where role_id = 2
+           MINUS
+           select login_id, service_id from AUTH.MV_SERVICE_ACCESS where role_id = 1","Found service admin access with no monitor access","6","INFO"
+"2","SEL_mdr_entity_type_data","default","select ID from NIDS.NIDS_ENTITY where
+          (NIDS_ENTITY_TYPE_ID = 1 and (MEMBER_ENTITY_GROUP_ID IS NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 2 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 3 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 4 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 5 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 6 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NULL OR USER_ID IS NOT NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 7 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NULL OR FILE_ID IS NOT NULL)
+        OR NIDS_ENTITY_TYPE_ID = 8 and (MEMBER_ENTITY_GROUP_ID IS NOT NULL OR IP_ADDRESS_ID IS NOT NULL OR NETWORK_ID IS NOT NULL OR IPV6_ADDRESS_ID IS NOT NULL OR IPV6_PREFIX_ID IS NOT NULL OR DEVICE_ID IS NOT NULL OR USER_ID IS NOT NULL OR FILE_ID IS NULL))","There are MDR/NDR entities with inconsistent data","6","INFO"
+"3","SEL_mdr_entity_ipv6_address_company_not_in_shared","default","SELECT id AS entity_id, address_1, address_2, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_ipv6_address ip WHERE ip.company_id IS NOT NULL AND ip.id IN (SELECT e.ipv6_address_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR/NDR IPV6 address in company scope is used incorrectly in a shared scope","6","INFO"
+"4","SEL_mss_iiface_external","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati INNER JOIN MSS.INTERFACE i ON nati.IIFACE_ID = i.ID WHERE i.EXTERNAL = 1","There are incoming source NAT interfaces that are external interfaces.","6","INFO"
+"5","SEL_isp_link_customer","default","SELECT il.id isp_link_id, h.name hostname, il.mc_customer_id mc_customer_id, h.service_company_id host_company_id
+            FROM mss.host h, mss.isp_link il, mss.interface2isp_link i2i, mss.interface i
+           WHERE i.id = i2i.interface_id AND i.host_id = h.id AND il.id = i2i.isp_link_id AND h.service_company_id <> il.mc_customer_id","There are host that are attached to an ISP, which is not assigned to the host's company","6","INFO"
+"6","SEL_unique_ip_per_host","default","SELECT h.name host, i1.name interface_1, mss.osag_ip.num2ip(i1.ip_address) ip1, i2.name interface_2, mss.osag_ip.num2ip(i2.ip_address) ip2
+                                              FROM mss.host h INNER JOIN mss.interface i1 ON h.ID = i1.HOST_ID INNER JOIN mss.interface i2 ON h.ID = i2.HOST_ID AND i1.ip_address = i2.ip_address
+                                              WHERE i1.id > i2.id AND i1.ip_address > 0
+                                                AND i2.name NOT LIKE 'reth\%' AND i1.name NOT LIKE 'reth\%'
+                                                AND h.id not in (22429, 22430, 25928, 25929)
+                                                and not exists (select 1 from mss.decomm_host dh where dh.host_id = h.id and dh.status_id not in (2,4))
+                                              ","There are hosts with duplicate IP addresses.","6","INFO"
+"7","SEL_unique_app_name_8","default","
+    SELECT A1.ID, A1.NAME
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 1 AND A1.COMPANY_ID IS NOT NULL AND A1.PROCERA_COMPATIBLE = 0
+  ","There are company-specific QuickID apps that are NON-`Procera Compatible`!","6","INFO"
+"8","SEL_hardware_assignment","default","SELECT	hw.id hardwareId, hwt.name hardwareType, h1.id hostId1, h1.name hostName1, h2.id hostId2, h2.name hostName2
+              FROM mss.hardware hw, mss.hardware_type hwt, mss.host h1, mss.host h2
+            WHERE h1.id < h2.id AND h1.hardware_id = hw.id AND h2.hardware_id = hw.id
+                AND hw.hardware_type_id = hwt.id
+            ORDER BY hwt.name,h1.name,h2.name","There is hardware that is assigned to more than one host.","6","INFO"
+"9","SEL_mdr_entity_ipv6_prefix_company_not_in_shared","default","SELECT id AS entity_id, address_1, address_2, mask, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_ipv6_prefix prefix WHERE prefix.company_id IS NOT NULL AND prefix.id IN (SELECT e.ipv6_prefix_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR/NDR IPV6 prefix in company scope is used incorrectly in a shared scope","6","INFO"
+"10","SEL_quarantine_zone_use","default","select distinct p.name from fw.section s, fw.policy p where s.policy_id = p.id and (dst_zone_id = 9 or src_zone_id = 9)","There are FW policies that use the Quarantine zone. This is not supported yet.","6","INFO"
+"11","SEL_foreign_networks","default","SELECT	h.name hostName, h.id hostId,	i.name interfaceName, i.id interfaceId, OSAG_IP.num2ip(i.ip_address) interfaceAddress,
+            n.name networkName, n.id networkId, OSAG_IP.num2ip(n.ip_address) networkAddress, n.netmask networkNetmask,
+            hc.name hostCompany, hc.id hostCompanyId,	nc.name networkCompany, nc.id networkCompanyId
+           FROM mss.interface i, mss.host h, mss.network n, stop.company hc, stop.company nc
+           WHERE i.host_id = h.id AND i.network_id = n.id AND h.service_company_id != n.scope_company_id
+                 AND n.scope_company_id = nc.id AND hc.id = h.service_company_id","There are interfaces assigned to networks that belong to a different company.","6","INFO"
+"12","SEL_perm_company_unit_scope","default","SELECT p.id permissionId, p.login_id loginId, p.company_unit_id companyUnitId, cu.company_id companyUnitCompanyId,
+                  l.company_id loginCompanyId
+           FROM auth.permission p, auth.login l, stop.company_unit cu
+           WHERE p.login_id = l.id AND cu.id = p.company_unit_id AND l.company_id <> cu.company_id","There are logins that have permissions for company units beloning not to their company.","6","INFO"
+"13","SEL_unique_app_name_1","default","select a.id, a.name, b.id
+from appid.app a, appid.app b
+where a.id < b.id
+and upper(a.name) = upper(b.name)
+and a.PROCERA_COMPATIBLE = 1
+and b.PROCERA_COMPATIBLE = 1
+and (a.TYPE_ID = 2 or b.TYPE_ID = 2)
+and a.TYPE_ID != 3 and b.TYPE_ID != 3","There are duplicate names for Procera apps!","6","INFO"
+"14","SEL_perm_scopes","default","SELECT p.id permissionId, p.login_id loginId, p.role_id roleId
+           FROM auth.permission p
+           WHERE (p.company_id IS NULL AND p.company_unit_id IS NULL AND p.service_id IS NULL AND p.user_unit_id IS NULL) OR
+                 (p.company_id IS NOT NULL AND p.company_unit_id IS NOT NULL) OR
+                 (p.company_id IS NOT NULL AND p.service_id IS NOT NULL) OR
+                 (p.company_unit_id IS NOT NULL AND p.service_id IS NOT NULL) OR
+                 (p.user_unit_id IS NOT NULL AND p.company_id IS NOT NULL) OR
+                 (p.user_unit_id IS NOT NULL AND p.company_unit_id IS NOT NULL) OR
+                 (p.user_unit_id IS NOT NULL AND p.service_id IS NOT NULL)","There are permission entries with none or more than one scope set!","6","INFO"
+"15","SEL_um_alien_user_unit","default","SELECT l.id AS login_id, l.contact_id, l.company_id AS login_company_id, c1.name AS login_company, c.id AS contact_id, c.email, l.login, u.id AS user_unit_id, u.company_id AS user_unit_company_id, c2.name AS user_unit_company
+            FROM auth.passport_login l, stop.contact c, auth.user_unit u, stop.company c1, stop.company c2
+            WHERE u.id = l.user_unit_id AND c.id = l.contact_id AND c1.id = l.company_id AND c2.id = u.company_id AND l.company_id <> u.company_id
+            ORDER BY login_company_id","There are logins that have a user unit from a different company (DB-632)","6","INFO"
+"16","SEL_mdr_entity_device_company_not_in_shared","default","SELECT id AS entity_id, device, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_device device WHERE device.company_id IS NOT NULL AND device.id IN (SELECT e.device_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR device in company scope is used incorrectly in a shared scope","6","INFO"
+"17","SEL_mdr_signature_group_name","default","select g1.company_id, g1.ID, g1.name, g2.company_id, g2.id, g2.name from NIDS.MDR_SIGNATURE_GROUP g1, NIDS.MDR_SIGNATURE_GROUP g2 where g1.ID != g2.ID AND ((g1.company_id = g2.company_id) OR (g1.company_id IS null AND g2.company_id IS NOT null)) AND g1.name = g2.name","There are MDR/NDR signature groups with duplicate names","6","INFO"
+"18","SEL_unique_app_name_2","default","
+    SELECT A1.ID, A1.NAME
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 2 AND A1.PROCERA_COMPATIBLE = 0
+  ","There are NON-`Procera Compatible` Procera apps!","6","INFO"
+"19","SEL_mdr_entity_net_name","default","select n1.scope_company_id, n1.ID, n1.NAME, n2.scope_company_id, n2.ID, n2.NAME from NIDS.NIDS_IP_NETWORK n1, NIDS.NIDS_IP_NETWORK n2 where n1.ID < n2.ID AND ((n1.scope_company_id = n2.scope_company_id) OR (n1.scope_company_id IS null AND n2.scope_company_id IS NOT null)) AND n1.NAME = n2.NAME","There are MDR/NDR networks with duplicate names","6","INFO"
+"20","SEL_unref_automatic_ip_group","default","SELECT ig.id FROM FW.IP_GROUP ig WHERE
+  ig.automatic = 1 AND
+  NOT EXISTS (SELECT 1 FROM FW.IP_GROUP_MEMBER WHERE IP_GROUP_ID = ig.id or MEMBER_IP_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM FW.RULE WHERE SRC_IP_GROUP_ID = ig.id or DST_IP_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM FW.DESTINATION_NAT_RULE WHERE ORIG_SRC_GROUP_ID = ig.id or ORIG_DST_GROUP_ID = ig.id or TRANS_DST_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM FW.SOURCE_NAT_RULE WHERE ORIG_SRC_GROUP_ID = ig.id or ORIG_DST_GROUP_ID = ig.id or TRANS_SRC_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM FW.SCOPED_IP_GROUP_SCOPE WHERE IP_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM MSS.INTERFACE WHERE ANTI_SPOOFING_IP_GROUP_ID = ig.id) AND
+  NOT EXISTS (SELECT 1 FROM NIDS.POLICY_RULE WHERE SRC_AUTOMATIC_IP_GROUP_ID = ig.id or DST_AUTOMATIC_IP_GROUP_ID = ig.id)","There are automatic IP groups that are not referenced!.","6","INFO"
+"21","SEL_addr_no_comp","default","SELECT a.id addressId FROM mss.address a WHERE a.company_id IS NULL","There exist addresses in the database that are not associated to a company","6","INFO"
+"22","SEL_unique_app_name_3","default","
+    SELECT A1.ID, A1.NAME
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 2 AND A1.COMPANY_ID IS NOT NULL
+  ","There are company specific Procera apps!","6","INFO"
+"23","SEL_ks_enf_scopes","default","SELECT enf.id
+            FROM NIDS.ks_enforcement enf
+            WHERE enf.id NOT IN
+            (SELECT scope.ks_enforcement_id
+            FROM NIDS.ks_enforcement_scope scope)","There are kill switch enforcement entries with no scope set!","6","INFO"
+"25","SEL_orphaned_automatic_apps","default","
+    SELECT A1.ID
+    FROM APPID.APP A1
+    WHERE A1.AUTOMATIC = 1 AND A1.NAME != 'Optimization Mgmt' AND NOT EXISTS (
+      SELECT *
+      FROM APPID.APP_OPTIMIZATION_SETTING A2
+      WHERE A2.OPTIMIZED_APP_ID = A1.ID
+    )
+  ","There are automatic apps which have no configuration to a non-automatic app!","6","INFO"
+"26","SEL_guma_sig_limit","default","SELECT (SELECT short_name FROM guma2.signature si WHERE si.id = sm.signature_id) signature,
+                  COUNT(signature_id) signature_count
+            FROM guma2.syslog_message sm GROUP BY sm.signature_id HAVING COUNT(signature_id) > 1000000","There exist GUMA signatures in the database that have more than 1 million messages associated with them","6","INFO"
+"27","SEL_unique_app_name_7","default","
+    SELECT A1.ID, A1.NAME, A1.COMPANY_ID
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 1 AND A1.COMPANY_ID IS NOT NULL AND A1.PROCERA_COMPATIBLE = 1 AND EXISTS (
+      SELECT *
+      FROM APPID.APP A2
+      WHERE upper(A1.NAME) = upper(A2.NAME) AND A1.ID != A2.ID AND (A2.COMPANY_ID = NULL OR A2.COMPANY_ID = A1.COMPANY_ID)
+    )
+  ","There are duplicate names for company-specific and procera-compatible QuickID apps!","6","INFO"
+"28","SEL_um_auditor_no_monitor","default","select login_id, service_id from AUTH.MV_SERVICE_ACCESS where role_id = 15
+           MINUS
+           select login_id, service_id from AUTH.MV_SERVICE_ACCESS where role_id = 1","Found service auditor access with no monitor access","6","INFO"
+"29","SEL_interface_network","default","SELECT h.name hostName, h.id hostId, i.name interfaceName, i.id interfaceId, OSAG_IP.num2ip(i.ip_address) interfaceAddress,
+                  n.name networkName, n.id networkId, OSAG_IP.num2ip(n.ip_address) networkAddress, n.netmask networkNetmask
+           FROM mss.interface i, mss.host h, mss.network n
+           WHERE i.host_id = h.id AND i.network_id = n.id AND i.id in
+            (SELECT i.id
+             FROM mss.interface i, mss.network n
+              WHERE i.network_id = n.id AND OSAG_IP.getnet(i.ip_address,n.netmask) != OSAG_IP.getnet(n.ip_address,n.netmask)
+            )","There are interfaces that have an address outside the range of their assigned network.","6","INFO"
+"30","SEL_unique_app_name_6","default","
+    SELECT A1.ID, A1.NAME
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 1 AND A1.COMPANY_ID = NULL AND A1.PROCERA_COMPATIBLE = 0 AND EXISTS (
+      SELECT *
+      FROM APPID.APP A2
+      WHERE upper(A1.NAME) = upper(A2.NAME) AND A1.ID != A2.ID AND A2.TYPE_ID = 1
+    )
+  ","There are duplicate names for shared and NON procera-compatible QuickID apps!","6","INFO"
+"31","SEL_login_contact_company","default","SELECT l.id loginId, l.company_id loginCompanyId, c.company_id contactCompanyId
+           FROM stop.contact c, auth.login l
+           WHERE l.contact_id = c.id AND l.company_id <> c.company_id","There are logins that have a different company_id than their contact record.","6","INFO"
+"32","SEL_mss_natiface_not_same_host","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati
+           INNER JOIN MSS.INTERFACE ii ON nati.IIFACE_ID = ii.ID
+           INNER JOIN MSS.INTERFACE oi ON nati.OIFACE_ID = oi.ID
+           WHERE ii.HOST_ID != oi.HOST_ID","There are NAT interfaces where the incoming interface is on a different host than the outgoing interface.","6","INFO"
+"33","SEL_mdr_signature_company_not_in_shared","default","SELECT id AS entity_id, sentinel_id, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.mdr_signature s WHERE s.company_id IS NOT NULL AND s.id IN (SELECT m.mdr_signature_id FROM nids.mdr_signature_group_member m JOIN nids.mdr_signature_group g ON g.id = m.mdr_signature_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR signature in company scope is used incorrectly in a shared scope","6","INFO"
+"35","SEL_comp_no_def_unit","default","SELECT c.id companyId, c.short companyShort FROM stop.company c, stop.comp_comptype_ref ctc
+           WHERE c.id = ctc.company_id AND ctc.comptype_id = 1 AND c.default_company_unit_id IS NULL","There exist customer companies in the database that have no default company unit","6","INFO"
+"36","SEL_nsm_duplicate_ip_group","default","SELECT
+                g1.id, g1.name, g1.company_id, g2.id, g2.name, g2.company_id
+            FROM
+                nids.nids_entity_group g1, nids.nids_entity_group g2
+            WHERE
+                g1.name = g2.name AND g1.company_id = g2.company_id AND g1.id != g2.id","There are duplicate NSM ip groups.","6","INFO"
+"37","SEL_um_orphan_auto_profile","default","SELECT l.login as login, l.id as login_id, p.id as profile_id
+FROM auth.profile p, auth.login l, auth.login2profile l2p
+WHERE l.id = l2p.LOGIN_ID and p.id = l2p.profile_id and p.is_automatic = 1 AND p.id NOT IN ( SELECT profile_id FROM auth.user_permission)
+order by l.id, p.id","There are automatic permission profiles with no permissions. They should be auto-removed","6","INFO"
+"38","SEL_bad_shared_ip_groups","default","select g.id as IP_GROUP_ID from fw.ip_group_member m, fw.ip_group g
+          where g.id = m.ip_Group_id and g.company_id is null
+          and (
+            exists (select 1 from mss.network n where n.id = m.network_id and n.scope_company_id is not null)
+          or
+            exists (select 1 from fw.ip_address i where i.id = m.ip_address_id and i.company_id is not null)
+          or
+            exists (select 1 from fw.ip_group g2 where g2.id = m.member_ip_group_id and g2.company_id is not null)
+          or
+            exists (select 1 from mss.host h where h.id = m.host_id)
+          or
+            exists (select 1 from mss.interface i where i.id = m.interface_id)
+          )","There are shared IP groups with non-shared members!.","6","INFO"
+"39","SEL_cluster_iface_ip_clash","default","SELECT h1.name AS host1, i1.name AS if1, OSAG_ip.num2ip(i1.ip_address) AS ip1,
+             h2.name AS host2, i2.name AS if2, OSAG_ip.num2ip(i2.ip_address) AS ip2
+           FROM mss.host h1, mss.interface i1, mss.host h2, mss.interface i2, mss.host2service h2s1, mss.host2service h2s2
+            WHERE i1.host_id = h1.id  AND i2.host_id = h2.id
+            AND h2s1.host_id = h1.id and h2s2.host_id = h2.id
+            AND h2s1.service_id = h2s2.service_id
+            AND h1.id < h2.id  AND i1.network_id = i2.network_id
+            AND i1.IS_CLUSTER_MANAGED = 1 AND i2.IS_CLUSTER_MANAGED = 1
+            AND i1.name = i2.name
+            AND i1.ip_address != i2.ip_address","There are cluster managed interface pairs in the same network but differing ip addresses","6","INFO"
+"40","SEL_perm_userunit_scope","default","SELECT p.id permissionId, p.login_id loginId, p.user_unit_id userUnitId, u.company_id userUnitCompanyId,
+                  l.company_id loginCompanyId
+           FROM auth.permission p, auth.login l, auth.user_unit u
+           WHERE p.login_id = l.id AND p.user_unit_id = u.id AND l.company_id <> u.company_id","There are logins that have permissions for user units belonging not to their company","6","INFO"
+"41","SEL_unique_app_name_5","default","
+    SELECT A1.ID, A1.NAME
+    FROM APPID.APP A1
+    WHERE A1.TYPE_ID = 1 AND A1.COMPANY_ID = NULL AND A1.PROCERA_COMPATIBLE = 1 AND EXISTS (
+      SELECT *
+      FROM APPID.APP A2
+      WHERE upper(A1.NAME) = upper(A2.NAME) AND A1.ID != A2.ID
+    )
+  ","There are duplicate names for shared and procera-compatible QuickID apps!","6","INFO"
+"42","SEL_cvpn_authsys_mismatch","default","select l.id as login from auth.passport_login l, auth.passport_login2tunnelgroup l2t, auth.tunnelgroup t, auth.authsys a, auth.authhost2authsys h2a
+where l.homeauthhost_id = h2a.authhost_id and h2a.authsys_id = a.id and l.id = l2t.login_id and l2t.tunnelgroup_id = t.id and t.authsys_id != a.id","There are logins where the home authsys and tunnelgroup authsys do not match","6","INFO"
+"43","SEL_mdr_entity_device_name","default","select d1.company_id, d1.ID, d1.NAME, d2.company_id, d2.ID, d2.NAME from NIDS.NIDS_DEVICE d1, NIDS.NIDS_DEVICE d2 where d1.ID < d2.ID AND ((d1.company_id = d2.company_id) OR (d1.company_id IS null AND d2.company_id IS NOT null)) AND d1.NAME = d2.NAME","There are MDR/NDR devices with duplicate names","6","INFO"
+"44","SEL_mss_oiface_not_alias","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati INNER JOIN MSS.INTERFACE i ON nati.OIFACE_ID = i.ID WHERE i.NAME NOT LIKE '%:%'","There are outgoing source NAT interfaces that are not alias interfaces.","6","INFO"
+"45","SEL_mss_oiface_not_external","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati INNER JOIN MSS.INTERFACE i ON nati.OIFACE_ID = i.ID WHERE i.EXTERNAL = 0","There are outgoing source NAT interfaces that are not external interfaces.","6","INFO"
+"46","SEL_mss_oiface_not_hiding","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati INNER JOIN MSS.INTERFACE i ON nati.OIFACE_ID = i.ID WHERE i.HIDING_NAT = 0","There are outgoing source NAT interfaces with no hiding NAT configured.","6","INFO"
+"47","SEL_mdr_entity_group_name","default","select g1.company_id, g1.ID, g1.NAME, g2.company_id, g2.ID, g2.NAME from NIDS.NIDS_ENTITY_GROUP g1, NIDS.NIDS_ENTITY_GROUP g2 where g1.ID != g2.ID AND ((g1.company_id = g2.company_id) OR (g1.company_id IS null AND g2.company_id IS NOT null)) AND g1.NAME = g2.NAME","There are MDR/NDR groups with duplicate names","6","INFO"
+"48","SEL_dup_cust-radius","default","SELECT cmp.SHORT, cmp.NAME, c.SHORT as user_short, l.id as login_id, c.FIRSTNAME, c.LASTNAME, l.LOGIN, r.NAME as role_name,
+a.COMPANY_ID, b.COMPANY_ID,
+a.COMPANY_UNIT_ID, b.COMPANY_UNIT_ID,
+a.USER_UNIT_ID, b.USER_UNIT_ID,
+a.SERVICE_ID, b.SERVICE_ID
+FROM AUTH.PERMISSION a, AUTH.PERMISSION b, AUTH.LOGIN l, STOP.CONTACT c, STOP.COMPANY cmp, AUTH.ROLE r
+WHERE a.LOGIN_ID = b.LOGIN_ID AND a.ID < b.ID
+  AND a.ROLE_ID = 3 AND b.ROLE_ID = 3
+  AND a.LOGIN_ID != 50 AND a.LOGIN_ID != 40
+  AND a.LOGIN_ID = l.id
+  AND l.CONTACT_ID = c.id
+  AND a.ROLE_ID = r.id
+  AND c.COMPANY_ID = cmp.id","There are duplicate cust-radius roles around (MC-4810)","6","INFO"
+"49","SEL_nsm_on_mail","default","SELECT h.id hostId,h.name hostName
+           FROM mss.host h, mss.host2service h2s, mss.service s, mss.service_type t
+           WHERE h2s.host_id = h.id AND h2s.service_id = s.id AND s.service_type_id = t.id AND t.internal_code = 'mail'
+             AND OSAG_DBPROP.get_number_by_host(h.id,'snort') = 1
+           ORDER BY h.name","There are mail hosts that have NSM enabled.","6","INFO"
+"50","SEL_mdr_entity_ip6_name","default","select a1.company_id, a1.ID, a1.NAME, a2.company_id, a2.ID, a2.NAME from NIDS.NIDS_IPV6_ADDRESS a1, NIDS.NIDS_IPV6_ADDRESS a2 where a1.ID < a2.ID AND ((a1.company_id = a2.company_id) OR (a1.company_id IS null AND a2.company_id IS NOT null)) AND a1.NAME = a2.NAME","There are MDR/NDR ipv6 ips with duplicate names","6","INFO"
+"51","SEL_perm_company_scope","default","SELECT p.id permissionId, p.login_id loginId, p.company_id permCompanyId, l.company_id loginCompanyId
+           FROM auth.permission p, auth.login l
+           WHERE (p.company_id != l.company_id AND l.id = p.login_id AND p.login_id NOT IN (40,50))","There are logins that have permissions for a foreign company!","6","INFO"
+"52","SEL_mss_iiface_alias","default","SELECT * FROM MSS.NAT_IIFACE_2_OIFACE nati INNER JOIN MSS.INTERFACE i ON nati.IIFACE_ID = i.ID WHERE i.NAME LIKE '%:%'","There are incoming source NAT interfaces that are alias interfaces.","6","INFO"
+"53","SEL_wrong_nexthop","default","select h.id, h.name, OSAG_IP.num2ip(tn.IP_ADDRESS) target_net, tn.NETMASK, OSAG_IP.num2ip(nh.IP_ADDRESS) gw, OSAG_IP.num2ip(gwn.IP_ADDRESS) gw_net, gwn.NETMASK
+from mss.STATIC_ROUTE sr, mss.HOST h, mss.INTERFACE nh, mss.NETWORK tn, mss.NETWORK gwn
+where sr.ROUTE_OWNER_HOST_ID = h.id
+  and sr.NEXTHOP_INTERFACE_ID = nh.id
+  and sr.NETWORK_ID = tn.id
+  and nh.NETWORK_ID = gwn.id
+  and not exists (
+        select 1
+        from mss.INTERFACE i
+        where i.HOST_ID = sr.ROUTE_OWNER_HOST_ID
+          and i.NETWORK_ID = nh.NETWORK_ID
+    )
+  and not exists (select 1 from mss.decomm_host dh where dh.host_id = h.id and dh.status_id not in (2,4))","There are routes that have next hop outside their network.","6","INFO"
+"54","SEL_mdr_entity_net6_name","default","select n1.company_id, n1.ID, n1.NAME, n2.company_id, n2.ID, n2.NAME from NIDS.NIDS_IPV6_PREFIX n1, NIDS.NIDS_IPV6_PREFIX n2 where n1.ID < n2.ID AND ((n1.company_id = n2.company_id) OR (n1.company_id IS null AND n2.company_id IS NOT null)) AND n1.NAME = n2.NAME","There are MDR/NDR ipv6 netowrks with duplicate names","6","INFO"
+"55","SEL_tt_orphan_tickets","default","SELECT t.id FROM tt.ticket t WHERE t.WORKER_ID is not NULL AND t.STATUS_ID in (1, 2, 3, 4, 11, 60, 61) AND NOT EXISTS
+  (SELECT 1 FROM auth.login l WHERE l.CONTACT_ID = t.WORKER_ID)","Found orphan tickets that should go back to MC","6","INFO"
+"56","SEL_nsm_duplicate_sig_group","default","SELECT
+                s1.id, s1.name, s1.company_id, s2.id, s2.name, s2.company_id
+            FROM
+                nids.signature_group s1, nids.signature_group s2
+            WHERE
+                s1.name = s2.name AND s1.company_id = s2.company_id AND s1.id != s2.id","There are duplicate NSM signature groups.","6","INFO"
+"57","SEL_mdr_entity_file_company_not_in_shared","default","SELECT id AS entity_id, nf.nids_file, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_file nf WHERE nf.company_id IS NOT NULL AND nf.id IN (SELECT e.file_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR file in company scope is used incorrectly in a shared scope","6","INFO"
+"58","SEL_perm_service_scope","default","SELECT p.id permissionId, p.login_id loginId, p.service_id serviceId, s.company_id serviceCompanyId,
+                  l.company_id loginCompanyId
+           FROM auth.permission p, auth.login l, mss.service s
+           WHERE p.login_id = l.id AND p.service_id = s.id AND l.company_id <> s.company_id","There are logins that have permissions for services belonging not to their company.","6","INFO"
+"59","SEL_mdr_entity_file_name","default","select d1.company_id, d1.ID, d1.NAME, d2.company_id, d2.ID, d2.NAME from NIDS.NIDS_FILE d1, NIDS.NIDS_FILE d2 where d1.ID < d2.ID AND ((d1.company_id = d2.company_id) OR (d1.company_id IS null AND d2.company_id IS NOT null)) AND d1.NAME = d2.NAME","There are MDR/NDR files with duplicate names","6","INFO"
+"60","SEL_mdr_filter_rule_name","default","select r1.company_id, r1.ID, r1.name, r2.company_id, r2.id, r2.name from NIDS.MDR_FILTER_RULE r1, NIDS.MDR_FILTER_RULE r2 where r1.ID != r2.ID AND ((r1.company_id = r2.company_id) OR (r1.company_id IS null AND r2.company_id IS NOT null)) AND r1.name = r2.name","There are MDR/NDR filter rules with duplicate names","6","INFO"
+"61","SEL_mdr_entity_user_name","default","select u1.company_id, u1.ID, u1.NAME, u2.company_id, u2.ID, u2.NAME from NIDS.NIDS_USER u1, NIDS.NIDS_USER u2 where u1.ID < u2.ID AND ((u1.company_id = u2.company_id) OR (u1.company_id IS null AND u2.company_id IS NOT null)) AND u1.NAME = u2.NAME","There are MDR/NDR users with duplicate names","6","INFO"
+"62","SEL_mdr_entity_user_company_not_in_shared","default","SELECT id AS entity_id, user_name, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_user u WHERE u.company_id IS NOT NULL AND u.id IN (SELECT e.user_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR user in company scope is used incorrectly in a shared scope","6","INFO"
+"63","SEL_perm_orphan","default","SELECT p.ID AS permission_id, ur.name, l.login, l.EMAIL
+                                   FROM AUTH.USER_PERMISSION p
+                                            LEFT JOIN AUTH.USER_COMPANY_SCOPE cs ON p.id = cs.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_COMPANY_UNIT_SCOPE cus ON p.id = cus.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_SERVICE_TYPE_SCOPE sts ON p.id = sts.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_SERVICE_SCOPE ss ON p.id = ss.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_UNIT_SCOPE uus ON p.id = uus.PERMISSION_ID
+                                            JOIN auth.user_role ur ON p.USER_ROLE_ID = ur.id
+                                            JOIN auth.login2profile l2p ON l2p.PROFILE_ID = p.PROFILE_ID
+                                            JOIN auth.PASSPORT_LOGIN l ON l2p.LOGIN_ID = l.id
+                                   WHERE p.USER_ROLE_ID >= 1000
+                                     AND cs.COMPANY_ID IS NULL
+                                     AND cus.COMPANY_UNIT_ID IS NULL
+                                     AND sts.SERVICE_TYPE_ID IS NULL
+                                     AND ss.SERVICE_ID IS NULL
+                                     AND uus.USER_UNIT_ID IS NULL
+                                   UNION ALL
+                                   SELECT p.ID AS permission_id, ur.name, l.login, ''
+                                   FROM AUTH.USER_PERMISSION p
+                                            LEFT JOIN AUTH.USER_COMPANY_SCOPE cs ON p.id = cs.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_COMPANY_UNIT_SCOPE cus ON p.id = cus.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_SERVICE_TYPE_SCOPE sts ON p.id = sts.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_SERVICE_SCOPE ss ON p.id = ss.PERMISSION_ID
+                                            LEFT JOIN AUTH.USER_UNIT_SCOPE uus ON p.id = uus.PERMISSION_ID
+                                            JOIN auth.user_role ur ON p.USER_ROLE_ID = ur.id
+                                            JOIN auth.login2profile l2p ON l2p.PROFILE_ID = p.PROFILE_ID
+                                            JOIN auth.LOGIN l ON l2p.LOGIN_ID = l.id
+                                   WHERE p.USER_ROLE_ID >= 1000
+                                     AND cs.COMPANY_ID IS NULL
+                                     AND cus.COMPANY_UNIT_ID IS NULL
+                                     AND sts.SERVICE_TYPE_ID IS NULL
+                                     AND ss.SERVICE_ID IS NULL
+                                     AND uus.USER_UNIT_ID IS NULL","There are cust-permissions with no scope","6","INFO"
+"64","SEL_mdr_entity_ipv4_address_company_not_in_shared","default","SELECT id entity_id, OSAG_IP.num2ip(ip_address) AS ip, name, company_id, (SELECT short FROM stop.company WHERE id = company_id) AS company_short FROM nids.nids_ip_address ip WHERE ip.company_id IS NOT NULL AND ip.id IN (SELECT e.ip_address_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR/NDR IPV4 address in company scope is used incorrectly in a shared scope","6","INFO"
+"65","SEL_mdr_entity_ipv4_network_company_not_in_shared","default","SELECT id AS entity_id, OSAG_IP.num2ip(ip_address) AS ip, netmask, scope_company_id as company_id, (SELECT short FROM stop.company WHERE id = scope_company_id) AS company_short FROM nids.nids_ip_network net WHERE net.scope_company_id IS NOT null AND net.id IN (SELECT e.network_id FROM nids.nids_entity e JOIN nids.nids_entity_group g ON g.id = e.entity_group_id WHERE g.company_id IS NULL) ORDER BY company_short","A MDR/NDR IPV4 network in company scope is used incorrectly in a shared scope","6","INFO"
+"66","SEL_mdr_entity_circl","default","select ID from NIDS.NIDS_ENTITY where ENTITY_GROUP_ID = MEMBER_ENTITY_GROUP_ID","There are MDR/NDR entities with circular references","6","INFO"
+"67","SEL_cvpn_dup_group_name","default","select a.company_id as company, a.id as authsys, t.name as tunnelgroup from auth.tunnelgroup t, auth.authsys a
+           where t.authsys_id = a.id and exists (
+             select null from auth.tunnelgroup t1, auth.authsys a1
+             where t1.authsys_id = a1.id and a1.company_id = a.company_id and t.name = t1.name and t.id != t1.id
+           ) order by t.name","Found CVPN groups with the same name","6","INFO"
+"68","SEL_mview_incon","critical","SELECT owner schemaName, mview_name mview, staleness staleness, compile_state compileState
+  			FROM dba_mviews
+  			WHERE (staleness in ('UNUSABLE', 'UNKNOWN') OR compile_state in ('NEEDS_COMPILE', 'ERROR') ) AND mview_name NOT LIKE '%_INT'","There are inconsistent materialized views in the database.","4","WARNING"
+"69","SEL_datafile_alert","critical","select tablespace_name, size_gb, max_gb,
+       (size_gb - free_gb) used_gb,
+       free_gb,
+       (max_gb - size_gb + free_gb) avail_gb,
+       round(100*(max_gb - size_gb + free_gb)/max_gb, 2) avail_pct
+from (
+       select f.tablespace_name,
+              sum(f.bytes/1024/1024/1024) size_gb,
+              sum(greatest(f.maxbytes, f.bytes)/1024/1024/1024) max_gb,
+              sum((select sum(s.bytes)/1024/1024/1024
+                   from dba_free_space s
+                   where s.tablespace_name = f.tablespace_name
+                     and s.file_id = f.file_id
+                   group by s.tablespace_name, s.file_id))  free_gb
+       from dba_data_files f
+where f.TABLESPACE_NAME not in ('UNDO', 'TEMP')
+       group by f.tablespace_name)
+where round(100*(max_gb - size_gb + free_gb)/max_gb, 2) < 2
+and free_gb < 2","There are tablespaces whose datafiles are almost out of space.","4","WARNING"
+"70","SEL_session_wait","critical","SELECT s.sid, s.serial#, s.username, s.terminal, s.program
+           FROM dba_waiters w, v$session s
+           WHERE s.sid = w.waiting_session AND seconds_in_wait > 10*60 AND wait_time = 0","There are sessions waiting in the database for more than 10 minutes.","4","WARNING"
+"71","SEL_invalid_objs","critical","SELECT object_type, owner, object_name
+FROM sys.dba_objects o
+WHERE o.status = 'INVALID'
+and o.OWNER not in ('DKA')","There are invalid objects in the database.","4","WARNING"
+"72","SEL_datafile_notify","default","select tablespace_name, size_gb, max_gb,
+       (size_gb - free_gb) used_gb,
+       free_gb,
+       (max_gb - size_gb + free_gb) avail_gb,
+       round(100*(max_gb - size_gb + free_gb)/max_gb, 2) avail_pct
+from (
+       select f.tablespace_name,
+              sum(f.bytes/1024/1024/1024) size_gb,
+              sum(greatest(f.maxbytes, f.bytes)/1024/1024/1024) max_gb,
+              sum((select sum(s.bytes)/1024/1024/1024
+                   from dba_free_space s
+                   where s.tablespace_name = f.tablespace_name
+                     and s.file_id = f.file_id
+                   group by s.tablespace_name, s.file_id))  free_gb
+       from dba_data_files f
+where f.TABLESPACE_NAME not in ('UNDO', 'TEMP')
+       group by f.tablespace_name)
+where round(100*(max_gb - size_gb + free_gb)/max_gb, 2) between 5 and 2
+and free_gb between 4 and 2","There are tablespaces whose datafiles soon won't be extendible.","4","WARNING"
+"74","SEL_failed_sched_jobs","critical","SELECT owner, job_name, enabled, state, failure_count FROM dba_scheduler_jobs WHERE state = 'BROKEN' or state = 'FAILED'","There are broken scheduler jobs in the database.","4","WARNING"
+"75","SEL_failed_apply_proc","critical","SELECT apply_name, status FROM DBA_APPLY WHERE status != 'ENABLED'","There are apply processes that are down in the database","4","WARNING"
+"76","SEL_invalid_idx","critical","select owner, index_name from DBA_INDEXES where status != 'VALID' and owner not in ('SYS', 'SYSTEM', 'AUDSYS')","There are unusable indexes in the database. They need to be rebuilt.","4","WARNING"
+"77","SEL_fra_full","critical","select 100-round(100*(SPACE_USED-SPACE_RECLAIMABLE)/SPACE_LIMIT, 2) pct_free from V$RECOVERY_FILE_DEST d where 100-round(100*(SPACE_USED-SPACE_RECLAIMABLE)/SPACE_LIMIT, 2) < 30","DB FRA is running out of space. Check DG and start DB Backup to free up space NOW or DB will stop soon!","4","WARNING"
+"78","SEL_cluster_interface","default","select distinct ha.NAME service, ia.NAME interface
+from mss.HOST2SERVICE ha2s, mss.HOST2SERVICE hb2s, mss.INTERFACE ia, mss.INTERFACE ib,
+     mss.HOST ha, mss.HOST hb
+where ha2s.SERVICE_ID = hb2s.SERVICE_ID
+and ha2s.HOST_ID < hb2s.HOST_ID
+and ha2s.HOST_ID = ia.HOST_ID
+and hb2s.HOST_ID = ib.HOST_ID
+and ia.HOST_ID = ha.ID
+and ib.HOST_ID = hb.ID
+and ha.ACTIVE = 1
+and hb.ACTIVE = 1
+and ia.NAME = ib.NAME
+and ia.IS_CLUSTER_MANAGED != ib.IS_CLUSTER_MANAGED
+order by ha.NAME, ia.NAME","There are interfaces with inconsistent cluster flag across nodes!","6","INFO"
