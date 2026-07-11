@@ -26,7 +26,8 @@
 
 - [ ] **XCUT-01**: Exception mapping table (Oracle error codes / -20NNN RAISE_APPLICATION_ERROR → PostgreSQL SQLSTATE convention) applied uniformly across all translations
 - [ ] **XCUT-02**: `plog` re-implemented the PostgreSQL-idiomatic way — a non-transactional **UDP log shipper** to the telemetry stack (syslog-shaped payload; plog's existing levels 0–7 already match). No Oracle AQ queue, no autonomous-transaction emulation, no dblink/pg_background: a fire-and-forget datagram survives rollback inherently. OTel is the eventual destination; adapters can be added later if needed
-- [ ] **XCUT-05**: The three *table-writing* autonomous-transaction sites — `mcdb_checks_consistency.insert_result`, `tt_util.close_old_dev_tickets`, and `plog.AuditUsage` (an `osag.plsql_audit` UPDATE, not logging, 174 call sites) — each get an explicit recorded decision: re-emit as a UDP telemetry event, accept transactional semantics, or (last resort) dblink
+- [ ] **XCUT-05**: The two remaining *table-writing* autonomous-transaction sites — `mcdb_checks_consistency.insert_result` and `tt_util.close_old_dev_tickets` — each get an explicit recorded decision: re-emit as a UDP telemetry event, accept transactional semantics, or (last resort) dblink
+- [ ] **XCUT-06**: `plog.AuditUsage` and its ~177 call sites are **dropped, not translated** — the feature is unused (nothing reads `osag.plsql_audit`; `plog` is its only writer), and its arguments are Oracle inquiry directives (`$$PLSQL_UNIT_OWNER`/`$$PLSQL_UNIT_TYPE`/`$$PLSQL_UNIT`) with no PostgreSQL equivalent. Delete the call sites during translation rather than stubbing them; drop `plsql_audit` from the migrated DDL (`ddl/migrated/tables/tables.pg.sql`)
 - [ ] **XCUT-03**: DBMS_*/UTL_* replacement reference table (orafce coverage vs native rewrite) decided once and applied consistently
 - [ ] **XCUT-04**: Transaction-semantics audit: every Oracle routine that COMMITs/ROLLBACKs identified and mapped to PG PROCEDURE (not FUNCTION) with call-chain implications documented
 
@@ -90,6 +91,7 @@ Deferred to a later milestone:
 | XCUT-03 | Phase 3 — Cross-cutting Semantics | Pending |
 | XCUT-04 | Phase 3 — Cross-cutting Semantics | Pending |
 | XCUT-05 | Phase 3 — Cross-cutting Semantics | Pending |
+| XCUT-06 | Phase 3 — Cross-cutting Semantics | Pending |
 | SPEC-01 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
 | TRAN-01 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
 | TRAN-02 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
@@ -103,7 +105,7 @@ Deferred to a later milestone:
 | CONT-02 | Phase 5 — Container Build & Client Migration Aids | Pending |
 | CLI-01 | Phase 5 — Container Build & Client Migration Aids | Pending |
 
-**Coverage:** 27/27 v1 requirements mapped to exactly one phase. No orphans, no duplicates.
+**Coverage:** 28/28 v1 requirements mapped to exactly one phase. No orphans, no duplicates.
 
 **Mapping notes:**
 - **SPEC-01** (behavioral spec per Oracle package) is assigned to Phase 4, where it completes across all 48 packages. Phase 2 produces pilot specs as instances of the format defined by SPEC-02/SPEC-03.

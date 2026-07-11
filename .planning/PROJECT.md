@@ -40,6 +40,7 @@ Every translated PostgreSQL object behaves like its Oracle original, proven by t
 - Materialized view logs (`ddl/src/mlog`, `ddl/src/mviews`) — Oracle-specific refresh machinery; deferred to a later milestone
 - Execution-based Oracle behavioral baseline — no live Oracle instance available now; specs come from static analysis. An Oracle 19c container is possible later to validate specs empirically
 - Applying the client-code regexps to actual Perl/Java codebases — we deliver the regexp list; client teams apply it
+- `plog.AuditUsage` / the `osag.plsql_audit` usage-audit feature — unused (write-only, no reader anywhere in the codebase); deleted during translation rather than ported
 
 ## Context
 
@@ -70,6 +71,7 @@ Every translated PostgreSQL object behaves like its Oracle original, proven by t
 | Jobs/queues/mviews deferred to later milestone | Need architectural replacements (pg_cron, LISTEN/NOTIFY), separable from core code translation | — Pending |
 | `plog` becomes a UDP log shipper — no autonomous-transaction emulation | Oracle's plog enqueues to an AQ queue inside an autonomous transaction purely so logs survive rollback. A fire-and-forget UDP datagram is non-transactional by construction, so rollback-survival is inherent, not emulated. Kills the project's highest-rated risk and removes dblink/pg_background from the logging path entirely. plog's levels are already syslog-shaped (0–7, EMERG…DEBUG), so the payload maps cleanly | — Pending |
 | Telemetry destination is OTel, via adapters if needed — deferred | The in-database emitter only needs to send datagrams; what consumes them is a separate concern that can evolve without touching 48 packages' logging calls | — Pending |
+| `plog.AuditUsage` deleted, not translated (~177 call sites + `plsql_audit` table) | The feature is unused: `plog` is the only writer of `osag.plsql_audit` and nothing reads it — the data is write-only. Its args are Oracle inquiry directives (`$$PLSQL_UNIT*`) with no PG equivalent, so porting means inventing a replacement for dead code. Deleted rather than stubbed, so nothing implies the audit still works | — Pending |
 
 ## Evolution
 
