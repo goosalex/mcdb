@@ -72,6 +72,37 @@ Deferred to a later milestone:
 
 <!-- Filled by roadmap creation: REQ-ID → Phase mapping -->
 
-| REQ-ID | Phase |
-|--------|-------|
-| (pending roadmap) | |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| INV-01 | Phase 1 — Inventory & Foundation | Pending |
+| INV-02 | Phase 1 — Inventory & Foundation | Pending |
+| INV-03 | Phase 1 — Inventory & Foundation | Pending |
+| SPEC-02 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| SPEC-03 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-01 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-02 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-03 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-04 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-05 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| XCUT-01 | Phase 3 — Cross-cutting Semantics | Pending |
+| XCUT-02 | Phase 3 — Cross-cutting Semantics | Pending |
+| XCUT-03 | Phase 3 — Cross-cutting Semantics | Pending |
+| XCUT-04 | Phase 3 — Cross-cutting Semantics | Pending |
+| SPEC-01 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-01 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-02 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-03 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-04 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-05 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| TRAN-06 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| VER-01 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| VER-02 | Phase 4 — Wave-Ordered Translation & Verification | Pending |
+| CONT-01 | Phase 5 — Container Build & Client Migration Aids | Pending |
+| CONT-02 | Phase 5 — Container Build & Client Migration Aids | Pending |
+| CLI-01 | Phase 5 — Container Build & Client Migration Aids | Pending |
+
+**Coverage:** 26/26 v1 requirements mapped to exactly one phase. No orphans, no duplicates.
+
+**Mapping notes:**
+- **SPEC-01** (behavioral spec per Oracle package) is assigned to Phase 4, where it completes across all 48 packages. Phase 2 produces pilot specs as instances of the format defined by SPEC-02/SPEC-03.
+- **TRAN-01** completes in Phase 4. Pilot translations in Phase 2 exist to prove the harness and spec method, not to claim translation coverage.
