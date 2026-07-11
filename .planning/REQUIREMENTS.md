@@ -4,7 +4,7 @@
 
 ### Inventory & Foundation
 
-- [ ] **INV-01**: Complete inventory of all programmatic objects in `ddl/src` (48 package specs, 49 bodies, 2 procs, 8 triggers, 2 types) with per-object metadata (public routines, DBMS_*/UTL_* call sites, COMMIT/ROLLBACK presence, autonomous-transaction pragmas, package-level mutable state)
+- [x] **INV-01**: Complete inventory of all programmatic objects in `ddl/src` (48 package specs, 49 bodies, 2 procs, 8 triggers, 2 types) with per-object metadata (public routines, DBMS_*/UTL_* call sites, COMMIT/ROLLBACK presence, autonomous-transaction pragmas, package-level mutable state)
 - [ ] **INV-02**: Static dependency graph of cross-package/object calls driving a topological translation order (leaf packages first, waves)
 - [ ] **INV-03**: Single name-mapping table (Oracle `SCHEMA.PACKAGE.OBJECT` → PG `package_in_name` object name) as the sole source of truth for SQL refactoring, test naming, and client regexps
 
@@ -76,7 +76,7 @@ Deferred to a later milestone:
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| INV-01 | Phase 1 — Inventory & Foundation | Pending |
+| INV-01 | Phase 1 — Inventory & Foundation | Complete |
 | INV-02 | Phase 1 — Inventory & Foundation | Pending |
 | INV-03 | Phase 1 — Inventory & Foundation | Pending |
 | SPEC-02 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
@@ -108,5 +108,6 @@ Deferred to a later milestone:
 **Coverage:** 28/28 v1 requirements mapped to exactly one phase. No orphans, no duplicates.
 
 **Mapping notes:**
+
 - **SPEC-01** (behavioral spec per Oracle package) is assigned to Phase 4, where it completes across all 48 packages. Phase 2 produces pilot specs as instances of the format defined by SPEC-02/SPEC-03.
 - **TRAN-01** completes in Phase 4. Pilot translations in Phase 2 exist to prove the harness and spec method, not to claim translation coverage.
