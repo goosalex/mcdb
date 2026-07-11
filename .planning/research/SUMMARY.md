@@ -11,7 +11,7 @@ This milestone translates 48 Oracle packages, 2 procedures, 8 triggers, and 2 ty
 
 The technology stack is largely determined: PostgreSQL 17.10 (already installed), pgTAP 1.3.4 + pg_prove for in-database testing, orafce 4.16.7 for Oracle built-in compatibility (allowed by project constraints), ora2pg 25.0 as a draft-generation tool (not a final translator), and Docker + Compose for reproducible environment management. The roadmap should be driven by a **dependency graph** computed during Stage 1 (leaf packages first, high-dependency hubs last) rather than file alphabetical or Liquibase include order, to surface implicit dependencies early and structure translation in independent waves.
 
-The top four risks are: (1) **Autonomous transactions** (3 packages use `PRAGMA AUTONOMOUS_TRANSACTION`; PostgreSQL has no direct equivalent—requires dblink/pg_background workarounds at high priority); (2) **Exception handling** (Oracle's numeric `-20NNN` codes don't map 1:1 to PostgreSQL SQLSTATE; requires an explicit, consistently-applied mapping table); (3) **SELECT INTO STRICT semantics** (Oracle raises `NO_DATA_FOUND` by default; PostgreSQL doesn't without explicit `STRICT`—must be decided per statement, not blanket-applied); (4) **Package-level session state** (Oracle packages are scoped to a session; PostgreSQL's `package_in_name` flattening loses this unless explicitly replaced with GUCs/temp tables—must be audited per package).
+The top four risks are: (1) **Autonomous transactions — substantially defused by project decision.** The original research called for emulating `PRAGMA AUTONOMOUS_TRANSACTION` via dblink/pg_background so `plog` writes survive rollback. **Rejected.** `plog` is re-implemented as a non-transactional **UDP log shipper** to the telemetry stack (OTel-bound; adapters later if needed) — rollback-survival is inherent to a fire-and-forget datagram, so no emulation, no queue, no dblink. What remains is a much smaller, separate problem: three *table-writing* autonomous sites (`mcdb_checks_consistency.insert_result`, `tt_util.close_old_dev_tickets`, and `plog.AuditUsage`, which despite its package is a table `UPDATE`, not logging) each need an explicit recorded decision, not a blanket workaround; (2) **Exception handling** (Oracle's numeric `-20NNN` codes don't map 1:1 to PostgreSQL SQLSTATE; requires an explicit, consistently-applied mapping table); (3) **SELECT INTO STRICT semantics** (Oracle raises `NO_DATA_FOUND` by default; PostgreSQL doesn't without explicit `STRICT`—must be decided per statement, not blanket-applied); (4) **Package-level session state** (Oracle packages are scoped to a session; PostgreSQL's `package_in_name` flattening loses this unless explicitly replaced with GUCs/temp tables—must be audited per package).
 
 ## Key Findings
 
@@ -40,7 +40,8 @@ This is a **migration milestone**; "features" are the work products and assuranc
 - Per-package behavioral spec (signatures, side effects, exceptions, transaction semantics) — ground truth independent of ora2pg
 - Dependency-ordered translation (derived from static analysis, never file-alphabetical)
 - Exception/error-code mapping table (Oracle RAISE_APPLICATION_ERROR → PostgreSQL SQLSTATE; single source of truth, applied uniformly)
-- Transaction-semantics audit per package (explicit per-case refactor-vs-workaround decision for PRAGMA AUTONOMOUS_TRANSACTION)
+- Transaction-semantics audit per package (explicit per-case decision for PRAGMA AUTONOMOUS_TRANSACTION; note `plog` logging is settled — UDP emitter, no emulation)
+- PL/pgSQL-idiomatic logging: `plog` re-implemented as a UDP shipper to the telemetry stack, replacing the Oracle AQ queue + autonomous transaction entirely
 - Test per public routine (dual harness: pgTAP + expected-output regression)
 - CI-runnable test suite (pg_prove + plain-SQL harness, scriptable, repeatable)
 - Idempotent, ordered deployment scripts (preserving Liquibase `runOnChange:true` pattern)
@@ -79,7 +80,7 @@ Top 5 by risk/likelihood:
 
 1. **SELECT INTO STRICT semantics** — Oracle raises `NO_DATA_FOUND` by default; PostgreSQL silently returns NULL. **Prevention:** Per-statement spec review, add `STRICT` + exception handlers only when Oracle had a handler. Verify with tests exercising zero-row and multi-row cases.
 
-2. **Autonomous transactions** — 3 packages use `PRAGMA AUTONOMOUS_TRANSACTION`; PostgreSQL has no equivalent. **Prevention:** Implement via dblink/pg_background; include explicit rollback-survival test. Must be resolved before or alongside first package batch.
+2. **Autonomous transactions** — 3 packages use `PRAGMA AUTONOMOUS_TRANSACTION`; PostgreSQL has no equivalent. **Prevention — corrected:** For `plog` (the log levels 0–7, by far the most call sites), do NOT emulate: emit a fire-and-forget **UDP datagram** to the telemetry sink, which is non-transactional by construction and therefore survives rollback inherently. dblink/pg_background are explicitly rejected for the logging path. For the three genuine table-writing autonomous sites (`insert_result`, `close_old_dev_tickets`, `AuditUsage`), record an explicit per-case decision — UDP telemetry event, accept transactional semantics, or dblink as a last resort. Resolve before the first package batch.
 
 3. **Exception/error-code mapping** — Oracle uses numeric codes; PostgreSQL uses 5-char SQLSTATE. **Prevention:** Standardize exception format with `USING ERRCODE = '<P0001-P9999>'`; maintain explicit mapping table; apply consistently.
 
@@ -102,7 +103,7 @@ Addresses: Foundational features; Avoids: Pitfall 7 (ora2pg blind spots)
 **Phase 1: Spec Derivation & Early Pilots (2-3 weeks)**
 - Behavioral specs for pilot packages (3-5 smallest)
 - Exception/error-code mapping table (reference, applied to pilots first)
-- Transaction-semantics audit (per-pilot-package: PRAGMA AUTONOMOUS_TRANSACTION decisions)
+- Transaction-semantics audit (per-pilot-package: COMMIT/ROLLBACK and PRAGMA AUTONOMOUS_TRANSACTION decisions)
 - Package-state audit (per pilot: mutable globals, initialization blocks)
 - pgTAP + plain-SQL tests (100% coverage per public routine)
 - Translated pilot packages, cross-references rewritten
@@ -110,10 +111,11 @@ Addresses: Foundational features; Avoids: Pitfall 7 (ora2pg blind spots)
 Addresses: Pitfalls 2, 4, 5; Avoids: Pitfalls 1, 3, 6
 
 **Phase 2: Cross-cutting Dependency Resolution (1-2 weeks)**
-- Autonomous-transaction implementation (plog via dblink; rollback-survival test)
+- `plog` re-implemented as a UDP log shipper (syslog-shaped payload; levels 0–7 already match). No autonomous-transaction emulation, no AQ queue, no dblink. Test asserts the datagram reaches the collector after the caller rolls back
+- Per-case decisions for the 3 table-writing autonomous sites (`insert_result`, `close_old_dev_tickets`, `AuditUsage`)
 - DBMS_*/UTL_* replacement strategies (reference table: one decision per family, applied consistently)
 - SELECT INTO STRICT pattern (approved document: when to add STRICT, when to add exception handlers)
-Addresses: Pitfalls 2, 4, 8, 9; Stack: dblink/pg_background, pgcrypto, native PostgreSQL equivalents
+Addresses: Pitfalls 2, 4, 8, 9; Stack: UDP emitter (untrusted PL or extension — decide in phase), pgcrypto, native PostgreSQL equivalents
 
 **Phase 3: Wave 1 Translation & Test (3-4 weeks)**
 - Complete specs for all Wave 1 packages (leaf packages: no other packages call them)
@@ -142,7 +144,7 @@ Addresses: Table-stakes; Avoids: Pitfall 10 (from-scratch build surfaces any dan
 
 Dependency order is critical: the dependency graph (Phase 0) determines wave boundaries (Phases 3-4). Packages translated in topological order (leaves first) so cross-reference rewrites assume called package's objects already exist. This prevents spurious "object not found" failures masking real errors.
 
-Cross-cutting work first (Phases 1-2) resolves exceptions, autonomous transactions, DBMS_* families spanning multiple packages, preventing per-package re-decisions.
+Cross-cutting work first (Phases 1-2) resolves exceptions, logging (the `plog` UDP emitter), the residual table-writing autonomous transactions, and DBMS_* families spanning multiple packages — preventing per-package re-decisions.
 
 Pilot before full scale (Phase 1) de-risks the methodology on low-remediation-cost packages.
 
@@ -150,7 +152,7 @@ Pilot before full scale (Phase 1) de-risks the methodology on low-remediation-co
 
 **Phases needing deeper research:**
 - **Phase 1** — Complex dynamic SQL (DBMS_SQL, EXECUTE IMMEDIATE) may need manual trace or live-Oracle baseline. ZPA toolkit may help but isn't a complete substitute.
-- **Phase 2** — If dblink shows high per-call overhead, benchmark pg_background or persistent-connection pooling.
+- **Phase 2** — Decide *how* the database emits UDP: untrusted PL (`plperlu`/`plpython3u`, no C build) vs a small C extension. Confirm the payload shape (syslog RFC 5424 maps 1:1 onto plog's existing 0–7 levels) and that the sink can front an OTel collector later. No dblink/pg_background benchmarking — that path is dropped.
 - **Phase 4** — If any package found to have FUNCTION issuing COMMIT/ROLLBACK, escalate for re-scoping as PROCEDURE + OUT parameter.
 
 **Standard patterns (skip research-phase):**
@@ -175,9 +177,9 @@ Research has strong foundations in technology verification (stack) and project-s
 
 **During Phase 0:** Verify dependency graph for packages with dynamic SQL (EXECUTE IMMEDIATE, DBMS_SQL). Validate name-mapping table for zero collisions.
 
-**During Phase 1:** Each spec must include "Assumptions / Unresolved" section for dynamic SQL, implicit coercions, or NLS behavior that static analysis couldn't resolve. Plog rollback-survival test must pass before other packages' tests.
+**During Phase 1:** Each spec must include "Assumptions / Unresolved" section for dynamic SQL, implicit coercions, or NLS behavior that static analysis couldn't resolve. The plog rollback-survival test (datagram reaches the collector after the caller rolls back) must pass before other packages' tests.
 
-**During Phase 2:** Benchmark dblink vs. pg_background for autonomous-transaction overhead. Validate each DBMS_*/UTL_* replacement against a real usage.
+**During Phase 2:** Choose the UDP emission mechanism and prove it end-to-end (datagram observed at a collector, including after a caller rollback). Validate each DBMS_*/UTL_* replacement against a real usage.
 
 **During Phase 4:** If spec includes unresolved dynamic SQL and call-time SQL is complex/performance-sensitive, escalate for manual review or live-Oracle trace.
 

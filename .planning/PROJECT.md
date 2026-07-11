@@ -23,6 +23,7 @@ Every translated PostgreSQL object behaves like its Oracle original, proven by t
 ### Active
 
 - [ ] Behavioral specification derived per Oracle package (static analysis of `ddl/src/pkg` + `ddl/src/pkgb`): signatures, semantics, side effects, error behavior, transaction behavior
+- [ ] `plog` re-implemented as a UDP log shipper to the telemetry stack (replaces Oracle's AQ queue + autonomous transaction; keeps the syslog-shaped 0–7 level API so the ~470 call sites across the packages don't change shape)
 - [ ] Test harness selected and set up for PostgreSQL: pgTAP **and** plain SQL with expected-output comparison, runnable against the local Postgres 17 instance
 - [ ] PostgreSQL tests written that verify the specs derived from the Oracle code
 - [ ] All 48 packages translated to valid PL/pgSQL (orafce permitted), using `package_in_name` naming; all cross-references between objects refactored to the new names
@@ -55,6 +56,7 @@ Every translated PostgreSQL object behaves like its Oracle original, proven by t
 - **Naming/Compatibility**: Schema stays identical to Oracle; object names get package-name prefix (`package_in_name` convention) — keeps client migration mechanical (regexp-driven)
 - **Verification**: Local Postgres 17.10 via sudo peer auth is the test target — no Oracle instance available for now
 - **Methodology**: Spec-first — specs derived from Oracle source before translation; tests verify specs, not the translation's own assumptions
+- **Logging**: `plog` ships logs off-box via **UDP** to the telemetry stack (OTel-bound) rather than writing to the database — no AQ queue, no autonomous transactions, no dblink/pg_background anywhere in the logging path. Behavioral equivalence with Oracle is *not* the goal here; the PostgreSQL-idiomatic path is deliberately preferred
 
 ## Key Decisions
 
@@ -66,6 +68,8 @@ Every translated PostgreSQL object behaves like its Oracle original, proven by t
 | Keep `package_in_name` naming from prototype | Schema stays Oracle-identical; package prefix on object names makes client-side rename regexp-able | — Pending |
 | orafce allowed | Reduces friction translating Oracle built-ins | — Pending |
 | Jobs/queues/mviews deferred to later milestone | Need architectural replacements (pg_cron, LISTEN/NOTIFY), separable from core code translation | — Pending |
+| `plog` becomes a UDP log shipper — no autonomous-transaction emulation | Oracle's plog enqueues to an AQ queue inside an autonomous transaction purely so logs survive rollback. A fire-and-forget UDP datagram is non-transactional by construction, so rollback-survival is inherent, not emulated. Kills the project's highest-rated risk and removes dblink/pg_background from the logging path entirely. plog's levels are already syslog-shaped (0–7, EMERG…DEBUG), so the payload maps cleanly | — Pending |
+| Telemetry destination is OTel, via adapters if needed — deferred | The in-database emitter only needs to send datagrams; what consumes them is a separate concern that can evolve without touching 48 packages' logging calls | — Pending |
 
 ## Evolution
 

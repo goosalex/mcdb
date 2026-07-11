@@ -55,7 +55,7 @@ This codebase uses `WHEN OTHERS THEN plog.err(...); RAISE;` extensively (27 occu
 ora2pg mechanically substitutes `RAISE_APPLICATION_ERROR` calls but has no way to know whether calling code elsewhere depends on the specific `-20NNN` code to distinguish error types — that dependency often lives in client code outside this repo entirely.
 
 **How to avoid:**
-Standardize a mapping convention up front: use `RAISE EXCEPTION 'msg' USING ERRCODE = '<custom 5-char SQLSTATE in the P0001-P9999 or application-reserved range>'`, and maintain a table mapping each Oracle `-20NNN` code used in this codebase to a chosen PostgreSQL custom SQLSTATE, published alongside the client rename regexps so client code can be updated consistently. For `WHEN OTHERS THEN <log>; RAISE;`, translate to `EXCEPTION WHEN OTHERS THEN <log>; RAISE;` (PL/pgSQL supports bare `RAISE;` to re-raise) — but note the interaction with autonomous transactions below, since `plog.err` itself must survive the eventual rollback caused by the re-raise.
+Standardize a mapping convention up front: use `RAISE EXCEPTION 'msg' USING ERRCODE = '<custom 5-char SQLSTATE in the P0001-P9999 or application-reserved range>'`, and maintain a table mapping each Oracle `-20NNN` code used in this codebase to a chosen PostgreSQL custom SQLSTATE, published alongside the client rename regexps so client code can be updated consistently. For `WHEN OTHERS THEN <log>; RAISE;`, translate to `EXCEPTION WHEN OTHERS THEN <log>; RAISE;` (PL/pgSQL supports bare `RAISE;` to re-raise). `plog.err` must still survive the rollback that the re-raise causes — and it does so for free, because `plog` emits a UDP datagram rather than writing to the database (Pitfall 4). No autonomous-transaction emulation is involved.
 
 **Warning signs:**
 - Client code (Perl/Java) with `if (errorCode == -20001)`-style branches that silently stop matching after migration.
@@ -68,21 +68,28 @@ Standardize a mapping convention up front: use `RAISE EXCEPTION 'msg' USING ERRC
 
 ### Pitfall 4: Autonomous transactions silently become ordinary (rollback-vulnerable) calls
 
-**What goes wrong:**
-Three package bodies in this repo use `PRAGMA AUTONOMOUS_TRANSACTION` specifically so that logging/audit writes survive a later rollback in the caller: `osag_osag_plog.sql` (the core `plog` logging package used almost everywhere, including inside `WHEN OTHERS` handlers that then `RAISE`), `mcdb_checks_consistency.sql` (`insert_result` — writes consistency-check results that must persist even if the check itself errors), and `tt_util.sql` (`close_old_dev_tickets`). PostgreSQL has no `PRAGMA AUTONOMOUS_TRANSACTION` and no native equivalent. If these procedures are translated as ordinary PL/pgSQL functions/procedures, their writes are folded into the caller's transaction and vanish on rollback — meaning every error-path log message written via `plog.err()` right before a `RAISE` would disappear from the log table in PostgreSQL, exactly when you most need it.
+> **CORRECTED — project decision supersedes the original finding for `plog`.**
+> The original research recommended emulating `PRAGMA AUTONOMOUS_TRANSACTION` via `dblink`/`pg_background` so `plog` writes survive rollback. **This is rejected.** `plog` does not get an autonomous-transaction emulation in PostgreSQL. It is re-implemented as a non-transactional UDP log shipper (see below). Do not plan, benchmark, or build `dblink`/`pg_background` machinery for logging.
+
+**What goes wrong (the part that still applies):**
+Three package bodies use `PRAGMA AUTONOMOUS_TRANSACTION` so their writes survive a later rollback in the caller. PostgreSQL has no equivalent, and ora2pg drops the pragma silently. The three sites split into two very different categories, and only the second is still a problem:
+
+1. **Log shipping — SOLVED BY DESIGN, not by emulation.** `osag_osag_plog.sql` (`Log`, called by `Emerg`/`Alert`/`Crit`/`Err`/`Warning`/`Notice`/`Info`/`Debug`) uses an autonomous transaction purely to `ENQUEUE` onto the Oracle AQ queue `MCDB_MONITOR.plog_messages` and `COMMIT` it. In PostgreSQL the AQ queue and the autonomous transaction both disappear: `plog` emits a **fire-and-forget UDP datagram** to the telemetry sink instead. A UDP send is not part of any transaction, so rollback-survival is inherent rather than emulated — the datagram has already left the backend process by the time the caller rolls back. This is strictly *better* than the Oracle behavior (no queue table to drain, no commit cost on the error path) and removes the highest-risk item from the original research.
+2. **Table writes — STILL A REAL PROBLEM.** Two autonomous-transaction sites are genuine database writes that UDP does *not* address: `mcdb_checks_consistency.insert_result` (persists consistency-check results that must survive a failing check) and `tt_util.close_old_dev_tickets`. A third, `plog.AuditUsage` (174 call sites), is *inside* the plog package but is not logging at all — it `UPDATE`s `osag.plsql_audit.last_used` and commits, with `WHEN OTHERS THEN rollback`. These three need an explicit decision, and it is not "UDP".
 
 **Why it happens:**
-Static translation tools (ora2pg) drop the pragma or translate it as a no-op comment because there is no direct PostgreSQL syntax for it; the semantic loss is invisible unless someone explicitly checks that logging survives failure.
+ora2pg drops the pragma or emits a no-op comment; the semantic loss is invisible unless someone checks that the write survives a failure.
 
 **How to avoid:**
-Implement `plog.*` and the consistency-check writer using `dblink` (mature, simple, per-call connection overhead acceptable for logging-frequency workloads) or `pg_background` (lower overhead, but a third-party extension requiring its own install/trust decision — evaluate against the "orafce allowed" constraint since `pg_background` is not part of orafce). Do not simply drop the pragma and hope; write a test that asserts a log row exists after a deliberately-failed-and-rolled-back caller transaction — this is the only way to prove the behavior was preserved, and it must be one of the explicit pgTAP tests since a plain "does it compile" check will never catch this.
+- **For `plog.*` logging (levels 0–7):** implement as a UDP emitter — no queue, no autonomous transaction, no `dblink`, no `pg_background`. The rollback-survival test still has value, but it now asserts *the datagram was sent* (observed at the collector), not *a log row exists*.
+- **For the three real table-writing autonomous transactions:** decide each explicitly in the cross-cutting phase. Options, cheapest first: (a) re-emit as a UDP telemetry event and drop the table write entirely — plausible for `AuditUsage`, which is usage telemetry that already tolerates loss (it swallows its own errors); (b) accept transactional semantics (write folds into the caller's transaction and is lost on rollback) where losing the row on rollback is actually correct; (c) only if a write genuinely must survive an unrelated rollback, reach for `dblink`. Do not apply (c) reflexively — it was the original research's blanket answer and it is overkill for at least `AuditUsage`.
 
 **Warning signs:**
-- Any occurrence of `PRAGMA AUTONOMOUS_TRANSACTION` in the Oracle source with no corresponding `dblink`/`pg_background` call in the translated code.
-- Test suites that only test the happy path (no test ever forces a rollback after the autonomous call).
-- Missing log rows reported by users/ops only in production, well after migration, specifically for failure-path diagnostics.
+- A `dblink`/`pg_background` dependency appearing anywhere in the logging path — that means the UDP decision was quietly reverted.
+- `PRAGMA AUTONOMOUS_TRANSACTION` in a *table-writing* Oracle routine with no corresponding explicit decision recorded in the transaction-semantics audit.
+- Test suites that only test the happy path (no test ever forces a rollback after a log/audit call).
 
-**Phase to address:** Should be its own explicit sub-task early (the `plog` package is a load-bearing, cross-cutting dependency used by nearly every other package's `WHEN OTHERS` handler) — translating `plog` correctly, including autonomous-transaction semantics, should happen before or alongside the first batch of package translations, not deferred to the end.
+**Phase to address:** Phase 3 (Cross-cutting Semantics). `plog` is still load-bearing and still goes first — nearly every package's `WHEN OTHERS` handler calls it — but the work is now "build the UDP emitter and the syslog-shaped payload", not "emulate autonomous transactions". The three table-writing autonomous sites are a separate, much smaller decision list in the same phase.
 
 ---
 
@@ -232,13 +239,13 @@ Default to a purely mechanical translation of Oracle sequences and any pre-exist
 | Defer package-global-state audit ("we didn't find any in the sample, probably fine") | Saves upfront analysis time | One missed mutable global variable silently changes behavior across all calls to that package | Never — must be checked per package, not sampled |
 | Use orafce shims wherever "it compiles" | Avoids rewriting Oracle-specific logic | Hidden semantic gaps (length limits, volatility, NULL/'' handling) surface later as data corruption or index breakage | Acceptable for genuinely mechanical 1:1 cases (e.g., `SYSDATE`-adjacent date functions) only after verifying semantics match |
 | Translate every Oracle FUNCTION as a PostgreSQL FUNCTION by default | Matches ora2pg default output, less restructuring | Silently breaks any function that internally COMMITs (Pitfall 6) — hard PostgreSQL error only surfaces at CALL-time, possibly late | Only after grep-confirming no COMMIT/ROLLBACK inside |
-| Skip the "log survives rollback" test for `plog`/autonomous-transaction replacements | Ships faster | Failure-path diagnostics vanish in production exactly when needed most | Never |
+| Skip the "log survives rollback" test for `plog` (now: datagram reaches the collector after the caller rolls back) | Ships faster | Failure-path diagnostics vanish in production exactly when needed most | Never |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |--------------|------------------|-------------------|
-| `plog` logging package | Assume plain PL/pgSQL translation preserves autonomous-transaction "survives rollback" guarantee | Implement via `dblink`/`pg_background`; add an explicit rollback-survival test (Pitfall 4) |
+| `plog` logging package | Port the Oracle shape (AQ enqueue inside an autonomous transaction) by emulating autonomous transactions with `dblink`/`pg_background` | Re-implement as a non-transactional **UDP log shipper** — no queue, no autonomous transaction, no `dblink`. Rollback-survival is inherent to UDP. Verify by asserting the datagram reached the collector (Pitfall 4) |
 | `aserto.*` authorization calls in triggers (30+ call sites per CONCERNS.md) | Translate trigger body mechanically without adding error handling; a failed aserto call currently has undocumented failure behavior and cascades to the triggering DML | Decide explicitly whether aserto failures should abort the triggering transaction (current implicit behavior) or be caught/logged — do not leave this ambiguous; write a test for the chosen behavior |
 | DBMS_SQL dynamic SQL (13 sites) | Attempt to mechanically substitute `DBMS_SQL.PARSE`/`EXECUTE` calls 1:1 with PL/pgSQL `EXECUTE` | Re-derive the actual dynamic SQL being constructed at runtime from the Oracle logic (static analysis can't fully resolve this — flag as a "needs manual trace" item, matching the project's own acknowledgment that no live Oracle exists to observe actual runtime SQL) |
 | UTL_SMTP email sending | Try to find/force a PostgreSQL in-database SMTP equivalent | Move email-sending to the application layer or an explicit external-call shim (`plpython3u`/HTTP callout); keep the database function signature stable so callers don't need to change, but the implementation must not live purely in SQL |
@@ -248,7 +255,7 @@ Default to a purely mechanical translation of Oracle sequences and any pre-exist
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|-----------------|
 | Leaning on orafce's Oracle-collection emulation (bulk-collect-style patterns) instead of native SQL set operations | Functions that loop row-by-row instead of using set-based SQL | Rewrite as native PostgreSQL set-based SQL where the Oracle pattern was only there because PL/SQL required explicit iteration | Noticeable once row counts move from hundreds to tens of thousands per call |
-| `dblink`-based autonomous-transaction emulation for high-frequency logging (`plog` is called from nearly every package's error handler) | Connection overhead per log call under high error/log volume | Consider `pg_background` instead of `dblink` if log volume is high, or a lightweight connection-pooled dblink persistent connection | Once logging frequency is high enough that per-call connection setup dominates |
+| ~~`dblink`-based autonomous-transaction emulation for high-frequency logging~~ — **obsolete, decision reversed** | — | `plog` ships via UDP: no connection setup, no commit, no queue drain. The per-call-overhead trap this row described cannot occur. Residual risk moves to the UDP sink itself (datagram loss under load is accepted by design; the collector, not the database, is the backpressure point) | n/a |
 | Sequential CLOB data migration (already flagged in CONCERNS.md, not code-translation but adjacent) | Multi-hour bulk transfers for CLOB-heavy historical tables | Parallelize by ID/date range, use `COPY` | Multi-GB CLOB tables |
 
 ## Security Mistakes
@@ -264,7 +271,7 @@ Default to a purely mechanical translation of Oracle sequences and any pre-exist
 - [ ] **STRICT/exception handling on every `SELECT INTO`:** Often "translated" by mechanically adding `STRICT` everywhere or nowhere — verify each one against the Oracle source's actual exception-handling intent (Pitfall 1).
 - [ ] **Package-global mutable state:** Often assumed absent because a quick sample didn't find any — verify per-package, not by sampling (Pitfall 5).
 - [ ] **FUNCTION vs PROCEDURE choice:** Often defaulted to FUNCTION (matching ora2pg's typical output) — verify no internal `COMMIT`/`ROLLBACK` exists before accepting (Pitfall 6).
-- [ ] **`plog`/autonomous-transaction rollback survival:** Often "translated" as a plain function call that compiles and logs on the happy path — verify with a test that deliberately rolls back the caller (Pitfall 4).
+- [ ] **`plog` rollback survival:** Verify with a test that deliberately rolls back the caller and asserts the UDP datagram still reached the collector. Also assert no `dblink`/`pg_background`/queue-table dependency crept into the logging path (Pitfall 4).
 - [ ] **DBMS_*/UTL_* replacement completeness:** Often left as untranslated dead references that only fail at first invocation — verify zero Oracle-package-qualified identifiers remain in final code (Pitfall 7, Pitfall 9).
 - [ ] **`%TYPE`/`%ROWTYPE` against Oracle dictionary views:** Often missed because the code "compiles" against the wrong or stale reference during incremental builds — verify via full from-scratch container rebuild (Pitfall 10).
 - [ ] **Empty-string vs NULL parity:** Often untested because test suites only exercise NULL, never `''` — verify explicit `''`-input test cases exist for every string parameter that had Oracle NULL-equivalence semantics (Pitfall 2).
@@ -276,7 +283,8 @@ Default to a purely mechanical translation of Oracle sequences and any pre-exist
 | Missing STRICT/exception handling discovered post-translation | LOW | Re-derive the specific SELECT INTO's spec from Oracle source, add STRICT + handler, add a regression test for the zero/multi-row case |
 | Package-global mutable state discovered late (behavior drift found in testing) | MEDIUM | Identify the state's actual purpose, redesign as session GUC/temp table/explicit param, re-verify all callers of the affected package |
 | Wrong FUNCTION/PROCEDURE choice discovered after several dependent objects already built on top | HIGH | Requires cascading rewrite of the call chain and all call sites (including client code) — this is why Pitfall 6 needs upfront spec analysis, not late discovery |
-| `plog`/autonomous-transaction rollback-survival gap discovered in production | HIGH (discovered late = worst case) | Retrofit dblink/pg_background implementation, backfill missing audit trail is not possible for already-lost log entries — this is why the rollback test must exist before any package ships |
+| `plog` log messages not reaching the telemetry sink (UDP emitter misconfigured, sink down, datagrams dropped) | LOW-MEDIUM | Fix the emitter/sink config; already-lost datagrams are unrecoverable, but UDP loss is an accepted property of the design, not a correctness bug in the translation. Verify the emitter with a collector-side assertion before any package ships |
+| Table-writing autonomous transaction (`insert_result`, `close_old_dev_tickets`, `AuditUsage`) folded into the caller's transaction and lost on rollback | MEDIUM | Recover per the decision recorded in the Phase 3 transaction-semantics audit: re-emit as UDP telemetry, accept the transactional semantics, or (last resort) `dblink`. Not applicable to `plog`'s log levels |
 | Oracle `-20NNN` error code semantics lost, client code silently stops branching correctly | MEDIUM | Reconstruct the mapping table from Oracle source, patch client code via the regexp deliverable, add tests asserting SQLSTATE values match the documented mapping |
 
 ## Pitfall-to-Phase Mapping
@@ -286,7 +294,7 @@ Default to a purely mechanical translation of Oracle sequences and any pre-exist
 | NO_DATA_FOUND / SELECT INTO STRICT (1) | Spec derivation + package translation | pgTAP test per SELECT INTO exercising zero-row and multi-row cases where Oracle had a handler |
 | Empty string vs NULL (2) | Spec derivation + DDL/data migration | Test suite includes explicit `''` inputs alongside `NULL` inputs for every affected string parameter/column |
 | WHEN OTHERS / RAISE_APPLICATION_ERROR mapping (3) | Spec derivation + package translation | Test asserts specific SQLSTATE/ERRCODE returned matches the documented Oracle-code mapping table |
-| Autonomous transactions (`plog` et al.) (4) | Early, cross-cutting (before/alongside first package batch) | pgTAP test that forces a caller rollback and asserts the log row still exists |
+| Autonomous transactions (4) — **split** | Phase 3, cross-cutting (before the first package batch) | **Logging:** `plog` emits UDP; test asserts the datagram reaches the collector after the caller rolls back (inherent, not emulated). **Table writes** (`insert_result`, `close_old_dev_tickets`, `AuditUsage`): each has an explicit recorded decision in the transaction-semantics audit; test the chosen behavior |
 | Package-global state / `package_in_name` flattening (5) | Spec derivation, per package | Explicit per-package checklist item; grep-based automated check for non-CONSTANT package-body-level variables |
 | FUNCTION vs PROCEDURE / COMMIT semantics (6) | Spec derivation (call-graph analysis) | Automated grep for COMMIT/ROLLBACK inside translated FUNCTIONs (should be zero); CALL-chain integration test for procedures that commit |
 | ora2pg mistranslation classes (7) | Cross-cutting guardrail, every translation phase | Automated check for leftover DBMS_*/UTL_*/Oracle-only syntax before marking any object complete |

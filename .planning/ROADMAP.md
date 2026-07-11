@@ -2,7 +2,7 @@
 
 ## Overview
 
-This milestone moves MCDB's programmatic layer (48 packages, 2 standalone procedures, 8 triggers, 2 types) from Oracle 19c PL/SQL to PostgreSQL 17 PL/pgSQL, spec-first. The journey starts by turning `ddl/src` into machine-readable ground truth — an object inventory, a dependency graph that dictates translation order, and a single name-mapping table. That foundation feeds a proving run: the dual test harness (pgTAP + expected-output) plus the spec format, validated end-to-end on a small pilot batch. Decisions that span every package — exception codes, `plog`'s autonomous-transaction logging, DBMS_*/UTL_* replacements, COMMIT/ROLLBACK semantics — are then settled once so translation never re-litigates them. Only then does bulk translation run, wave by wave in dependency order, each package specified from Oracle source and verified green against tests derived from that spec (never from ora2pg output). The milestone closes when a container built from scratch — extensions, DDL, masterdata, translated code — passes the full suite, and the name-mapping table has been turned into a regexp kit for client teams.
+This milestone moves MCDB's programmatic layer (48 packages, 2 standalone procedures, 8 triggers, 2 types) from Oracle 19c PL/SQL to PostgreSQL 17 PL/pgSQL, spec-first. The journey starts by turning `ddl/src` into machine-readable ground truth — an object inventory, a dependency graph that dictates translation order, and a single name-mapping table. That foundation feeds a proving run: the dual test harness (pgTAP + expected-output) plus the spec format, validated end-to-end on a small pilot batch. Decisions that span every package — exception codes, logging (`plog` becomes a non-transactional UDP shipper to the telemetry stack, dropping Oracle's AQ queue and autonomous transaction entirely), DBMS_*/UTL_* replacements, COMMIT/ROLLBACK semantics — are then settled once so translation never re-litigates them. Only then does bulk translation run, wave by wave in dependency order, each package specified from Oracle source and verified green against tests derived from that spec (never from ora2pg output). The milestone closes when a container built from scratch — extensions, DDL, masterdata, translated code — passes the full suite, and the name-mapping table has been turned into a regexp kit for client teams.
 
 ## Phases
 
@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Inventory & Foundation** - Object inventory, dependency graph with wave order, name-mapping SSOT
 - [ ] **Phase 2: Spec Method, Test Harness & Pilot** - Dual harness running and the spec-first method proven on a pilot batch
-- [ ] **Phase 3: Cross-cutting Semantics** - Exceptions, plog autonomous transactions, DBMS_* replacements, transaction audit — decided once
+- [ ] **Phase 3: Cross-cutting Semantics** - Exceptions, plog as a UDP log shipper, DBMS_* replacements, transaction audit — decided once
 - [ ] **Phase 4: Wave-Ordered Translation & Verification** - All packages, procs, triggers, types specified, translated, and green
 - [ ] **Phase 5: Container Build & Client Migration Aids** - From-scratch runnable container, green suite inside it, client rename regexps
 
@@ -48,14 +48,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### Phase 3: Cross-cutting Semantics
 **Goal**: Every decision that spans packages is made once, written down, and applied uniformly — so per-package translation never re-decides exception codes, logging, Oracle built-ins, or transaction shape
 **Depends on**: Phase 2 (decisions are exercised against the pilot batch and its tests)
-**Requirements**: XCUT-01, XCUT-02, XCUT-03, XCUT-04
+**Requirements**: XCUT-01, XCUT-02, XCUT-03, XCUT-04, XCUT-05
 **Success Criteria** (what must be TRUE):
   1. An exception mapping table maps every Oracle error code and `-20NNN` RAISE_APPLICATION_ERROR found in the Phase 1 inventory to a PostgreSQL SQLSTATE, and the pilot translations already use it
-  2. `plog` is translated with autonomous-transaction semantics preserved, proven by a rollback-survival test: log rows written on an error path persist after the calling transaction rolls back
-  3. A DBMS_*/UTL_* replacement reference records one decision per family (orafce coverage vs native rewrite), covering every call site the inventory found — no family is left to per-package improvisation
-  4. A transaction-semantics audit lists every Oracle routine that COMMITs or ROLLBACKs, maps each to a PG PROCEDURE (not FUNCTION), and documents the call-chain implications for its callers
+  2. `plog` is re-implemented as a **UDP log shipper** — the Oracle AQ queue (`MCDB_MONITOR.plog_messages`) and the autonomous transaction are both gone, replaced by a fire-and-forget datagram to the telemetry sink. Proven by a rollback-survival test: a message logged on an error path is observed at the collector *after* the calling transaction rolls back. The translated logging path contains no `dblink`, no `pg_background`, and no queue table
+  3. The three *table-writing* autonomous-transaction sites (`mcdb_checks_consistency.insert_result`, `tt_util.close_old_dev_tickets`, `plog.AuditUsage`) each have an explicit recorded decision — UDP telemetry event, accept transactional semantics, or dblink as a last resort — and a test for the chosen behavior
+  4. A DBMS_*/UTL_* replacement reference records one decision per family (orafce coverage vs native rewrite), covering every call site the inventory found — no family is left to per-package improvisation
+  5. A transaction-semantics audit lists every Oracle routine that COMMITs or ROLLBACKs, maps each to a PG PROCEDURE (not FUNCTION), and documents the call-chain implications for its callers
 **Plans**: 2 plans
-**Research**: Needs deeper research — if dblink shows high per-call overhead for autonomous logging, benchmark pg_background or persistent-connection pooling before committing. Each DBMS_*/UTL_* replacement must be validated against a real call site, not assumed from orafce docs.
+**Research**: Needs deeper research — decide *how* the database emits UDP (untrusted PL such as `plperlu`/`plpython3u`, needing no C build, vs a small C extension) and confirm the payload shape; syslog RFC 5424 maps 1:1 onto plog's existing 0–7 levels, and the sink should be able to front an OTel collector later without changing the in-database emitter. Do NOT benchmark dblink vs pg_background — that path is dropped for logging. Each DBMS_*/UTL_* replacement must be validated against a real call site, not assumed from orafce docs.
 
 ### Phase 4: Wave-Ordered Translation & Verification
 **Goal**: Every package, standalone procedure, trigger, and type is specified from Oracle source, translated to PL/pgSQL, and green against tests derived from that spec — worked through in dependency-wave order
@@ -96,16 +97,16 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 ## Requirement Coverage
 
-All 26 v1 requirements mapped to exactly one phase.
+All 27 v1 requirements mapped to exactly one phase.
 
 | Phase | Requirements | Count |
 |-------|--------------|-------|
 | 1 | INV-01, INV-02, INV-03 | 3 |
 | 2 | SPEC-02, SPEC-03, HARN-01, HARN-02, HARN-03, HARN-04, HARN-05 | 7 |
-| 3 | XCUT-01, XCUT-02, XCUT-03, XCUT-04 | 4 |
+| 3 | XCUT-01, XCUT-02, XCUT-03, XCUT-04, XCUT-05 | 5 |
 | 4 | SPEC-01, TRAN-01, TRAN-02, TRAN-03, TRAN-04, TRAN-05, TRAN-06, VER-01, VER-02 | 9 |
 | 5 | CONT-01, CONT-02, CLI-01 | 3 |
-| **Total** | | **26/26** |
+| **Total** | | **27/27** |
 
 **Mapping notes:**
 - **SPEC-01** (behavioral spec per Oracle package) is assigned to Phase 4, where it completes for all 48 packages. Phase 2 produces pilot specs as instances of the format established by SPEC-02/SPEC-03; Phase 4 finishes the set wave by wave.
