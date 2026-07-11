@@ -1,0 +1,12 @@
+{
+  "package_specs": 48,
+  "package_bodies": 48,
+  "packages": 48,
+  "standalone_procedures": 2,
+  "trigger_files": 8,
+  "trigger_objects": 53,
+  "types": 2,
+  "schemas": 23,
+  "_schemas_note": "PLAN.md's ground-truth table states 21 distinct schemas, but that figure was derived from ddl/src/pkg (package specs) only. ddl/src/triggers/APPID.sql and ddl/src/triggers/STOP.sql declare trigger objects in schemas APPID and STOP, which do not appear in any package spec -- the full scanned corpus (pkg+pkgb+proc+triggers+types) genuinely contains 23 distinct schemas. Verified by direct extraction (see 01-01-SUMMARY.md Deviations). This artifact hard-gates on the lexer-derived count, not the incomplete manual one.",
+  "pkgb_non_sql_files": ["ticketing-interfaces.md"]
+}
