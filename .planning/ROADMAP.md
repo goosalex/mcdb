@@ -30,6 +30,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A name-mapping table (Oracle `SCHEMA.PACKAGE.OBJECT` → PG `package_in_name` name) covers every object with zero collisions, and is the single artifact that SQL refactoring, test naming, and client regexps all read from
   4. Objects whose call edges cannot be resolved statically (EXECUTE IMMEDIATE, DBMS_SQL) are explicitly flagged in the graph rather than silently omitted
 **Plans**: 2 plans
+- [ ] 01-01-PLAN.md — Oracle source lexer + object inventory (`migration/analyze/inventory.json`), reconciled against files on disk (INV-01)
+- [ ] 01-02-PLAN.md — Name-mapping SSOT with collision gate + dependency graph with wave order, behind one regeneration command (INV-02, INV-03)
 **Research**: Standard pattern (DAG extraction + topological sort) — no deeper research needed. Gap to close during the phase: verify graph completeness for dynamic-SQL packages; validate name map for zero collisions.
 
 ### Phase 2: Spec Method, Test Harness & Pilot
