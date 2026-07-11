@@ -1,0 +1,4044 @@
+{
+  "generated_at": "2026-07-11T21:49:27.822529+00:00",
+  "generator_version": "1.0.0",
+  "nodes": [
+    {
+      "id": "APPID.T_INTERFACE_PS_LINK_CLASS_SYNC",
+      "kind": "trigger",
+      "schema": "APPID",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "APPID.INTERFACE_2_PS_LINK_CLASS",
+          "line": 13
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "APPID.INTERFACE_2_PS_LINK_CLASS",
+          "line": 13
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "APPID.T_PATH_OVERRIDE_MEMBER_LINK_SYNC",
+      "kind": "trigger",
+      "schema": "APPID",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "ASERTO_TEST.E2ETEST",
+      "kind": "package",
+      "schema": "ASERTO_TEST",
+      "package": "E2ETEST",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.company",
+          "line": 37
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.COMP_COMPTYPE_REF",
+          "line": 39
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.CONTACT_LIST",
+          "line": 43
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.CONTACT_HANDLING",
+          "line": 45
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.COMPANY_UNIT",
+          "line": 48
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.COMPANY_UNIT",
+          "line": 52
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.host",
+          "line": 56
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.host",
+          "line": 58
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.SERVICE",
+          "line": 62
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.SERVICE",
+          "line": 64
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.HOST2SERVICE",
+          "line": 67
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.HOST2SERVICE",
+          "line": 69
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 76
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 78
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 86
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 88
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 91
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 92
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 94
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 95
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 98
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 100
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 103
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 104
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 106
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_SERVICE_SCOPE",
+          "line": 107
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 110
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 112
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 117
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 119
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 122
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 123
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 125
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_SERVICE_SCOPE",
+          "line": 126
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 130
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 132
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 135
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 136
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 138
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_COMPANY_SCOPE",
+          "line": 139
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 140
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_SERVICE_SCOPE",
+          "line": 141
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact",
+          "line": 144
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login",
+          "line": 146
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 149
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 150
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 152
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_COMPANY_SCOPE",
+          "line": 153
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 154
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.USER_SERVICE_SCOPE",
+          "line": 155
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "stop.company",
+          "line": 37
+        },
+        {
+          "text": "stop.COMP_COMPTYPE_REF",
+          "line": 39
+        },
+        {
+          "text": "stop.CONTACT_LIST",
+          "line": 43
+        },
+        {
+          "text": "stop.CONTACT_HANDLING",
+          "line": 45
+        },
+        {
+          "text": "stop.COMPANY_UNIT",
+          "line": 48
+        },
+        {
+          "text": "stop.COMPANY_UNIT",
+          "line": 52
+        },
+        {
+          "text": "mss.host",
+          "line": 56
+        },
+        {
+          "text": "mss.host",
+          "line": 58
+        },
+        {
+          "text": "mss.SERVICE",
+          "line": 62
+        },
+        {
+          "text": "mss.SERVICE",
+          "line": 64
+        },
+        {
+          "text": "mss.HOST2SERVICE",
+          "line": 67
+        },
+        {
+          "text": "mss.HOST2SERVICE",
+          "line": 69
+        },
+        {
+          "text": "stop.contact",
+          "line": 76
+        },
+        {
+          "text": "auth.login",
+          "line": 78
+        },
+        {
+          "text": "stop.contact",
+          "line": 86
+        },
+        {
+          "text": "auth.login",
+          "line": 88
+        },
+        {
+          "text": "auth.profile",
+          "line": 91
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 92
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 94
+        },
+        {
+          "text": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 95
+        },
+        {
+          "text": "stop.contact",
+          "line": 98
+        },
+        {
+          "text": "auth.login",
+          "line": 100
+        },
+        {
+          "text": "auth.profile",
+          "line": 103
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 104
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 106
+        },
+        {
+          "text": "auth.USER_SERVICE_SCOPE",
+          "line": 107
+        },
+        {
+          "text": "stop.contact",
+          "line": 110
+        },
+        {
+          "text": "auth.login",
+          "line": 112
+        },
+        {
+          "text": "stop.contact",
+          "line": 117
+        },
+        {
+          "text": "auth.login",
+          "line": 119
+        },
+        {
+          "text": "auth.profile",
+          "line": 122
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 123
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 125
+        },
+        {
+          "text": "auth.USER_SERVICE_SCOPE",
+          "line": 126
+        },
+        {
+          "text": "stop.contact",
+          "line": 130
+        },
+        {
+          "text": "auth.login",
+          "line": 132
+        },
+        {
+          "text": "auth.profile",
+          "line": 135
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 136
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 138
+        },
+        {
+          "text": "auth.USER_COMPANY_SCOPE",
+          "line": 139
+        },
+        {
+          "text": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 140
+        },
+        {
+          "text": "auth.USER_SERVICE_SCOPE",
+          "line": 141
+        },
+        {
+          "text": "stop.contact",
+          "line": 144
+        },
+        {
+          "text": "auth.login",
+          "line": 146
+        },
+        {
+          "text": "auth.profile",
+          "line": 149
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 150
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 152
+        },
+        {
+          "text": "auth.USER_COMPANY_SCOPE",
+          "line": 153
+        },
+        {
+          "text": "auth.USER_COMPANY_UNIT_SCOPE",
+          "line": 154
+        },
+        {
+          "text": "auth.USER_SERVICE_SCOPE",
+          "line": 155
+        }
+      ],
+      "wave": 5,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.OSAG_AUTH",
+      "kind": "package",
+      "schema": "AUTH",
+      "package": "OSAG_AUTH",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.profile",
+          "line": 133
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.login2profile",
+          "line": 134
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_permission",
+          "line": 138
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.user_company_scope",
+          "line": 139
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "auth.profile",
+          "line": 133
+        },
+        {
+          "text": "auth.login2profile",
+          "line": 134
+        },
+        {
+          "text": "auth.user_permission",
+          "line": 138
+        },
+        {
+          "text": "auth.user_company_scope",
+          "line": 139
+        }
+      ],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.OSAG_AUTH_PASSPORT",
+      "kind": "package",
+      "schema": "AUTH",
+      "package": "OSAG_AUTH_PASSPORT",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.passport_contact",
+          "line": 688
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.passport_contact_sync",
+          "line": 864
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.passport_contact_sync",
+          "line": 988
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.authsecret",
+          "line": 2303
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "stop.passport_contact",
+          "line": 688
+        },
+        {
+          "text": "stop.passport_contact_sync",
+          "line": 864
+        },
+        {
+          "text": "stop.passport_contact_sync",
+          "line": 988
+        },
+        {
+          "text": "auth.authsecret",
+          "line": 2303
+        }
+      ],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.OSAG_AUTH_STATE",
+      "kind": "package",
+      "schema": "AUTH",
+      "package": "OSAG_AUTH_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.OSAG_IMPLICATION",
+      "kind": "package",
+      "schema": "AUTH",
+      "package": "OSAG_IMPLICATION",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_AUTHHOST_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_GROUPS_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_LOGIN_SET_COMPANY",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PASSPORT_ALIAS_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PASSPORT_LOGIN_SET_AUTHTYPE",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PASSPORT_LOGIN_SET_COMPANY",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PASSPORT_LOGIN_SET_DEFAULT_UNIT",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PASSPORT_LOGIN_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PL2G_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_PL2TG_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_TGROUP_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_TOKEN_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USERUNIT",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USRCOMPSC_ASERTO",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USRCOMPUSC_ASERTO",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USRPERM_ASERTO",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USRSVCSC_ASERTO",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "AUTH.T_USRUSERUSC_ASERTO",
+      "kind": "trigger",
+      "schema": "AUTH",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "ESP.OSAG_DUTY",
+      "kind": "package",
+      "schema": "ESP",
+      "package": "OSAG_DUTY",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.DELETE_AUTO_IP_GROUPS",
+      "kind": "procedure",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 4
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 4
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.DELETE_AUTO_IP_GROUPS_TEST",
+      "kind": "package",
+      "schema": "FW",
+      "package": "DELETE_AUTO_IP_GROUPS_TEST",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 29
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 32
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 46
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP_MEMBER",
+          "line": 49
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 52
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 71
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 74
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP_MEMBER",
+          "line": 77
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP_MEMBER",
+          "line": 80
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 83
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 104
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP_MEMBER",
+          "line": 107
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 110
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 126
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP",
+          "line": 129
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.IP_GROUP_MEMBER",
+          "line": 132
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 136
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.IP_GROUP",
+          "line": 29
+        },
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 32
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 46
+        },
+        {
+          "text": "FW.IP_GROUP_MEMBER",
+          "line": 49
+        },
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 52
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 71
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 74
+        },
+        {
+          "text": "FW.IP_GROUP_MEMBER",
+          "line": 77
+        },
+        {
+          "text": "FW.IP_GROUP_MEMBER",
+          "line": 80
+        },
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 83
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 104
+        },
+        {
+          "text": "FW.IP_GROUP_MEMBER",
+          "line": 107
+        },
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 110
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 126
+        },
+        {
+          "text": "FW.IP_GROUP",
+          "line": 129
+        },
+        {
+          "text": "FW.IP_GROUP_MEMBER",
+          "line": 132
+        },
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 136
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.OSAG_FW",
+      "kind": "package",
+      "schema": "FW",
+      "package": "OSAG_FW",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_DST_NAT_DEL_IP_GROUPS",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 206
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 206
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_RULE_DEL_IP_GROUPS",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 190
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 190
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_SCIPGSCOPE_DEL_IP_GROUPS",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 214
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 214
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_SRC_NAT_DEL_IP_GROUPS",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 198
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 198
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_APP_GROUP",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_DESTINATION_NAT_RULE",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_DNS_OBJECT",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_IP",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_IPG",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_IPSRV",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_NAT_SECTION",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_POLICY",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_RULE",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_SCOPED_IP_GROUP",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_SCOPED_IP_GROUP_MEMBER",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_SECTION",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_SG",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FW.TRG_VERSION_SOURCE_NAT_RULE",
+      "kind": "trigger",
+      "schema": "FW",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "FYI.OSAG_FYI",
+      "kind": "package",
+      "schema": "FYI",
+      "package": "OSAG_FYI",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "GETNODES.OSAG_GETNODES",
+      "kind": "package",
+      "schema": "GETNODES",
+      "package": "OSAG_GETNODES",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "GUMA2.OSAG_GUMA",
+      "kind": "package",
+      "schema": "GUMA2",
+      "package": "OSAG_GUMA",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.hardware_history",
+          "line": 157
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.hardware_lifecycle_item",
+          "line": 188
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mss.hardware_history",
+          "line": 157
+        },
+        {
+          "text": "mss.hardware_lifecycle_item",
+          "line": 188
+        }
+      ],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "GUMA2.OSAG_GUMA_STATE",
+      "kind": "package",
+      "schema": "GUMA2",
+      "package": "OSAG_GUMA_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "GUMA2.OSAG_IMPLICATION",
+      "kind": "package",
+      "schema": "GUMA2",
+      "package": "OSAG_IMPLICATION",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "GUMA2.PATTERN_POS",
+      "kind": "trigger",
+      "schema": "GUMA2",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "GUMA2.SECONDARY_ISP",
+      "kind": "package",
+      "schema": "GUMA2",
+      "package": "SECONDARY_ISP",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "MAIL.DMARC_CLEANUP",
+      "kind": "package",
+      "schema": "MAIL",
+      "package": "DMARC_CLEANUP",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MC.CONNECTIVITY_COORDINATOR",
+      "kind": "package",
+      "schema": "MC",
+      "package": "CONNECTIVITY_COORDINATOR",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 267
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 298
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 399
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 429
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mc.isp_link_history",
+          "line": 267
+        },
+        {
+          "text": "mc.isp_link_history",
+          "line": 298
+        },
+        {
+          "text": "mc.isp_link_history",
+          "line": 399
+        },
+        {
+          "text": "mc.isp_link_history",
+          "line": 429
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MC.MONITORING",
+      "kind": "package",
+      "schema": "MC",
+      "package": "MONITORING",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.host_connection_status",
+          "line": 688
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mc.host_connection_status",
+          "line": 688
+        }
+      ],
+      "wave": 5,
+      "cycle_group": "MC.MONITORING|MC.MONITORING_TICKET_PROCESSES"
+    },
+    {
+      "id": "MC.MONITORING_STATE",
+      "kind": "package",
+      "schema": "MC",
+      "package": "MONITORING_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MC.MONITORING_TICKET_PROCESSES",
+      "kind": "package",
+      "schema": "MC",
+      "package": "MONITORING_TICKET_PROCESSES",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 5,
+      "cycle_group": "MC.MONITORING|MC.MONITORING_TICKET_PROCESSES"
+    },
+    {
+      "id": "MC.OSAG_ISP_MONITORING",
+      "kind": "package",
+      "schema": "MC",
+      "package": "OSAG_ISP_MONITORING",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 133
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_history",
+          "line": 163
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mc.isp_link_history",
+          "line": 133
+        },
+        {
+          "text": "mc.isp_link_history",
+          "line": 163
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MC.OSAG_MAINTSYNC",
+      "kind": "package",
+      "schema": "MC",
+      "package": "OSAG_MAINTSYNC",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "sw.host_id",
+          "line": 46
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.host_maintenance_history",
+          "line": 59
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "sw.isp_link_id",
+          "line": 119
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_maintenance_history",
+          "line": 150
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_maintenance_history",
+          "line": 162
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "sw.host_id",
+          "line": 216
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.host_maintenance_history",
+          "line": 224
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "sw.isp_link_id",
+          "line": 286
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mc.isp_link_maintenance_history",
+          "line": 305
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "sw.host_id",
+          "line": 46
+        },
+        {
+          "text": "mc.host_maintenance_history",
+          "line": 59
+        },
+        {
+          "text": "sw.isp_link_id",
+          "line": 119
+        },
+        {
+          "text": "mc.isp_link_maintenance_history",
+          "line": 150
+        },
+        {
+          "text": "mc.isp_link_maintenance_history",
+          "line": 162
+        },
+        {
+          "text": "sw.host_id",
+          "line": 216
+        },
+        {
+          "text": "mc.host_maintenance_history",
+          "line": 224
+        },
+        {
+          "text": "sw.isp_link_id",
+          "line": 286
+        },
+        {
+          "text": "mc.isp_link_maintenance_history",
+          "line": 305
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MCAUDIT.OSAG_AUDIT",
+      "kind": "package",
+      "schema": "MCAUDIT",
+      "package": "OSAG_AUDIT",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MCDB_CHECKS.CONSISTENCY",
+      "kind": "package",
+      "schema": "MCDB_CHECKS",
+      "package": "CONSISTENCY",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 7
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 19
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 20
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 20
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 21
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 29
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 34
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 36
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 38
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 43
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 49
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 51
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 53
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 56
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 67
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "DBMS_SQL",
+          "line": 73
+        }
+      ],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MCDB_MONITOR.CONSISTENCY_CHECK_RESULT_TYPE",
+      "kind": "type",
+      "schema": "MCDB_MONITOR",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MCDB_MONITOR.NOOP_CONSUMER",
+      "kind": "package",
+      "schema": "MCDB_MONITOR",
+      "package": "NOOP_CONSUMER",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "MCDB_MONITOR.PLOG_OUTPUT",
+          "line": 94
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "MCDB_MONITOR.PLOG_OUTPUT",
+          "line": 94
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MCDB_MONITOR.PLOG_MESSAGE_TYPE",
+      "kind": "type",
+      "schema": "MCDB_MONITOR",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.OSAG_DBPROP",
+      "kind": "package",
+      "schema": "MSS",
+      "package": "OSAG_DBPROP",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.OSAG_DBPROP_STATE",
+      "kind": "package",
+      "schema": "MSS",
+      "package": "OSAG_DBPROP_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.OSAG_IP",
+      "kind": "package",
+      "schema": "MSS",
+      "package": "OSAG_IP",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.OSAG_IP_TEST",
+      "kind": "package",
+      "schema": "MSS",
+      "package": "OSAG_IP_TEST",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.OSAG_SOFTWARE_RELEASE",
+      "kind": "package",
+      "schema": "MSS",
+      "package": "OSAG_SOFTWARE_RELEASE",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.software_release",
+          "line": 91
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.release_installation",
+          "line": 110
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mss.software_release",
+          "line": 91
+        },
+        {
+          "text": "mss.release_installation",
+          "line": 110
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.TRG_VERSION_IFACE",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.TRG_VERSION_IPV6",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.TRG_VERSION_NET",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.TRG_VERSION_NETV6",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.T_HARDWARE_DISPOSAL",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.T_HOST2SERVICE_ASERTO",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "MSS.T_SERVICE_ASERTO",
+      "kind": "trigger",
+      "schema": "MSS",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "NIDS.OSAG_NIDS",
+      "kind": "package",
+      "schema": "NIDS",
+      "package": "OSAG_NIDS",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "nids.nids_event",
+          "line": 313
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "nids.nids_event",
+          "line": 313
+        }
+      ],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "NIDS.TRG_POLICY_RULE_DEL_IP_GROUPS",
+      "kind": "trigger",
+      "schema": "NIDS",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 11
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "FW.DELETE_AUTO_IP_GROUPS",
+          "line": 11
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "OSAG.OSAG_ASERTO",
+      "kind": "package",
+      "schema": "OSAG",
+      "package": "OSAG_ASERTO",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "OSAG.OSAG_DIGEST",
+      "kind": "package",
+      "schema": "OSAG",
+      "package": "OSAG_DIGEST",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "SYS.DBMS_CRYPTO.HASH",
+          "line": 15
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "SYS.DBMS_CRYPTO.HASH",
+          "line": 25
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "SYS.DBMS_CRYPTO.HASH",
+          "line": 15
+        },
+        {
+          "text": "SYS.DBMS_CRYPTO.HASH",
+          "line": 25
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "OSAG.OSAG_EXT",
+      "kind": "package",
+      "schema": "OSAG",
+      "package": "OSAG_EXT",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "OSAG.OSAG_MSG",
+      "kind": "package",
+      "schema": "OSAG",
+      "package": "OSAG_MSG",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "OSAG.OSAG_PLOG",
+      "kind": "package",
+      "schema": "OSAG",
+      "package": "OSAG_PLOG",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "MCDB_MONITOR.PLOG_MESSAGE_TYPE",
+          "line": 15
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "MCDB_MONITOR.PLOG_MESSAGE_TYPE",
+          "line": 15
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "OSIXINFO.OSAG_EXCEPTIONS",
+      "kind": "package",
+      "schema": "OSIXINFO",
+      "package": "OSAG_EXCEPTIONS",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "OSIXINFO.OSAG_HARDWARE",
+      "kind": "package",
+      "schema": "OSIXINFO",
+      "package": "OSAG_HARDWARE",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.hardware_history",
+          "line": 65
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "mss.hardware_lifecycle_item",
+          "line": 96
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "mss.hardware_history",
+          "line": 65
+        },
+        {
+          "text": "mss.hardware_lifecycle_item",
+          "line": 96
+        }
+      ],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "REPORT.OSAG_CHANNEL",
+      "kind": "package",
+      "schema": "REPORT",
+      "package": "OSAG_CHANNEL",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 39
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "report.channelvalue",
+          "line": 41
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "report.host_count",
+          "line": 79
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "report.channelvalue",
+          "line": 41
+        },
+        {
+          "text": "report.host_count",
+          "line": 79
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "STOP.T_COMPANYTYPE_ASERTO",
+      "kind": "trigger",
+      "schema": "STOP",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "STOP.T_COMPANYUNIT_ASERTO",
+      "kind": "trigger",
+      "schema": "STOP",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "STOP.T_COMPANY_ASERTO",
+      "kind": "trigger",
+      "schema": "STOP",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": null
+    },
+    {
+      "id": "STOP.T_PASSPORT_CONTACT_DN_SET_DIRTYAUTHHOST",
+      "kind": "trigger",
+      "schema": "STOP",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "auth.dirtyauthhost",
+          "line": 181
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "auth.dirtyauthhost",
+          "line": 181
+        }
+      ],
+      "wave": 2,
+      "cycle_group": null
+    },
+    {
+      "id": "SYS.DECOMAUTHHOST",
+      "kind": "procedure",
+      "schema": "SYS",
+      "package": null,
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "sys.decomAuthHost",
+          "line": 4
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "sys.decomAuthHost",
+          "line": 4
+        }
+      ],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "SYS.OSAG_TABLE_REDEFINITION",
+      "kind": "package",
+      "schema": "SYS",
+      "package": "OSAG_TABLE_REDEFINITION",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 101
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 132
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 165
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 172
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 179
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 196
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 205
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 206
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 273
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 303
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 343
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 345
+        },
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 356
+        }
+      ],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TICKETEVOLUTION.CALCULATOR",
+      "kind": "package",
+      "schema": "TICKETEVOLUTION",
+      "package": "CALCULATOR",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.ESCALATION_INTERFACE",
+      "kind": "package",
+      "schema": "TT",
+      "package": "ESCALATION_INTERFACE",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "ec.ID",
+          "line": 169
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "tc.ID",
+          "line": 170
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "ec.ID",
+          "line": 169
+        },
+        {
+          "text": "tc.ID",
+          "line": 170
+        }
+      ],
+      "wave": 4,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.EVENT_INTERFACE",
+      "kind": "package",
+      "schema": "TT",
+      "package": "EVENT_INTERFACE",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "dynamic_sql",
+          "detail": "EXECUTE IMMEDIATE",
+          "line": 971
+        }
+      ],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+    },
+    {
+      "id": "TT.EVENT_INTERFACE_STATE",
+      "kind": "package",
+      "schema": "TT",
+      "package": "EVENT_INTERFACE_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.OSAG_NOTIFY",
+      "kind": "package",
+      "schema": "TT",
+      "package": "OSAG_NOTIFY",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "h.id",
+          "line": 362
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "h2s.host_id",
+          "line": 363
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "v_smtp_headers.extend",
+          "line": 1083
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact.id",
+          "line": 1561
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "address.id",
+          "line": 1588
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "city.id",
+          "line": 1589
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "country.id",
+          "line": 1590
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "stop.contact.id",
+          "line": 1709
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "address.id",
+          "line": 1736
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "city.id",
+          "line": 1737
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "country.id",
+          "line": 1738
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "h.id",
+          "line": 362
+        },
+        {
+          "text": "h2s.host_id",
+          "line": 363
+        },
+        {
+          "text": "v_smtp_headers.extend",
+          "line": 1083
+        },
+        {
+          "text": "stop.contact.id",
+          "line": 1561
+        },
+        {
+          "text": "address.id",
+          "line": 1588
+        },
+        {
+          "text": "city.id",
+          "line": 1589
+        },
+        {
+          "text": "country.id",
+          "line": 1590
+        },
+        {
+          "text": "stop.contact.id",
+          "line": 1709
+        },
+        {
+          "text": "address.id",
+          "line": 1736
+        },
+        {
+          "text": "city.id",
+          "line": 1737
+        },
+        {
+          "text": "country.id",
+          "line": 1738
+        }
+      ],
+      "wave": 3,
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+    },
+    {
+      "id": "TT.TICKET_INTERFACE",
+      "kind": "package",
+      "schema": "TT",
+      "package": "TICKET_INTERFACE",
+      "static_resolution": "incomplete",
+      "reasons": [
+        {
+          "kind": "unresolved_reference",
+          "detail": "tt.event",
+          "line": 837
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "tt.ticket2mc_file",
+          "line": 2012
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "tt.ticket_request_classification",
+          "line": 2112
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "tt.todo_item",
+          "line": 2195
+        },
+        {
+          "kind": "unresolved_reference",
+          "detail": "tt.ticket_flow",
+          "line": 2403
+        }
+      ],
+      "unresolved_refs": [
+        {
+          "text": "tt.event",
+          "line": 837
+        },
+        {
+          "text": "tt.ticket2mc_file",
+          "line": 2012
+        },
+        {
+          "text": "tt.ticket_request_classification",
+          "line": 2112
+        },
+        {
+          "text": "tt.todo_item",
+          "line": 2195
+        },
+        {
+          "text": "tt.ticket_flow",
+          "line": 2403
+        }
+      ],
+      "wave": 3,
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+    },
+    {
+      "id": "TT.TICKET_INTERFACE_STATE",
+      "kind": "package",
+      "schema": "TT",
+      "package": "TICKET_INTERFACE_STATE",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.TICKET_UPDATE_TRG",
+      "kind": "trigger",
+      "schema": "TT",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.TODO_ITEM_UPDATE_TRG",
+      "kind": "trigger",
+      "schema": "TT",
+      "package": null,
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 1,
+      "cycle_group": null
+    },
+    {
+      "id": "TT.UTIL",
+      "kind": "package",
+      "schema": "TT",
+      "package": "UTIL",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 3,
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+    },
+    {
+      "id": "VPN.OSAG_VPN",
+      "kind": "package",
+      "schema": "VPN",
+      "package": "OSAG_VPN",
+      "static_resolution": "complete",
+      "reasons": [],
+      "unresolved_refs": [],
+      "wave": 2,
+      "cycle_group": null
+    }
+  ],
+  "edges": [
+    {
+      "from": "ASERTO_TEST.E2ETEST",
+      "to": "AUTH.OSAG_AUTH",
+      "call_sites": [
+        82,
+        83,
+        114,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        20,
+        75,
+        78,
+        82,
+        93,
+        98,
+        116,
+        142,
+        149
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH",
+      "to": "TT.OSAG_NOTIFY",
+      "call_sites": [
+        25
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH_PASSPORT",
+      "to": "MCAUDIT.OSAG_AUDIT",
+      "call_sites": [
+        1873,
+        1900
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH_PASSPORT",
+      "to": "OSAG.OSAG_DIGEST",
+      "call_sites": [
+        561,
+        586
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH_PASSPORT",
+      "to": "OSAG.OSAG_EXT",
+      "call_sites": [
+        1209,
+        1313,
+        2017,
+        2187
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_AUTH_PASSPORT",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        15,
+        19,
+        24,
+        40,
+        49,
+        58,
+        75,
+        88,
+        92,
+        112,
+        123,
+        127,
+        132,
+        145,
+        148,
+        151,
+        156,
+        170,
+        174,
+        179,
+        198,
+        219,
+        222,
+        225,
+        230,
+        252,
+        270,
+        289,
+        310,
+        314,
+        331,
+        342,
+        358,
+        368,
+        385,
+        408,
+        417,
+        420,
+        424,
+        440,
+        463,
+        476,
+        479,
+        483,
+        497,
+        500,
+        504,
+        518,
+        521,
+        525,
+        539,
+        542,
+        546,
+        559,
+        565,
+        584,
+        590,
+        601,
+        606,
+        624,
+        632,
+        660,
+        661,
+        704,
+        737,
+        741,
+        775,
+        796,
+        806,
+        836,
+        870,
+        905,
+        925,
+        935,
+        964,
+        994,
+        1013,
+        1025,
+        1038,
+        1044,
+        1047,
+        1052,
+        1072,
+        1080,
+        1089,
+        1114,
+        1155,
+        1174,
+        1179,
+        1182,
+        1206,
+        1243,
+        1251,
+        1255,
+        1268,
+        1296,
+        1345,
+        1350,
+        1378,
+        1382,
+        1384,
+        1408,
+        1429,
+        1463,
+        1472,
+        1485,
+        1491,
+        1494,
+        1499,
+        1527,
+        1601,
+        1619,
+        1623,
+        1646,
+        1681,
+        1707,
+        1742,
+        1756,
+        1773,
+        1776,
+        1782,
+        1809,
+        1810,
+        1819,
+        1822,
+        1850,
+        1881,
+        1886,
+        1907,
+        1922,
+        1930,
+        1933,
+        1938,
+        1954,
+        1969,
+        1974,
+        1979,
+        1982,
+        1987,
+        2007,
+        2027,
+        2049,
+        2053,
+        2066,
+        2083,
+        2099,
+        2103,
+        2116,
+        2132,
+        2137,
+        2140,
+        2143,
+        2148,
+        2172,
+        2197,
+        2235,
+        2239,
+        2252,
+        2268,
+        2301
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_IMPLICATION",
+      "to": "AUTH.OSAG_AUTH_PASSPORT",
+      "call_sites": [
+        106,
+        108,
+        116
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.OSAG_IMPLICATION",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        51,
+        75,
+        83,
+        88,
+        93,
+        98,
+        110,
+        114,
+        123
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_AUTHHOST_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        21,
+        26,
+        36,
+        41,
+        46
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_GROUPS_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        75,
+        80,
+        92,
+        97,
+        104
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_LOGIN_SET_COMPANY",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        147,
+        155,
+        189,
+        236,
+        270,
+        299
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_LOGIN_SET_COMPANY",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        128
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PASSPORT_ALIAS_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        336,
+        341,
+        356,
+        361,
+        369
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PASSPORT_LOGIN_SET_AUTHTYPE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        396
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PASSPORT_LOGIN_SET_COMPANY",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        421
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PASSPORT_LOGIN_SET_DEFAULT_UNIT",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        451
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PASSPORT_LOGIN_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        476,
+        481,
+        494,
+        504,
+        513,
+        525,
+        530,
+        545,
+        550,
+        562,
+        567,
+        578,
+        583,
+        591
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PL2G_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        620,
+        625,
+        640,
+        645,
+        652
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_PL2TG_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        681,
+        686,
+        701,
+        706,
+        713
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_TGROUP_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        742,
+        747,
+        759,
+        764,
+        771
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_TOKEN_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        798,
+        803,
+        812
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USERUNIT",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        823,
+        832
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USRCOMPSC_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        900
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USRCOMPUSC_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        950
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USRPERM_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        997,
+        1006,
+        1041,
+        1089,
+        1120,
+        1145,
+        1175
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USRSVCSC_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        1223
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "AUTH.T_USRUSERUSC_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        1267
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "ESP.OSAG_DUTY",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        14,
+        30,
+        44,
+        60
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "FW.OSAG_FW",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        9
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "FYI.OSAG_FYI",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        13
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GETNODES.OSAG_GETNODES",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        24,
+        38,
+        60,
+        74
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.OSAG_GUMA",
+      "to": "MCAUDIT.OSAG_AUDIT",
+      "call_sites": [
+        335,
+        397
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.OSAG_GUMA",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        17,
+        34,
+        56,
+        67,
+        83,
+        87,
+        93,
+        125,
+        130,
+        183,
+        213,
+        266,
+        292,
+        322,
+        348,
+        379
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.OSAG_GUMA",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        279
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "GUMA2.OSAG_IMPLICATION",
+      "to": "AUTH.OSAG_AUTH_PASSPORT",
+      "call_sites": [
+        107,
+        109,
+        117
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.OSAG_IMPLICATION",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        52,
+        76,
+        84,
+        89,
+        94,
+        99,
+        111,
+        115,
+        124
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.SECONDARY_ISP",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        56,
+        80,
+        87,
+        94,
+        103,
+        112,
+        155,
+        184,
+        295,
+        305,
+        312,
+        346,
+        373,
+        384,
+        410,
+        441
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "GUMA2.SECONDARY_ISP",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        317,
+        415
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MAIL.DMARC_CLEANUP",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        6,
+        17,
+        36
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MC.CONNECTIVITY_COORDINATOR",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        26,
+        85,
+        227,
+        260,
+        343,
+        374
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MC.MONITORING",
+      "to": "MC.MONITORING_TICKET_PROCESSES",
+      "call_sites": [
+        536,
+        585,
+        597
+      ],
+      "via": "same_schema"
+    },
+    {
+      "from": "MC.MONITORING",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        20,
+        55,
+        164,
+        227,
+        245,
+        267,
+        285,
+        472,
+        500,
+        544,
+        548,
+        606,
+        611,
+        663,
+        727
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MC.MONITORING_TICKET_PROCESSES",
+      "to": "MC.MONITORING",
+      "call_sites": [
+        222,
+        223
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MC.MONITORING_TICKET_PROCESSES",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        160,
+        165,
+        259,
+        283,
+        319,
+        343,
+        359
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MC.MONITORING_TICKET_PROCESSES",
+      "to": "TT.ESCALATION_INTERFACE",
+      "call_sites": [
+        132
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MC.MONITORING_TICKET_PROCESSES",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        129,
+        157,
+        280
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MC.MONITORING_TICKET_PROCESSES",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        68,
+        70,
+        133
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MC.OSAG_ISP_MONITORING",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        66,
+        93,
+        126,
+        200,
+        217
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MC.OSAG_MAINTSYNC",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        54,
+        69,
+        141,
+        146,
+        172,
+        187,
+        235,
+        250,
+        313
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MCAUDIT.OSAG_AUDIT",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        23,
+        56,
+        99,
+        134
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MCDB_CHECKS.CONSISTENCY",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        137,
+        165
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MSS.OSAG_DBPROP",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        17,
+        37,
+        49,
+        52,
+        73,
+        78,
+        81
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MSS.OSAG_IP",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        62,
+        77,
+        87,
+        91,
+        120,
+        128,
+        136
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MSS.OSAG_IP_TEST",
+      "to": "MSS.OSAG_IP",
+      "call_sites": [
+        52,
+        118,
+        119
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "MSS.OSAG_SOFTWARE_RELEASE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        27
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MSS.T_HARDWARE_DISPOSAL",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        74,
+        88
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MSS.T_HOST2SERVICE_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        98
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "MSS.T_SERVICE_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        117,
+        150,
+        160
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "NIDS.OSAG_NIDS",
+      "to": "MSS.OSAG_IP",
+      "call_sites": [
+        166,
+        171
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "NIDS.OSAG_NIDS",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        138,
+        199,
+        224,
+        253,
+        325,
+        327,
+        329,
+        331,
+        365
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "NIDS.OSAG_NIDS",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        261,
+        273,
+        281
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "NIDS.OSAG_NIDS",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        291
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "OSAG.OSAG_ASERTO",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        45,
+        99
+      ],
+      "via": "same_schema"
+    },
+    {
+      "from": "OSAG.OSAG_DIGEST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        14,
+        24
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "OSAG.OSAG_EXT",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        46,
+        50,
+        54,
+        84,
+        86,
+        92,
+        95,
+        102,
+        111
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "OSAG.OSAG_MSG",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        22,
+        28,
+        58,
+        63,
+        85,
+        89,
+        94
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "OSIXINFO.OSAG_HARDWARE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        24,
+        33,
+        38,
+        91,
+        121,
+        175,
+        201
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "OSIXINFO.OSAG_HARDWARE",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        188
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "REPORT.OSAG_CHANNEL",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        34,
+        53,
+        55,
+        63,
+        65,
+        76,
+        84
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "STOP.T_COMPANYTYPE_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        26,
+        36,
+        46
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "STOP.T_COMPANYUNIT_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        65,
+        74
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "STOP.T_COMPANY_ASERTO",
+      "to": "OSAG.OSAG_ASERTO",
+      "call_sites": [
+        117,
+        143
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "STOP.T_PASSPORT_CONTACT_DN_SET_DIRTYAUTHHOST",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        179,
+        183
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.ESCALATION_INTERFACE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        22,
+        23,
+        50,
+        51,
+        61,
+        95,
+        159,
+        175,
+        178,
+        210,
+        217
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.ESCALATION_INTERFACE",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        68,
+        131
+      ],
+      "via": "same_schema"
+    },
+    {
+      "from": "TT.ESCALATION_INTERFACE",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        199
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.EVENT_INTERFACE",
+      "to": "MSS.OSAG_DBPROP",
+      "call_sites": [
+        955
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.EVENT_INTERFACE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        69,
+        85,
+        106,
+        135,
+        297,
+        306,
+        335,
+        415,
+        448,
+        559,
+        610,
+        664,
+        739,
+        826,
+        827,
+        838,
+        876,
+        884,
+        886,
+        888,
+        914,
+        915,
+        922,
+        933,
+        936,
+        943,
+        952,
+        963,
+        970,
+        974,
+        977,
+        980,
+        1072,
+        1117,
+        1151
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.EVENT_INTERFACE",
+      "to": "TT.OSAG_NOTIFY",
+      "call_sites": [
+        504,
+        747,
+        1099
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.EVENT_INTERFACE",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        199,
+        222,
+        288,
+        326,
+        419,
+        496,
+        620,
+        621,
+        676,
+        707,
+        720,
+        737
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.EVENT_INTERFACE",
+      "to": "TT.UTIL",
+      "call_sites": [
+        761
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.OSAG_NOTIFY",
+      "to": "MSS.OSAG_IP",
+      "call_sites": [
+        1460,
+        1462,
+        1467,
+        1469
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.OSAG_NOTIFY",
+      "to": "OSAG.OSAG_MSG",
+      "call_sites": [
+        807,
+        838,
+        1043,
+        1060,
+        1108,
+        1362,
+        1371,
+        1475
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.OSAG_NOTIFY",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        335,
+        368,
+        434,
+        517,
+        634,
+        750,
+        756,
+        757,
+        784,
+        809,
+        811,
+        840,
+        861,
+        901,
+        934,
+        935,
+        953,
+        984,
+        1058,
+        1066,
+        1079,
+        1114,
+        1361,
+        1369,
+        1380,
+        1447,
+        1473,
+        1508,
+        1512
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.OSAG_NOTIFY",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        926
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.TICKET_INTERFACE",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        68,
+        288,
+        305,
+        378,
+        379,
+        577,
+        672,
+        777,
+        869,
+        870,
+        910,
+        934,
+        957,
+        1011,
+        1031,
+        1067,
+        1132,
+        1210,
+        1241,
+        1272,
+        1300,
+        1353,
+        1395,
+        1446,
+        1463,
+        1496,
+        1653,
+        1716,
+        1734,
+        1752,
+        1793,
+        1810,
+        1829,
+        1845,
+        1917,
+        1934,
+        1940,
+        1953,
+        1969,
+        1986,
+        2003,
+        2021,
+        2025,
+        2045,
+        2066,
+        2089,
+        2122,
+        2141,
+        2191,
+        2243,
+        2378
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.TICKET_INTERFACE",
+      "to": "TT.EVENT_INTERFACE",
+      "call_sites": [
+        237,
+        250,
+        303,
+        459,
+        475,
+        509,
+        513,
+        1542,
+        1718,
+        1731,
+        1806,
+        1840,
+        1883,
+        1897,
+        1899,
+        1950,
+        1980,
+        2017,
+        2060,
+        2118,
+        2155,
+        2297
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.TICKET_INTERFACE",
+      "to": "TT.OSAG_NOTIFY",
+      "call_sites": [
+        234,
+        497,
+        1700
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.TICKET_INTERFACE",
+      "to": "TT.UTIL",
+      "call_sites": [
+        520,
+        522
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.UTIL",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        19,
+        59,
+        94,
+        166,
+        180,
+        221
+      ],
+      "via": "synonym"
+    },
+    {
+      "from": "TT.UTIL",
+      "to": "TT.OSAG_NOTIFY",
+      "call_sites": [
+        29
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "TT.UTIL",
+      "to": "TT.TICKET_INTERFACE",
+      "call_sites": [
+        23,
+        62,
+        170,
+        233
+      ],
+      "via": "qualified"
+    },
+    {
+      "from": "VPN.OSAG_VPN",
+      "to": "OSAG.OSAG_PLOG",
+      "call_sites": [
+        14,
+        35,
+        59,
+        118,
+        149,
+        214,
+        259,
+        301,
+        311,
+        318,
+        333,
+        350,
+        377
+      ],
+      "via": "synonym"
+    }
+  ],
+  "waves": [
+    [
+      "APPID.T_INTERFACE_PS_LINK_CLASS_SYNC",
+      "APPID.T_PATH_OVERRIDE_MEMBER_LINK_SYNC",
+      "AUTH.OSAG_AUTH_STATE",
+      "FW.DELETE_AUTO_IP_GROUPS",
+      "FW.DELETE_AUTO_IP_GROUPS_TEST",
+      "FW.TRG_DST_NAT_DEL_IP_GROUPS",
+      "FW.TRG_RULE_DEL_IP_GROUPS",
+      "FW.TRG_SCIPGSCOPE_DEL_IP_GROUPS",
+      "FW.TRG_SRC_NAT_DEL_IP_GROUPS",
+      "FW.TRG_VERSION_APP_GROUP",
+      "FW.TRG_VERSION_DESTINATION_NAT_RULE",
+      "FW.TRG_VERSION_DNS_OBJECT",
+      "FW.TRG_VERSION_IP",
+      "FW.TRG_VERSION_IPG",
+      "FW.TRG_VERSION_IPSRV",
+      "FW.TRG_VERSION_NAT_SECTION",
+      "FW.TRG_VERSION_POLICY",
+      "FW.TRG_VERSION_RULE",
+      "FW.TRG_VERSION_SCOPED_IP_GROUP",
+      "FW.TRG_VERSION_SCOPED_IP_GROUP_MEMBER",
+      "FW.TRG_VERSION_SECTION",
+      "FW.TRG_VERSION_SG",
+      "FW.TRG_VERSION_SOURCE_NAT_RULE",
+      "GUMA2.OSAG_GUMA_STATE",
+      "GUMA2.PATTERN_POS",
+      "MC.MONITORING_STATE",
+      "MCDB_MONITOR.CONSISTENCY_CHECK_RESULT_TYPE",
+      "MCDB_MONITOR.NOOP_CONSUMER",
+      "MCDB_MONITOR.PLOG_MESSAGE_TYPE",
+      "MSS.OSAG_DBPROP_STATE",
+      "MSS.TRG_VERSION_IFACE",
+      "MSS.TRG_VERSION_IPV6",
+      "MSS.TRG_VERSION_NET",
+      "MSS.TRG_VERSION_NETV6",
+      "NIDS.TRG_POLICY_RULE_DEL_IP_GROUPS",
+      "OSAG.OSAG_PLOG",
+      "OSIXINFO.OSAG_EXCEPTIONS",
+      "SYS.DECOMAUTHHOST",
+      "SYS.OSAG_TABLE_REDEFINITION",
+      "TICKETEVOLUTION.CALCULATOR",
+      "TT.EVENT_INTERFACE_STATE",
+      "TT.TICKET_INTERFACE_STATE",
+      "TT.TICKET_UPDATE_TRG",
+      "TT.TODO_ITEM_UPDATE_TRG"
+    ],
+    [
+      "AUTH.T_AUTHHOST_SET_DIRTYAUTHHOST",
+      "AUTH.T_GROUPS_SET_DIRTYAUTHHOST",
+      "AUTH.T_PASSPORT_ALIAS_SET_DIRTYAUTHHOST",
+      "AUTH.T_PASSPORT_LOGIN_SET_AUTHTYPE",
+      "AUTH.T_PASSPORT_LOGIN_SET_COMPANY",
+      "AUTH.T_PASSPORT_LOGIN_SET_DEFAULT_UNIT",
+      "AUTH.T_PASSPORT_LOGIN_SET_DIRTYAUTHHOST",
+      "AUTH.T_PL2G_SET_DIRTYAUTHHOST",
+      "AUTH.T_PL2TG_SET_DIRTYAUTHHOST",
+      "AUTH.T_TGROUP_SET_DIRTYAUTHHOST",
+      "AUTH.T_TOKEN_SET_DIRTYAUTHHOST",
+      "ESP.OSAG_DUTY",
+      "FW.OSAG_FW",
+      "FYI.OSAG_FYI",
+      "GETNODES.OSAG_GETNODES",
+      "MAIL.DMARC_CLEANUP",
+      "MC.CONNECTIVITY_COORDINATOR",
+      "MC.OSAG_ISP_MONITORING",
+      "MC.OSAG_MAINTSYNC",
+      "MCAUDIT.OSAG_AUDIT",
+      "MCDB_CHECKS.CONSISTENCY",
+      "MSS.OSAG_DBPROP",
+      "MSS.OSAG_IP",
+      "MSS.OSAG_SOFTWARE_RELEASE",
+      "MSS.T_HARDWARE_DISPOSAL",
+      "OSAG.OSAG_ASERTO",
+      "OSAG.OSAG_DIGEST",
+      "OSAG.OSAG_EXT",
+      "OSAG.OSAG_MSG",
+      "REPORT.OSAG_CHANNEL",
+      "STOP.T_PASSPORT_CONTACT_DN_SET_DIRTYAUTHHOST",
+      "VPN.OSAG_VPN"
+    ],
+    [
+      "AUTH.OSAG_AUTH_PASSPORT",
+      "AUTH.T_LOGIN_SET_COMPANY",
+      "AUTH.T_USERUNIT",
+      "AUTH.T_USRCOMPSC_ASERTO",
+      "AUTH.T_USRCOMPUSC_ASERTO",
+      "AUTH.T_USRPERM_ASERTO",
+      "AUTH.T_USRSVCSC_ASERTO",
+      "AUTH.T_USRUSERUSC_ASERTO",
+      "MSS.OSAG_IP_TEST",
+      "MSS.T_HOST2SERVICE_ASERTO",
+      "MSS.T_SERVICE_ASERTO",
+      "STOP.T_COMPANYTYPE_ASERTO",
+      "STOP.T_COMPANYUNIT_ASERTO",
+      "STOP.T_COMPANY_ASERTO",
+      "TT.EVENT_INTERFACE",
+      "TT.OSAG_NOTIFY",
+      "TT.TICKET_INTERFACE",
+      "TT.UTIL"
+    ],
+    [
+      "AUTH.OSAG_AUTH",
+      "AUTH.OSAG_IMPLICATION",
+      "GUMA2.OSAG_GUMA",
+      "GUMA2.OSAG_IMPLICATION",
+      "GUMA2.SECONDARY_ISP",
+      "NIDS.OSAG_NIDS",
+      "OSIXINFO.OSAG_HARDWARE",
+      "TT.ESCALATION_INTERFACE"
+    ],
+    [
+      "ASERTO_TEST.E2ETEST",
+      "MC.MONITORING",
+      "MC.MONITORING_TICKET_PROCESSES"
+    ]
+  ],
+  "cycle_groups": [
+    {
+      "id": "MC.MONITORING|MC.MONITORING_TICKET_PROCESSES",
+      "members": [
+        "MC.MONITORING",
+        "MC.MONITORING_TICKET_PROCESSES"
+      ],
+      "wave": 5,
+      "note": "all members translate as one batch -- none can precede the others"
+    },
+    {
+      "id": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL",
+      "members": [
+        "TT.EVENT_INTERFACE",
+        "TT.OSAG_NOTIFY",
+        "TT.TICKET_INTERFACE",
+        "TT.UTIL"
+      ],
+      "wave": 3,
+      "note": "all members translate as one batch -- none can precede the others"
+    }
+  ],
+  "stats": {
+    "node_count": 105,
+    "edge_count": 94,
+    "unresolved_count": 131,
+    "incomplete_count": 31
+  }
+}
