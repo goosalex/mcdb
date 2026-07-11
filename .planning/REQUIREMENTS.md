@@ -5,8 +5,8 @@
 ### Inventory & Foundation
 
 - [x] **INV-01**: Complete inventory of all programmatic objects in `ddl/src` (48 package specs, 49 bodies, 2 procs, 8 triggers, 2 types) with per-object metadata (public routines, DBMS_*/UTL_* call sites, COMMIT/ROLLBACK presence, autonomous-transaction pragmas, package-level mutable state)
-- [ ] **INV-02**: Static dependency graph of cross-package/object calls driving a topological translation order (leaf packages first, waves)
-- [ ] **INV-03**: Single name-mapping table (Oracle `SCHEMA.PACKAGE.OBJECT` → PG `package_in_name` object name) as the sole source of truth for SQL refactoring, test naming, and client regexps
+- [x] **INV-02**: Static dependency graph of cross-package/object calls driving a topological translation order (leaf packages first, waves)
+- [x] **INV-03**: Single name-mapping table (Oracle `SCHEMA.PACKAGE.OBJECT` → PG `package_in_name` object name) as the sole source of truth for SQL refactoring, test naming, and client regexps
 
 ### Specifications
 
@@ -77,8 +77,8 @@ Deferred to a later milestone:
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
 | INV-01 | Phase 1 — Inventory & Foundation | Complete |
-| INV-02 | Phase 1 — Inventory & Foundation | Pending |
-| INV-03 | Phase 1 — Inventory & Foundation | Pending |
+| INV-02 | Phase 1 — Inventory & Foundation | Complete |
+| INV-03 | Phase 1 — Inventory & Foundation | Complete |
 | SPEC-02 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | SPEC-03 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | HARN-01 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |

@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: inventory-foundation
-status: executing
-stopped_at: ROADMAP.md and STATE.md written; REQUIREMENTS.md traceability filled
-last_updated: "2026-07-11T21:34:24.057Z"
+status: verifying
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-07-11T21:55:03.516Z"
 last_activity: 2026-07-11
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 20
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 Phase: 01 (inventory-foundation) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-11 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 20min | 2 tasks | 7 files |
+| Phase 01 P02 | 16min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Roadmap]: ora2pg output is raw material and a completeness checklist only — never shipped unverified
 - [Phase ?]: schemas count is 23 (not the plan's stated 21) -- ddl/src/triggers/APPID.sql and STOP.sql declare objects in schemas absent from every package spec; hard-gated on the lexer-derived truth
 - [Phase ?]: reconcile() recomputes structural counts live from result['objects'] rather than a precomputed snapshot, so --check can actually detect a removed object
+- [Phase ?]: Real corpus has exactly one name collision (the legitimate TT.TICKET_INTERFACE.change_label overload); overrides.csv ships empty since the collision gate's hard-fail path is proven via synthetic fixtures
+- [Phase ?]: Two genuine mutual-recursion cycle groups verified against source and accepted into known_cycles.json: MC.MONITORING<->MC.MONITORING_TICKET_PROCESSES, and TT.EVENT_INTERFACE/OSAG_NOTIFY/TICKET_INTERFACE/UTIL
+- [Phase ?]: depgraph.py derives its synonym index from name-map.csv's oracle_synonym column rather than re-parsing inventory.json synonyms, keeping synonym resolution a single source of truth
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T21:34:02.189Z
-Stopped at: ROADMAP.md and STATE.md written; REQUIREMENTS.md traceability filled
+Last session: 2026-07-11T21:55:03.510Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

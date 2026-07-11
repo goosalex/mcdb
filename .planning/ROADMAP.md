@@ -13,7 +13,7 @@ This milestone moves MCDB's programmatic layer (48 packages, 2 standalone proced
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Inventory & Foundation** - Object inventory, dependency graph with wave order, name-mapping SSOT
+- [x] **Phase 1: Inventory & Foundation** - Object inventory, dependency graph with wave order, name-mapping SSOT (completed 2026-07-11)
 - [ ] **Phase 2: Spec Method, Test Harness & Pilot** - Dual harness running and the spec-first method proven on a pilot batch
 - [ ] **Phase 3: Cross-cutting Semantics** - Exceptions, plog as a UDP log shipper, DBMS_* replacements, transaction audit — decided once
 - [ ] **Phase 4: Wave-Ordered Translation & Verification** - All packages, procs, triggers, types specified, translated, and green
@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A name-mapping table (Oracle `SCHEMA.PACKAGE.OBJECT` → PG `package_in_name` name) covers every object with zero collisions, and is the single artifact that SQL refactoring, test naming, and client regexps all read from
   4. Objects whose call edges cannot be resolved statically (EXECUTE IMMEDIATE, DBMS_SQL) are explicitly flagged in the graph rather than silently omitted
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 - [x] 01-01-PLAN.md — Oracle source lexer + object inventory (`migration/analyze/inventory.json`), reconciled against files on disk (INV-01)
-- [ ] 01-02-PLAN.md — Name-mapping SSOT with collision gate + dependency graph with wave order, behind one regeneration command (INV-02, INV-03)
+- [x] 01-02-PLAN.md — Name-mapping SSOT with collision gate + dependency graph with wave order, behind one regeneration command (INV-02, INV-03)
 
 **Research**: Standard pattern (DAG extraction + topological sort) — no deeper research needed. Gap to close during the phase: verify graph completeness for dynamic-SQL packages; validate name map for zero collisions.
 
@@ -110,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Inventory & Foundation | 1/2 | In Progress|  |
+| 1. Inventory & Foundation | 2/2 | Complete   | 2026-07-11 |
 | 2. Spec Method, Test Harness & Pilot | 0/3 | Not started | - |
 | 3. Cross-cutting Semantics | 0/2 | Not started | - |
 | 4. Wave-Ordered Translation & Verification | 0/4 | Not started | - |
