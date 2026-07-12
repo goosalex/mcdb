@@ -53,8 +53,25 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Pilot packages (3-5, drawn from wave 1) each have a spec that applies the uniform checklist — empty-string/NULL handling, SELECT INTO strictness, exception codes, package state, FUNCTION-vs-PROCEDURE — and carries an explicit "assumptions / unresolved" section
   5. Every pilot test cites the spec clause it verifies, and the harness demonstrably goes red-before / green-after on the pilot batch — proving the method before it is applied at scale
 
-**Plans**: 3 plans
-**Research**: Needs deeper research — dynamic SQL (DBMS_SQL, EXECUTE IMMEDIATE) in pilot packages may resist static spec derivation and require manual tracing; no live-Oracle baseline is available to fall back on.
+**Plans**: 13 plans
+
+- [ ] 02-01-PLAN.md — Dual harness foundation: pgTAP+pg_prove, expected-output diffing, one-command runner, disposable test DBs, and the `redgreen.sh` gate — proven falsifiable (HARN-01, HARN-02, HARN-04)
+- [ ] 02-02-PLAN.md — Spec template + uniform 5-dimension checklist + the three anti-circularity linters (spec_lint, trace_lint, provenance_lint) (SPEC-02, SPEC-03, HARN-05)
+- [ ] 02-03-PLAN.md — Test schema from `ddl/migrated/` with ora2pg errors surfaced and fixed, sequences ported, masterdata fixtures, plog stub (HARN-03)
+- [ ] 02-04-PLAN.md — Spec + tests (RED): MSS.OSAG_DBPROP, AUTH.OSAG_AUTH, TT.UTIL (SPEC-02, SPEC-03, HARN-05)
+- [ ] 02-05-PLAN.md — Spec + tests (RED): TT.OSAG_NOTIFY — all 30 SELECT INTO sites (SPEC-02, SPEC-03, HARN-05)
+- [ ] 02-06-PLAN.md — Spec + tests (RED): TT.EVENT_INTERFACE + the dynamic-SQL manual trace (SPEC-02, SPEC-03, HARN-05)
+- [ ] 02-07-PLAN.md — Spec: TT.TICKET_INTERFACE — all 38 routines, all 77 SELECT INTO sites (SPEC-02, SPEC-03)
+- [ ] 02-08-PLAN.md — Tests (RED): TT.TICKET_INTERFACE — every routine cited to a clause (HARN-05, SPEC-03)
+- [ ] 02-09-PLAN.md — Translate: MSS.OSAG_DBPROP, AUTH.OSAG_AUTH, TT.UTIL → green (HARN-04, HARN-05)
+- [ ] 02-10-PLAN.md — Translate: TT.OSAG_NOTIFY → green (HARN-04, HARN-05)
+- [ ] 02-11-PLAN.md — Translate: TT.EVENT_INTERFACE incl. the dynamic-SQL site → green (HARN-04, HARN-05)
+- [ ] 02-12-PLAN.md — Translate: TT.TICKET_INTERFACE — all 38 routines → green (HARN-04, HARN-05)
+- [ ] 02-13-PLAN.md — Integration: one command, whole-pilot red→green + mutation check, PHASE2-FINDINGS + METHOD-REVIEW (all 7)
+
+**Research**: Needs deeper research — dynamic SQL (DBMS_SQL, EXECUTE IMMEDIATE) in pilot packages may resist static spec derivation and require manual tracing; no live-Oracle baseline is available to fall back on. *Skipped by user decision; handled instead by plan 02-06's mandatory manual trace, which may return an explicit `UNRESOLVED — DO NOT GUESS` verdict.*
+
+**Scope note (planning, 2026-07-12):** The roadmap assumed "3-5 small packages drawn from wave 1". The user overrode that: wave 1 is dominated by 0-routine `*_STATE` constants packages that would prove nothing. The locked pilot is 4 real packages (`MSS.OSAG_DBPROP`, `TT.EVENT_INTERFACE`, `TT.TICKET_INTERFACE` with **all 38 routines**, `AUTH.OSAG_AUTH`) plus 3 transitive dependencies they cannot run without (`OSAG.OSAG_PLOG` — stubbed; `TT.OSAG_NOTIFY`; `TT.UTIL`). That is **7 packages, ~76 public routines, ~6,000 lines of Oracle** — roughly 4x the assumed size, hence 13 plans rather than 3.
 
 ### Phase 3: Cross-cutting Semantics
 
@@ -111,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Inventory & Foundation | 2/2 | Complete   | 2026-07-11 |
-| 2. Spec Method, Test Harness & Pilot | 0/3 | Not started | - |
+| 2. Spec Method, Test Harness & Pilot | 0/13 | Not started | - |
 | 3. Cross-cutting Semantics | 0/2 | Not started | - |
 | 4. Wave-Ordered Translation & Verification | 0/4 | Not started | - |
 | 5. Container Build & Client Migration Aids | 0/2 | Not started | - |
