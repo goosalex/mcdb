@@ -115,7 +115,8 @@ fi
 
 if ! db_exists "$TEMPLATE"; then
   echo "FATAL: template database '${TEMPLATE}' does not exist." >&2
-  echo "Run plan 02-03's template builder first, or pass --bare to build a schema-less database." >&2
+  echo "Run plan 02-03's template builder first, or build a schema-less database with:" >&2
+  echo "  $0 --db ${DB} --bare" >&2
   exit 1
 fi
 
