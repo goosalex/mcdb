@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: spec-method-test-harness-pilot
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-07-12T14:25:50.453Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-07-12T15:10:52.104Z"
 last_activity: 2026-07-12
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 2
-  percent: 13
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 02 (spec-method-test-harness-pilot) — EXECUTING
-Plan: 1 of 13
-Status: Executing Phase 02
+Plan: 2 of 13
+Status: Ready to execute
 Last activity: 2026-07-12 — Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01 P01 | 20min | 2 tasks | 7 files |
 | Phase 01 P02 | 16min | 3 tasks | 11 files |
+| Phase 02 P03 | 30min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Real corpus has exactly one name collision (the legitimate TT.TICKET_INTERFACE.change_label overload); overrides.csv ships empty since the collision gate's hard-fail path is proven via synthetic fixtures
 - [Phase ?]: Two genuine mutual-recursion cycle groups verified against source and accepted into known_cycles.json: MC.MONITORING<->MC.MONITORING_TICKET_PROCESSES, and TT.EVENT_INTERFACE/OSAG_NOTIFY/TICKET_INTERFACE/UTIL
 - [Phase ?]: depgraph.py derives its synonym index from name-map.csv's oracle_synonym column rather than re-parsing inventory.json synonyms, keeping synonym resolution a single source of truth
+- [Phase ?]: tables/constraints.pg.sql (843 FK, non-deferrable) skipped in favor of constraints/fk-constraints.pg.sql (deferrable) -- avoids 843 duplicate-constraint errors and matches the masterdata loader's SET CONSTRAINTS ALL DEFERRED strategy
+- [Phase ?]: postgresadmin role + checklist schema (2 ora2pg gaps) fixed in bootstrap/10_schemas_roles.sql, not schema-fixes/ -- they must exist before tables.pg.sql can even attempt the statements that need them
+- [Phase ?]: masterdata NULL sentinel is the literal quoted token NULL, not an empty CSV field -- evidence-based (grep-verified), overturning the plan's own assumption; implemented via COPY NULL 'NULL' + FORCE_NULL
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-11T21:55:03.510Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-07-12T15:10:52.098Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

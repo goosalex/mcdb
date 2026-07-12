@@ -53,11 +53,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Pilot packages (3-5, drawn from wave 1) each have a spec that applies the uniform checklist — empty-string/NULL handling, SELECT INTO strictness, exception codes, package state, FUNCTION-vs-PROCEDURE — and carries an explicit "assumptions / unresolved" section
   5. Every pilot test cites the spec clause it verifies, and the harness demonstrably goes red-before / green-after on the pilot batch — proving the method before it is applied at scale
 
-**Plans**: 2/13 plans executed
+**Plans**: 3/13 plans executed
 
 - [x] 02-01-PLAN.md — Dual harness foundation: pgTAP+pg_prove, expected-output diffing, one-command runner, disposable test DBs, and the `redgreen.sh` gate — proven falsifiable (HARN-01, HARN-02, HARN-04)
 - [x] 02-02-PLAN.md — Spec template + uniform 5-dimension checklist + the three anti-circularity linters (spec_lint, trace_lint, provenance_lint) (SPEC-02, SPEC-03, HARN-05)
-- [ ] 02-03-PLAN.md — Test schema from `ddl/migrated/` with ora2pg errors surfaced and fixed, sequences ported, masterdata fixtures, plog stub (HARN-03)
+- [x] 02-03-PLAN.md — Test schema from `ddl/migrated/` with ora2pg errors surfaced and fixed, sequences ported, masterdata fixtures, plog stub (HARN-03)
 - [ ] 02-04-PLAN.md — Spec + tests (RED): MSS.OSAG_DBPROP, AUTH.OSAG_AUTH, TT.UTIL (SPEC-02, SPEC-03, HARN-05)
 - [ ] 02-05-PLAN.md — Spec + tests (RED): TT.OSAG_NOTIFY — all 30 SELECT INTO sites (SPEC-02, SPEC-03, HARN-05)
 - [ ] 02-06-PLAN.md — Spec + tests (RED): TT.EVENT_INTERFACE + the dynamic-SQL manual trace (SPEC-02, SPEC-03, HARN-05)
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Inventory & Foundation | 2/2 | Complete   | 2026-07-11 |
-| 2. Spec Method, Test Harness & Pilot | 2/13 | In Progress|  |
+| 2. Spec Method, Test Harness & Pilot | 3/13 | In Progress|  |
 | 3. Cross-cutting Semantics | 0/2 | Not started | - |
 | 4. Wave-Ordered Translation & Verification | 0/4 | Not started | - |
 | 5. Container Build & Client Migration Aids | 0/2 | Not started | - |

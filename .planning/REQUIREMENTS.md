@@ -18,7 +18,7 @@
 
 - [ ] **HARN-01**: pgTAP test harness installed and runnable against the local PostgreSQL 17.10 instance (pg_prove runner, dedicated test database)
 - [ ] **HARN-02**: Plain-SQL expected-output harness (pg_regress-style: sql/*.sql vs expected/*.out diffing) runnable alongside pgTAP
-- [ ] **HARN-03**: Shared test fixtures/seed data derived from `masterdata/` so tests run against realistic reference data
+- [x] **HARN-03**: Shared test fixtures/seed data derived from `masterdata/` so tests run against realistic reference data
 - [ ] **HARN-04**: One-command test runner executing both harnesses and reporting per-package pass/fail
 - [ ] **HARN-05**: Every test traceable to the Oracle-derived spec (not to the PL/pgSQL implementation) to avoid circular verification
 
@@ -83,7 +83,7 @@ Deferred to a later milestone:
 | SPEC-03 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | HARN-01 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | HARN-02 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
-| HARN-03 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
+| HARN-03 | Phase 2 — Spec Method, Test Harness & Pilot | Complete |
 | HARN-04 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | HARN-05 | Phase 2 — Spec Method, Test Harness & Pilot | Pending |
 | XCUT-01 | Phase 3 — Cross-cutting Semantics | Pending |
