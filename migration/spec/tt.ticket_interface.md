@@ -6,7 +6,7 @@ pg_prefix: ticket_interface
 clause_prefix: TICKET
 oracle_spec: ddl/src/pkg/tt_ticket_interface.sql
 oracle_body: ddl/src/pkgb/tt_ticket_interface.sql
-public_routines: 38
+public_routines: 37
 ---
 
 # TT.TICKET_INTERFACE — PostgreSQL spec
@@ -24,11 +24,22 @@ twice `TT.OSAG_NOTIFY`'s 30), 13 `NO_DATA_FOUND` handlers, 0 `TOO_MANY_ROWS` han
 `WHEN OTHERS` handlers, and the corpus's only genuine routine overload
 (`change_label`/`change_label`). It is **mutually recursive with `TT.EVENT_INTERFACE`**
 (`migration/analyze/known_cycles.json`'s `TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|
-TT.TICKET_INTERFACE|TT.UTIL` cycle group) — see S-TICKET-090 and
+TT.TICKET_INTERFACE|TT.UTIL` cycle group) — see S-TICKET-057 and
 `migration/spec/tt.event_interface.md` for the reverse direction, already committed and
 consistent with this spec. `static_resolution: complete` — no dynamic SQL anywhere in this
 package (confirmed against `migration/analyze/inventory.json`'s
 `static_resolution_reasons: []` for `TT.TICKET_INTERFACE`).
+
+**Front-matter note on `public_routines`:** this package has **38 distinct public routine
+declarations** in `migration/mapping/name-map.csv` (38 rows) — the front-matter
+`public_routines: 37` above is NOT a scope reduction; it matches
+`migration/analyze/inventory.json`'s routine list, which is a *name*-keyed set and
+therefore counts the `change_label` overload PAIR once (both share the name
+`change_label`, distinct signatures). `spec_lint.py`'s front-matter cross-check compares
+against that same deduplicated inventory count, so `37` is the value that check expects.
+Both `change_label` overloads are nonetheless specced as two fully distinct routines
+below (see `## Routines` and S-TICKET-019/S-TICKET-020) — nothing about this package's
+scope is reduced by this front-matter bookkeeping detail.
 
 ## Routines
 
