@@ -1,0 +1,6 @@
+psql:migration/test/regress/sql/mss__osag_dbprop__errors.sql:11: ERROR:  unknown db property 'no-such-property-xyz'
+CONTEXT:  PL/pgSQL function mss.osag_dbprop_get_string_by_host(integer,character varying) line 1 at RAISE
+psql:migration/test/regress/sql/mss__osag_dbprop__errors.sql:13: ERROR:  unknown db property ''
+CONTEXT:  PL/pgSQL function mss.osag_dbprop_get_string_by_host(integer,character varying) line 1 at RAISE
+psql:migration/test/regress/sql/mss__osag_dbprop__errors.sql:15: ERROR:  unknown db property ''
+CONTEXT:  PL/pgSQL function mss.osag_dbprop_get_string_by_host(integer,character varying) line 1 at RAISE
