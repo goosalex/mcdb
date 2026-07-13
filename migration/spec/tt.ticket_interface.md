@@ -537,7 +537,7 @@ plan's SUMMARY.
 - **`add_status_change_event`** (`ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`) — the
   shared audit-event writer used by `change_customer_reference`, `change_partner_reference`,
   `change_emergency`, `change_always_visible`, `change_notification`, `change_summary`. See
-  S-TICKET-060a for **a genuine, previously-undocumented bug**: it declares `cust_id
+  S-TICKET-060 for **a genuine, previously-undocumented bug**: it declares `cust_id
   NUMBER;` and inserts it as the event's `company_id` — but NEVER assigns `cust_id`
   anywhere in its 40-line body. Every audit event this routine writes has `company_id =
   NULL`, regardless of the ticket's real company. Documented faithfully as a real Oracle
@@ -552,4 +552,967 @@ plan's SUMMARY.
   `tt.ticket_time_statistic`, using a `SELECT`-then-`MERGE`-then-re-`SELECT` pattern to
   avoid a race on first-row creation (S-TICKET-062). No `EXCEPTION` block of its own beyond
   the local `NO_DATA_FOUND` guarding the create-row path.
+
+## Clauses
+
+### S-TICKET-001
+
+- **routines:** newticket_new
+- **claim:** SELECT INTO sites #1-#2 (inventory lines 86, 89), reached only when
+  `p_host_id IS NOT NULL`: `SELECT h.service_company_id INTO v_company_id FROM mss.host h
+  WHERE h.id = p_host_id` (line 86, `HOST_PK` — `TOO_MANY_ROWS` impossible, zero rows
+  reachable for a bad `p_host_id`) immediately followed by
+  `SELECT h2s.service_id INTO v_mss_service_id FROM mss.host2service h2s WHERE h2s.host_id
+  = p_host_id` (line 89). **`mss.host2service`'s primary key is `(HOST_ID, SERVICE_ID)`**
+  (`ddl/generated/schema.oracle.sql:81`) — `HOST_ID` alone is NOT unique, so a host mapped
+  to more than one service makes THIS site's plain (non-outer-joined) `SELECT INTO`
+  genuinely reachable for `TOO_MANY_ROWS` — the identical structural hazard already
+  documented for the same table in `migration/spec/tt.event_interface.md` (S-EVENT-001)
+  and `migration/spec/tt.osag_notify.md` (S-NOTIFY-003). **`newticket_new` has NO
+  procedure-level `EXCEPTION` block at all** (confirmed reading the full 238-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:35-272`), so both a zero-row and a multi-row
+  failure at either site propagate FULLY unhandled to whatever calls `newticket_new`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:35, 85-91, 272`
+
+### S-TICKET-002
+
+- **routines:** newticket_new
+- **claim:** SELECT INTO site #3 (inventory line 98), reached only when `p_contact_id IS
+  NOT NULL`: `SELECT company_id INTO v_company_id FROM stop.contact WHERE contact.id =
+  p_contact_id` — `CONTACT_PK`, `TOO_MANY_ROWS` structurally impossible; zero rows
+  reachable for a bad `p_contact_id`. No handler anywhere in `newticket_new` — propagates
+  fully unhandled, same as S-TICKET-001. This lookup deliberately OVERRIDES whatever
+  `v_company_id` the host branch (S-TICKET-001) may have already set (the routine's own
+  comment: "this overrides the company selection from the service id").
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:96-100`
+
+### S-TICKET-003
+
+- **routines:** newticket_new
+- **claim:** SELECT INTO sites #4 and #8 (inventory lines 108, 125): site #4
+  (`SELECT count(*) INTO v_count FROM auth.permission p, auth.login l WHERE ...`) is a
+  `COUNT` aggregate — always exactly one row, no `STRICT` concern of any kind — used only
+  to decide whether a NULL-host, non-NULL-contact ticket's contact qualifies as a
+  company-wide admin owner. Site #8, `SELECT source INTO v_event_source_id FROM
+  tt.event_type WHERE id = p_event_type_id` (`EVENTTYPE_PK`, `TOO_MANY_ROWS` impossible,
+  zero rows reachable for a bad `p_event_type_id`), determines whether the new ticket is
+  auto-confirmed. Neither has a local handler; both propagate to `newticket_new`'s total
+  absence of an outer handler (S-TICKET-001).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:106-115, 123-129`
+
+### S-TICKET-004
+
+- **routines:** newticket_new
+- **claim:** SELECT INTO site #6 (inventory line 133), reached only when `p_worker_id IS
+  NOT NULL`: `SELECT company_id INTO v_contact_company_id FROM stop.contact WHERE id =
+  p_worker_id` — `CONTACT_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable. Used only
+  to auto-confirm tickets opened by an OSAG (company 6) worker. No handler; propagates
+  unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:132-137`
+
+### S-TICKET-005
+
+- **routines:** newticket_new
+- **claim:** SELECT INTO sites #7 and #9 (inventory lines 141, 142, 254): `SELECT
+  ticket_sequence.NEXTVAL INTO p_ticket_id FROM dual` and `SELECT event_sequence.NEXTVAL
+  INTO p_event_id FROM dual` (lines 141-142, unconditional) and, ONLY when the
+  ServiceNow-integration heuristic fires (`v_create_cr = 1`), `SELECT
+  changerequest_seq.NEXTVAL INTO v_cr_id FROM dual` (line 254) — three ordinary
+  sequence-pull-via-`DUAL` sites, no `STRICT` concern at any of them (a sequence
+  `NEXTVAL` always returns exactly one value). The Oracle `sequence.NEXTVAL FROM DUAL`
+  idiom has no direct PostgreSQL syntax and needs `nextval('tt.<sequence>')` or
+  equivalent — a corpus-wide mechanic, not specific to this package (same note as
+  `migration/spec/tt.event_interface.md`'s S-EVENT-011).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:141-142, 252-268`
+
+### S-TICKET-006
+
+- **routines:** change_deferral_date
+- **claim:** SELECT INTO site #10 (inventory line 289), unconditional:
+  `SELECT status_id INTO v_ticket_status_id FROM tt.ticket t WHERE t.id = p_ticket_id` —
+  `TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable for a bad `p_ticket_id`.
+  SELECT INTO site #11 (inventory line 295), reached ONLY when `v_ticket_status_id = 60`
+  (deferred): `SELECT t.host_id INTO v_host_id FROM tt.ticket t WHERE t.id = p_ticket_id`
+  — same PK, same structural profile. **`change_deferral_date` has no `EXCEPTION` block
+  of its own** (confirmed reading the full 31-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:278-308`) — both sites' failures propagate fully
+  unhandled. If the ticket is NOT deferred, the routine logs a warning and does nothing
+  (a normal, non-exceptional branch, not related to either `SELECT INTO`).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:278-308`
+
+### S-TICKET-007
+
+- **routines:** change_status
+- **claim:** `change_status` is a pure delegator to `change_status_event_id_out`,
+  discarding that routine's `event_id OUT` parameter into a local `ev_id` it never reads.
+  No `SELECT INTO` and no `EXCEPTION` block of its own — every strictness/exception fact
+  established for `change_status_event_id_out` (S-TICKET-008 onward) applies transitively
+  and identically when reached via this delegator.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:314-341`
+
+### S-TICKET-008
+
+- **routines:** change_status_event_id_out
+- **claim:** SELECT INTO site #12 (inventory line 381), unconditional, the routine's main
+  ticket-state read: `SELECT t.status_id, t.handled_by_mcc, t.last_public_event_id,
+  t.escalation_status_id, t.status_valid_until_date, t.last_status_change_date,
+  t.last_deferral_date, SYSDATE INTO ... FROM tt.ticket t WHERE t.id = p_ticket_id` —
+  8-column single-row `TICKET_PK` lookup, `TOO_MANY_ROWS` structurally impossible, zero
+  rows reachable for a bad `p_ticket_id`. SELECT INTO site #13 (inventory line 389),
+  reached only when `v_last_public_event_id IS NOT NULL`: `SELECT event.type_id INTO
+  v_last_public_event_type_id FROM tt.event WHERE event.id = v_last_public_event_id` —
+  `EVENT_PK`, same profile. **`change_status_event_id_out` has NO procedure-level
+  `EXCEPTION` block** (confirmed reading the full 212-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:346-557`) — both sites propagate fully unhandled.
+  If the new status equals the current one, the routine `RETURN`s immediately (line 396,
+  a normal no-op, not an exception).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:381-391, 395-397`
+
+### S-TICKET-009
+
+- **routines:** change_status_event_id_out
+- **claim:** SELECT INTO sites #14 and #15 (inventory lines 416, 417), unconditional,
+  back-to-back: `SELECT name INTO status_name FROM status WHERE id = p_status_id` and
+  `SELECT name INTO v_cur_status_name FROM status WHERE id = v_cur_status` — both
+  `STATUS_PK` lookups (`TOO_MANY_ROWS` impossible), zero rows reachable if either status
+  id is invalid. SELECT INTO site #16 (inventory line 435), unconditional: `SELECT
+  type_id INTO l_ticket_type_id FROM tt.ticket WHERE id = p_ticket_id` — `TICKET_PK`,
+  same profile, and notably its result (`l_ticket_type_id`) is READ NOWHERE ELSE IN THE
+  ROUTINE (dead local variable — harmless, but the `SELECT INTO` itself still carries
+  the same zero-row hazard as every other unguarded site here). None of the three has a
+  local handler; all propagate to the total absence of an outer handler (S-TICKET-008).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:416-417, 434-435`
+
+### S-TICKET-010
+
+- **routines:** change_status_event_id_out
+- **claim:** SELECT INTO site #17 (inventory line 549), reached only when the new status
+  is in (2,3,4) AND the OLD status was in (11,12,60,61,101): `SELECT
+  from_tz(cast(eventdate as timestamp), 'EUROPE/ZURICH') INTO v_ux_timeout_start FROM
+  tt.event WHERE id = event_id` — `event_id` here is the OUT parameter this same routine
+  just populated via `tt.event_interface.add_history_event` moments earlier in the SAME
+  transaction (line 459-469), so zero rows is structurally near-impossible but, per this
+  checklist's own discipline, not assumed safe merely because it is unlikely — `EVENT_PK`
+  makes `TOO_MANY_ROWS` impossible regardless. No local handler; propagates to
+  S-TICKET-008's total absence of an outer handler.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:548-551`
+
+### S-TICKET-011
+
+- **routines:** update_ux_timeout_for_ticket
+- **claim:** SELECT INTO site #18 (inventory line 579), unconditional: `SELECT type_id,
+  emergency, ux_timeout_start, handled_by_mcc, status_id INTO ... FROM tt.ticket WHERE id
+  = p_ticket_id` — `TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable for a bad
+  `p_ticket_id`. **No `EXCEPTION` block anywhere in this 85-line routine** (confirmed
+  reading the full body, `ddl/src/pkgb/tt_ticket_interface.sql:563-647`) — propagates
+  fully unhandled. For excluded ticket types/statuses, the routine clears the timeout and
+  `RETURN`s (lines 588-591, a normal early exit).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:563-591`
+
+### S-TICKET-012
+
+- **routines:** update_ux_timeout_for_ticket
+- **claim:** SELECT INTO site #19 (inventory line 619), reached only for maintenance
+  tickets (type 12): `SELECT COUNT(*) INTO v_ticket_has_service_window FROM
+  tt.service_window s WHERE p_ticket_id = s.ticket_id` — `COUNT` aggregate, no `STRICT`
+  concern. SELECT INTO site #20 (inventory line 625), reached only when that count is
+  `> 0`: `SELECT from_tz(cast(end_date as timestamp), 'EUROPE/ZURICH') INTO
+  v_service_window_end FROM tt.service_window WHERE ticket_id = p_ticket_id AND ROWNUM =
+  1`. **The trailing `ROWNUM = 1` is the identical translation hazard already documented
+  in `migration/spec/tt.event_interface.md`'s S-EVENT-019**: Oracle's `ROWNUM` caps the
+  row source at one candidate BEFORE `SELECT INTO` can see more than one, so
+  `TOO_MANY_ROWS` is structurally impossible here ONLY because of that predicate — a
+  PostgreSQL translation must replace `ROWNUM = 1` with a trailing `LIMIT 1`, not merely
+  drop it, or its own `STRICT` could raise `TOO_MANY_ROWS` in a case Oracle never could
+  (a ticket can legitimately have more than one `service_window` row). Zero rows is
+  structurally near-impossible here (the count just confirmed `> 0` moments earlier in
+  the same transaction) but not assumed safe merely for that reason. Neither site has a
+  local handler.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:618-628`
+
+### S-TICKET-013
+
+- **routines:** change_worker
+- **claim:** SELECT INTO site #21 (inventory line 675): `SELECT short, id INTO new_shrt,
+  v_worker_id FROM stop.contact WHERE id = p_worker_id` — `CONTACT_PK`, `TOO_MANY_ROWS`
+  impossible, zero rows reachable for a bad `p_worker_id`. **Has its own local
+  `EXCEPTION WHEN NO_DATA_FOUND`** (lines 679-684) that defaults `new_shrt := 'MCC'`,
+  `v_worker_id := NULL` — a synthetic "unassigned / MCC" worker label, not an error path
+  from the caller's perspective.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:673-684`
+
+### S-TICKET-014
+
+- **routines:** change_worker
+- **claim:** SELECT INTO site #22 (inventory line 688): `SELECT c.short,
+  t.handled_by_mcc INTO old_shrt, v_handled_by_mcc FROM stop.contact c, tt.ticket t WHERE
+  t.id = p_ticket_id AND t.worker_id = c.id` — an INNER join, so zero rows is reachable
+  BOTH for a bad `p_ticket_id` AND for a ticket whose current `worker_id` doesn't resolve
+  (e.g. an unassigned ticket, `worker_id IS NULL`); `TOO_MANY_ROWS` is structurally
+  impossible (`TICKET_PK` pins at most one ticket row, `CONTACT_PK` pins at most one
+  contact). **Has its own local `EXCEPTION WHEN NO_DATA_FOUND`** (lines 693-698)
+  defaulting to the same synthetic "MCC" label plus `v_handled_by_mcc := 1`. SELECT INTO
+  site #23 (inventory line 715), unconditional and AFTER both local-handler blocks have
+  closed: `SELECT company_id into cust_id FROM ticket WHERE id = p_ticket_id` —
+  `TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable. **`change_worker` has no
+  procedure-level `EXCEPTION` block** (confirmed reading the full 104-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:653-756`) — site #23's failure propagates fully
+  unhandled, unlike sites #21/#22.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:686-698, 714-716`
+
+### S-TICKET-015
+
+- **routines:** change_service_host
+- **claim:** SELECT INTO site #24 (inventory line 779), unconditional, UN-guarded:
+  `SELECT company_id into cust_id FROM tt.ticket WHERE id = p_ticket_id` — `TICKET_PK`,
+  `TOO_MANY_ROWS` impossible, zero rows reachable for a bad `p_ticket_id`. **No
+  procedure-level `EXCEPTION` block** (confirmed reading the full 94-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:762-855`) — this specific site's failure
+  propagates fully unhandled, in contrast with the four FOLLOWING sites (S-TICKET-016),
+  which are each individually guarded.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:777-780`
+
+### S-TICKET-016
+
+- **routines:** change_service_host
+- **claim:** SELECT INTO sites #25-#28 (inventory lines 784, 799, 813, 825), each in its
+  OWN small `BEGIN...EXCEPTION WHEN NO_DATA_FOUND` block: old service name+id (784, join
+  on `mss.service_type`/`mss.service`/`tt.ticket`, defaults `v_service_label_old :=
+  NULL`), new service name (799, join on `mss.service_type`/`mss.service` by
+  `p_service_id`, defaults `NULL`), old host name (813, join on `mss.host`/`tt.ticket`,
+  defaults `'<empty>'`), new host name (825, `mss.host` by `p_host_id`, defaults
+  `'<empty>'`). All four are effectively single-row lookups (`mss.service.id` and
+  `mss.host.id` are each that table's PK; the `tt.ticket` join side is pinned by
+  `TICKET_PK`), so `TOO_MANY_ROWS` is structurally impossible at all four; zero rows is
+  reachable at each independently (orphaned/absent service or host references), and each
+  is caught LOCALLY — none of the four can ever reach an outer handler because this
+  routine has none (S-TICKET-015).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:782-832`
+
+### S-TICKET-017
+
+- **routines:** change_subject
+- **claim:** SELECT INTO site #29 (inventory line 873): `SELECT company_id into cust_id
+  FROM ticket WHERE id = p_ticket_id`. SELECT INTO site #30 (inventory line 877):
+  `SELECT t.subject INTO sub_old FROM tt.ticket t WHERE t.id = p_ticket_id`. Both are
+  `TICKET_PK` lookups, `TOO_MANY_ROWS` impossible at either, zero rows reachable at both
+  for a bad `p_ticket_id`. **`change_subject` has no `EXCEPTION` block of its own**
+  (confirmed reading the full 37-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:860-896`) — both sites propagate fully unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:868-878`
+
+### S-TICKET-018
+
+- **routines:** change_customer_reference
+- **claim:** No `SELECT INTO` at this routine's own level (it delegates its audit write
+  to the private `add_status_change_event`). The `IF (p_customer_reference IS NOT NULL)
+  ... ELSE 'changed to <empty>'` pattern (lines 911-915) is Oracle's OWN
+  `''`≡`NULL`-aware handling of its input, not a translation hazard to correct — both a
+  caller-supplied `''` and a caller-supplied `NULL` take the `ELSE` branch under Oracle's
+  native `''`≡`NULL` collapsing, and a PostgreSQL `IS NOT NULL` check on the SAME
+  parameter would ALSO take the `ELSE` branch for `NULL` but NOT for `''` (a caller
+  passing `''` explicitly would, in PostgreSQL, produce `'customer reference changed to
+  '` with a trailing empty string rather than `'customer reference changed to <empty>'`)
+  — a genuine, narrow divergence in the AUDIT TEXT ONLY (the `UPDATE ...
+  customer_reference = p_customer_reference` itself is unaffected either way, since it
+  writes whatever was passed verbatim). `tt.ticket.customer_reference` has no `NOT
+  NULL`/check constraint forbidding `''` (`ddl/generated/schema.oracle.sql:203`), so `''`
+  is a reachable caller input, not theoretical. Recorded as a real Checklist-dimension-1
+  finding (see `## Checklist` §1), not silently assumed harmless because it "only"
+  affects an audit string.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:901-924`
+
+### S-TICKET-019
+
+- **routines:** change_label
+- **claim:** The 2-arg overload (`change_label(p_ticket_id, p_label_id)`) is a single
+  `UPDATE tt.ticket SET label_id = p_label_id WHERE id = p_ticket_id` with no `SELECT`
+  of any kind and no `EXCEPTION` block — an `UPDATE` matching zero rows (bad
+  `p_ticket_id`) is NOT an error in Oracle or PostgreSQL (no implicit row-count check),
+  so a nonexistent ticket id silently no-ops rather than raising anything.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:930-938`
+
+### S-TICKET-020
+
+- **routines:** change_label
+- **claim:** The 3/4-arg overload's SELECT INTO sites #31-#33 (inventory lines 959, 965,
+  972): site #31, unconditional, `SELECT company_id, label_id INTO v_company_id,
+  v_old_label_id FROM ticket WHERE id=p_ticket_id` (`TICKET_PK`, `TOO_MANY_ROWS`
+  impossible, zero rows reachable). Site #32, reached only when `v_old_label_id IS NOT
+  NULL`: `SELECT name INTO v_old_label_name FROM label WHERE id=v_old_label_id` (`LABEL`
+  PK, same profile). Site #33, reached only when `p_label_id IS NOT NULL` (the `ELSE`
+  arm of the audit-text `IF`): `SELECT name INTO v_label_name FROM label WHERE
+  id=p_label_id` (same profile). **None of the three has a local handler, and this
+  overload has NO procedure-level `EXCEPTION` block either** (confirmed reading the full
+  51-line body, `ddl/src/pkgb/tt_ticket_interface.sql:944-994`) — all three propagate
+  fully unhandled. This overload CALLS the 2-arg overload (S-TICKET-019) to perform the
+  actual `UPDATE`, then inserts its own audit event directly (not via
+  `add_status_change_event`). The two overloads differ in argument COUNT (2 vs 3/4) —
+  PostgreSQL's native overload resolution dispatches on this exactly as Oracle's does,
+  no translation gap.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:956-980`
+
+### S-TICKET-021
+
+- **routines:** expire_status
+- **claim:** **A genuine doc/body disagreement, documented faithfully.** The package
+  spec's doc comment for `expire_status`
+  (`ddl/src/pkg/tt_ticket_interface.sql:191-202`) states it "sets private details text
+  then calls change_label() and change_status()." **The body
+  (`ddl/src/pkgb/tt_ticket_interface.sql:999-1017`) only calls `change_status`** —
+  `p_label_id` is accepted as a parameter and never read anywhere in the 20-line body; no
+  call to `change_label` exists in this routine at all. Per the plan's own instruction
+  that the body is authoritative where doc comment and body disagree, this spec records
+  the BODY's behavior (label is accepted but silently ignored) and flags the discrepancy
+  here rather than inventing a `change_label` call Oracle does not make. No `SELECT INTO`
+  at this routine's own level; no `EXCEPTION` block of its own — its call to
+  `change_status` inherits that routine's full strictness profile (S-TICKET-007 onward).
+- **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:999-1017`
+
+### S-TICKET-022
+
+- **routines:** change_partner_reference
+- **claim:** Structurally identical to `change_customer_reference`'s finding
+  (S-TICKET-018): the `IF (p_partner_reference IS NOT NULL) ... ELSE 'changed to
+  <empty>'` pattern (lines 1032-1036) has the same `''`-vs-`NULL` audit-text-only
+  divergence, and `tt.ticket.partner_reference` likewise has no `NOT NULL`/check
+  constraint forbidding `''`. No `SELECT INTO` at this routine's own level (delegates to
+  `add_status_change_event`); no `EXCEPTION` block of its own.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1022-1045`
+
+### S-TICKET-023
+
+- **routines:** change_owner
+- **claim:** SELECT INTO sites #34-#36 (inventory lines 1073, 1079, 1086), mutually
+  exclusive branches: when Zitadel first/last name are BOTH supplied, NEITHER site runs
+  (no DB lookup at all). When `p_owner_id IS NOT NULL` (and Zitadel names are not both
+  present): site #34, `SELECT firstname, lastname into first_name, last_name FROM
+  stop.contact WHERE id = p_owner_id` (`CONTACT_PK`, `TOO_MANY_ROWS` impossible, zero
+  rows reachable for a bad `p_owner_id`), then site #35, `SELECT company_id INTO
+  v_company_id FROM stop.contact WHERE id = p_owner_id` (re-query of the SAME row, same
+  profile). Otherwise (the `ELSE` branch, `p_owner_id IS NULL`): site #36, `SELECT
+  company_id into v_company_id FROM tt.ticket WHERE id = p_ticket_id` (`TICKET_PK`, same
+  profile). **`change_owner` has no `EXCEPTION` block of its own** (confirmed reading the
+  full 65-line body, `ddl/src/pkgb/tt_ticket_interface.sql:1050-1114`) — whichever branch
+  fires, the failure propagates fully unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1068-1088`
+
+### S-TICKET-024
+
+- **routines:** change_company
+- **claim:** SELECT INTO site #37 (inventory line 1135), unconditional: `SELECT
+  t.company_id, t.host_id INTO v_old_company_id, v_old_host_id FROM tt.ticket t WHERE
+  t.id = p_ticket_id` (`TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable). Site
+  #38 (line 1138), reached only if `v_old_host_id IS NOT NULL`: `SELECT h.name INTO
+  v_old_host_name FROM mss.host h WHERE id = v_old_host_id` (`HOST_PK`, same profile;
+  ELSE branch sets `'<none>'` — a normal default, not an exception). Site #39 (line
+  1144), reached only if `v_old_company_id IS NOT NULL`: `SELECT c.short INTO
+  v_old_company_short FROM stop.company c WHERE c.id = v_old_company_id` (`COMPANY` PK,
+  same profile; ELSE branch sets `'<empty>'`). Site #40 (line 1157): `SELECT short INTO
+  v_companyshort FROM stop.company WHERE id=p_company_id`, in its OWN local `BEGIN...
+  EXCEPTION WHEN NO_DATA_FOUND THEN v_companyshort := '<empty>'` block (lines 1155-1163)
+  — the only one of the four with a local handler. Sites #37-#39 have no local handler
+  and no outer handler exists in this 78-line routine either (confirmed reading the full
+  body, `ddl/src/pkgb/tt_ticket_interface.sql:1119-1196`) — they propagate fully
+  unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1135-1163`
+
+### S-TICKET-025
+
+- **routines:** change_emergency
+- **claim:** No `SELECT INTO` at this routine's own level — it delegates its audit write
+  to `add_status_change_event` (inheriting that private routine's own findings,
+  S-TICKET-060), then updates `emergency` and the ratchet `was_emergency :=
+  GREATEST(p_emergency, was_emergency)` (a value that, once set to 1, this routine can
+  never reset to 0 — by design, per the column name "was ever emergency"). No
+  `EXCEPTION` block of its own.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1200-1230`
+
+### S-TICKET-026
+
+- **routines:** change_always_visible
+- **claim:** No `SELECT INTO` at this routine's own level; delegates to
+  `add_status_change_event`. No `EXCEPTION` block of its own. Structurally the simplest
+  routine in the `change_*` family alongside `change_label`'s 2-arg overload.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1232-1254`
+
+### S-TICKET-027
+
+- **routines:** change_notification
+- **claim:** **A genuine, narrow Pitfall-2-adjacent NULL-propagation fact, correctly
+  handled by the Oracle source as written.** `v_event_details_public`/
+  `v_event_details_private` are declared with no default (`NULL` on entry); each is
+  assigned `EVENT_DETAILS_PREFIX || p_change_text_public` ONLY if that parameter `IS NOT
+  NULL` (lines 1273-1279) — i.e. the variable is left at its declared `NULL` (not
+  concatenated at all) if the input is `NULL`, so there is no `NULL || 'x'`
+  collapsing-vs-not divergence to translate here (unlike
+  `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator, which DOES
+  concatenate onto a NULL-seeded variable). If a caller passes `''` instead of `NULL` for
+  either text parameter, the `IS NOT NULL` check is TRUE in both Oracle and PostgreSQL
+  (an empty string is never NULL in either engine, so no `''`≡`NULL` collapsing is
+  relevant to THIS specific check) — the prefix is prepended to `''`, producing a
+  visible-but-otherwise-empty change line in both engines identically. No `EXCEPTION`
+  block of its own; delegates to `add_status_change_event`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1265-1281`
+
+### S-TICKET-028
+
+- **routines:** change_summary
+- **claim:** SELECT INTO site #41 (inventory line 1302), unconditional: `SELECT
+  summary_private, summary_public, summary_relevant_events_count into ... FROM ticket
+  WHERE id = p_ticket_id` — `TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable
+  for a bad `p_ticket_id`. **No `EXCEPTION` block of its own** (confirmed reading the
+  full 49-line body, `ddl/src/pkgb/tt_ticket_interface.sql:1288-1336`) — propagates fully
+  unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1299-1303`
+
+### S-TICKET-029
+
+- **routines:** change_summary
+- **claim:** The change-detection conditions for BOTH the private and public summary
+  (`(old != new OR old IS NULL OR new IS NULL) AND NOT (old IS NULL AND new IS NULL)`,
+  lines 1305-1308 and 1318-1321) are a careful, Oracle-correct `!=`-with-NULLs
+  formulation that ALREADY accounts for the fact that `x != y` evaluates to `NULL` (never
+  `TRUE`) whenever either side is `NULL` in standard three-valued SQL logic — identical
+  in Oracle and PostgreSQL, so no translation divergence exists in this specific
+  condition. `NVL(p_summary_private, '<empty>')`/`NVL(p_summary_public, '<empty>')`
+  (lines 1311, 1324) ARE Oracle-`NVL`-specific but behave identically to PostgreSQL's
+  `orafce` `NVL` or a native `COALESCE` for a NULL input — no divergence, since neither
+  summary column is ever compared against `''` specifically anywhere in this routine
+  (only against `NULL` and against each other). Resetting
+  `summary_relevant_events_count := 0` happens ONLY on the public-summary-changed path
+  (line 1325), never on the private-summary-changed path — a deliberate asymmetry, not an
+  omission.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1305-1333`
+
+### S-TICKET-030
+
+- **routines:** change_type
+- **claim:** SELECT INTO sites #42-#44 (inventory lines 1355, 1358, 1361), unconditional,
+  back-to-back: company id (`TICKET_PK`), old type name (join `ticket_type`/`ticket`,
+  `TICKETTYPE_PK` pins the type side, `TICKET_PK` pins the ticket side), new type name
+  (`TICKETTYPE_PK` on `p_type_id`) — `TOO_MANY_ROWS` structurally impossible at all
+  three, zero rows reachable at each independently (bad `p_ticket_id` for #42, a ticket
+  whose CURRENT `type_id` doesn't resolve for #43 — structurally near-impossible for a
+  live ticket but not schema-forbidden, a bad `p_type_id` for #44). **No `EXCEPTION`
+  block of its own** (confirmed reading the full 36-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:1342-1377`) — all three propagate fully
+  unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1354-1361`
+
+### S-TICKET-031
+
+- **routines:** change_type, change_service_component
+- **claim:** **A shared, corpus-relevant sequence-`CurrVal`-after-`INSERT` pattern.**
+  SELECT INTO site #45 (inventory line 1372, `change_type`) and site #51 (inventory line
+  1428, `change_service_component`) both do `SELECT event_sequence.CurrVal INTO
+  p_event_id FROM DUAL` immediately after their own `INSERT INTO event (...) VALUES
+  (event_sequence.NextVal, ...)` in the SAME session/transaction — Oracle's `CurrVal`
+  returns "the value most recently returned by `NextVal` for this sequence, in THIS
+  session," which is guaranteed defined here since `NextVal` was just called moments
+  earlier by the SAME session. **This relies on session-local sequence state that has no
+  1:1 PostgreSQL equivalent syntax** (`CurrVal` maps to `currval('tt.event_sequence')`,
+  which carries an IDENTICAL "must have called `nextval` in this session first"
+  precondition — so the translation is mechanically sound here, not a hazard, but IS a
+  corpus-wide mechanic worth flagging since bare `nextval()`/`currval()` calls must stay
+  paired within the same translated routine, never split across a `CALL` boundary that
+  crosses sessions). Neither site has a local handler, but a `CurrVal`-before-`NextVal`
+  ordering bug is structurally impossible here since both call sites text-order `INSERT`
+  (with `NextVal`) strictly before the `SELECT ... CurrVal`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1367-1372, 1421-1428`
+
+### S-TICKET-032
+
+- **routines:** change_service_component
+- **claim:** SELECT INTO site #46 (inventory line 1397), unconditional: company id
+  (`TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable). SELECT INTO sites #47-
+  #48 (inventory lines 1401-1402), both inside ONE local `BEGIN...EXCEPTION WHEN
+  NO_DATA_FOUND` block (lines 1400-1406): old service component internal_code and name
+  (both joins on `mss.service_component`/`ticket`, `TOO_MANY_ROWS` impossible via
+  `SERVICECOMPONENT_PK`, zero rows reachable if the ticket has no
+  `service_component_id`), defaulting to `''`/`'<empty>'` on miss. SELECT INTO sites
+  #49-#50 (inventory lines 1410-1411), both inside a SEPARATE local
+  `BEGIN...EXCEPTION WHEN NO_DATA_FOUND` block (lines 1409-1415): new service component
+  internal_code and name by `p_service_component_id`, same default pair. Site #46 has NO
+  local handler and this routine has no procedure-level `EXCEPTION` block either
+  (confirmed reading the full 51-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:1382-1432`) — site #46 propagates fully unhandled
+  while sites #47-#50 are locally swallowed.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1396-1415`
+
+### S-TICKET-033
+
+- **routines:** get_next_recent_ticket
+- **claim:** SELECT INTO site #52 (inventory line 1449): `SELECT MIN(t.id) INTO
+  v_ticketid FROM tt.ticket t WHERE ...` — a `MIN` aggregate over a filtered ticket set
+  (open, non-deferred, id greater than `p_last_ticket_id`, optional host/type/
+  resolve-age filters), always exactly one row (`NULL` if no ticket matches), no
+  `STRICT` concern of any kind. **Has its own `EXCEPTION WHEN OTHERS THEN
+  plog.err(c_prefix||'unexpected error 99: '||sqlerrm); RETURN NULL`** (lines 1461-1465)
+  — the ENTIRE function body is covered, so this `FUNCTION` never raises to its caller;
+  any error (including a hypothetical one from the aggregate query itself) is logged and
+  converted to a `NULL` return. Called from `TT.EVENT_INTERFACE.newevent_new`'s
+  recent-ticket search loop (`migration/spec/tt.event_interface.md` S-EVENT-009) — one of
+  the twelve call sites forming the `TT.EVENT_INTERFACE -> TT.TICKET_INTERFACE` depgraph
+  edge (see S-TICKET-045, mutual recursion).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1445-1465`
+
+### S-TICKET-034
+
+- **routines:** merge_tickets
+- **claim:** SELECT INTO sites #53-#56 (inventory lines 1498, 1504, 1508, 1514): site
+  #53, unconditional, `SELECT partner_reference, fast_resolvable, last_public_event_id,
+  ux_timeout_start, customer_ticket_rating_id, engineer_ticket_rating_id INTO ... FROM
+  ticket WHERE id = p_ticket_id` (SOURCE ticket, `TICKET_PK`, `TOO_MANY_ROWS` impossible,
+  zero rows reachable for a bad `p_ticket_id`). Site #54, reached only if
+  `v_last_public_event_id IS NOT NULL`: `SELECT eventdate INTO v_last_public_event_date
+  FROM tt.event WHERE id = v_last_public_event_id` (`EVENT_PK`, same profile). Site #55,
+  unconditional, the mirror query for the TARGET ticket (`p_mticket_id`, two extra
+  columns: `recoverable_status_id`, `status_id`). Site #56, reached only if
+  `v_mlast_public_event_id IS NOT NULL`, mirrors site #54 for the target. **`merge_tickets`
+  has no procedure-level `EXCEPTION` block** (confirmed reading the full 173-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:1470-1642`) — all four sites propagate fully
+  unhandled; a bad `p_ticket_id` or `p_mticket_id` aborts the ENTIRE merge partway
+  through, with no `COMMIT`/`ROLLBACK` anywhere in this package to define a transaction
+  boundary (Checklist dimension 5) — whatever DML already ran before the failing
+  `SELECT INTO` stays pending in the caller's transaction.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1495-1515`
+
+### S-TICKET-035
+
+- **routines:** merge_tickets
+- **claim:** **The precise cascade/non-cascade enumeration for the SOURCE ticket
+  (`p_ticket_id`) once merged into the TARGET (`p_mticket_id`).** CASCADES (rows moved or
+  re-pointed to the target): all `tt.event` rows (`ticket_id` updated to `p_mticket_id`,
+  original id preserved in `org_ticket_id` — lines 1530-1536); `event_notification` rows
+  NOT already duplicated on the target (moved via `UPDATE ... SET ticket_id =
+  p_mticket_id`, lines 1586-1588, AFTER first deleting exact-duplicate notifications
+  already present on the target, lines 1573-1583); `change_request` rows (line
+  1591-1593); `guma2.suppressed_signature` rows (line 1630-1632); the customer/engineer
+  RATING id is merged onto the target via `NVL(GREATEST(source_rating,
+  target_rating), source_rating)` — i.e. the MOST RECENT (highest id) rating wins,
+  falling back to the source's if the target has none (lines 1519-1526); the source's
+  `partner_reference` is adopted by the target ONLY if the target's is NULL (lines
+  1596-1598); `fast_resolvable` is forced to 0 on the target if the SOURCE is 0 and the
+  target is 1 (lines 1601-1603, i.e. merging in an unresolvable-fast ticket poisons the
+  target); the target's `last_public_event_id`/`recoverable_status_id` are updated to the
+  source's if the source's event is newer OR the target had none (lines 1607-1615); the
+  target's `ux_timeout_start` is updated to the source's if newer (lines 1619-1621).
+  DOES NOT CASCADE: the source ticket's own row is NOT deleted — it is marked
+  `merged_into_ticket_id = p_mticket_id`, status 110 ("merged"), `close_date`/
+  `last_resolved_date = sysdate`, `last_public_event_id = NULL` (lines 1564-1570); a NEW
+  duplicate `event` row is inserted (via `INSERT ... SELECT ... FROM event WHERE id =
+  v_event_id`, lines 1557-1561) connecting the SOURCE ticket to a COPY of the "merged"
+  history event, rather than sharing the same event row across both tickets — the
+  routine's own comment states this is deliberate preparation for a future release where
+  events are no longer shared between tickets.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1517-1621`
+
+### S-TICKET-036
+
+- **routines:** merge_tickets
+- **claim:** **Final state transitions, in exact order.** After all the above, the
+  routine calls `ticket_interface.change_status(p_ticket_id, 110, p_contact_id, NULL,
+  NULL, NULL, NULL, NULL, NULL, p_zitadel_contact_id)` (line 1567, marking the SOURCE
+  ticket "merged" — inheriting `change_status_event_id_out`'s full strictness profile,
+  S-TICKET-008 onward, including its own `updateTicketFlow` call), THEN a direct `UPDATE`
+  sets `close_date`/`last_resolved_date`/`last_public_event_id=NULL` on the source (line
+  1568-1570, i.e. these three columns are set OUTSIDE `change_status`'s own logic, not
+  duplicated by it), THEN — as the routine's VERY LAST statement — calls
+  `ticket_interface.change_status(p_mticket_id, 3, p_contact_id, NULL, NULL, NULL, NULL,
+  NULL, 'ticket '||p_ticket_id||' merged into this ticket', p_zitadel_contact_id)` (line
+  1640, forcing the TARGET to "hot" with a hot-reason string embedded in the private
+  details via `change_status_event_id_out`'s own `p_hot_reason` handling, lines 427-432 —
+  see S-TICKET-008). Both `change_status` calls are ordinary (non-dynamic) cross-routine
+  calls within the SAME package, not calls into `TT.EVENT_INTERFACE`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1566-1570, 1639-1641`
+
+### S-TICKET-037
+
+- **routines:** replace_id_placeholders
+- **claim:** Pure string substitution — `REPLACE(p_text, '##ticket_id##', p_ticket_id)`
+  then `REPLACE(..., '##event_id##', p_event_id)`, each `SUBSTRB`-truncated to 30000
+  bytes. **No `SELECT` of any kind, no call to any other routine, no `EXCEPTION` block**
+  — confirmed by reading the full 11-line body in its entirety
+  (`ddl/src/pkgb/tt_ticket_interface.sql:1647-1657`). **This closes the FUNCTION/
+  PROCEDURE-COMMIT question for this routine: it cannot transitively reach a `COMMIT`
+  because it calls nothing at all** — no hazard exists for
+  `get_next_recent_ticket`'s sibling `FUNCTION` either way (see S-TICKET-046 for the
+  full trace of both `FUNCTION`s). Mirrors `TT.EVENT_INTERFACE.ticket_type_for_event_type`'s
+  identical finding (S-EVENT-034 in the sibling spec).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1647-1657`
+
+### S-TICKET-038
+
+- **routines:** trigger_escalation
+- **claim:** No `SELECT INTO` at this routine's own level. Writes a public history event
+  (`tt.event_interface.add_history_event`, event type 100007) then runs
+  `event_interface.exec_event_type_actions(v_event_id)` — a call INTO
+  `TT.EVENT_INTERFACE`, one of the reverse-direction cycle edges (see S-TICKET-045).
+  **Has its own `EXCEPTION WHEN OTHERS THEN plog.err(c_prefix||'unexpected error: '||
+  sqlerrm)`** covering the entire body (lines 1732-1735) — logs and swallows, never
+  propagates.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1715-1735`
+
+### S-TICKET-039
+
+- **routines:** rate_ticket
+- **claim:** SELECT INTO site #58 (inventory line 1754): `SELECT ticketrating_seq.NextVal
+  INTO p_rating_id FROM dual` — sequence pull, no `STRICT` concern (same mechanic as
+  S-TICKET-005). **No `EXCEPTION` block of its own** (confirmed reading the full 34-line
+  body, `ddl/src/pkgb/tt_ticket_interface.sql:1741-1774`) — any `INSERT`/`UPDATE`
+  failure (e.g. an FK violation on `p_rating_event_id`) propagates fully unhandled. Only
+  a BAD customer rating (`p_by_engineer = 0 AND p_rating_value < 3`) triggers the
+  cascading `change_status(p_ticket_id, 3, ...)` call (hot); engineer ratings never
+  trigger a status change regardless of value.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1753-1773`
+
+### S-TICKET-040
+
+- **routines:** add_docs_page
+- **claim:** SELECT INTO site #59 (inventory line 1795): `SELECT ticketdocspage_seq.
+  NextVal INTO p_ticket_docs_page_id FROM dual` — sequence pull, no `STRICT` concern.
+  **Has its own `EXCEPTION WHEN OTHERS THEN plog.err(...)`** covering the entire body
+  (lines 1808-1810) — logs and swallows, never propagates (including this sequence
+  pull's own hypothetical failure, though a `DUAL` `SELECT` failing is not a realistic
+  scenario in practice).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1793-1811`
+
+### S-TICKET-041
+
+- **routines:** remove_docs_page
+- **claim:** SELECT INTO site #60 (inventory line 1830): `SELECT page_id, page_version,
+  ticket_id INTO ... FROM ticket_docs_page WHERE id = p_ticket_docs_page_id` — that
+  table's PK, `TOO_MANY_ROWS` impossible, zero rows reachable for a bad
+  `p_ticket_docs_page_id`. **Has a 2-arm handler**: `WHEN NO_DATA_FOUND THEN NULL`
+  (silently does nothing further — for a bad id, the `DELETE` and the history-event call
+  never execute) and `WHEN OTHERS THEN plog.err(...)` (lines 1841-1846).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1828-1846`
+
+### S-TICKET-042
+
+- **routines:** add_related_ticket
+- **claim:** SELECT INTO site #62 (inventory line 1936): `SELECT COUNT(*) INTO v_counter
+  FROM tt.ticket t WHERE t.id IN (p_ticket_id, p_related_ticket_id)` — `COUNT`
+  aggregate, no `STRICT` concern. `v_counter != 2` (covering BOTH "one or both tickets
+  don't exist" AND "the two ids are equal, so the `IN`-list collapses to one distinct
+  value") logs an error and `RETURN`s — a normal early exit, not an exception path.
+  **Has its own `EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN`** (lines 1951-1955)
+  covering the whole body.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1933-1955`
+
+### S-TICKET-043
+
+- **routines:** remove_related_ticket
+- **claim:** SELECT INTO site #63 (inventory line 1970): `SELECT COUNT(*) INTO v_counter
+  FROM tt.ticket2related_ticket rt WHERE rt.ticket_id = p_ticket_id AND
+  rt.related_ticket_id = p_related_ticket_id` — `COUNT` aggregate, no `STRICT` concern.
+  Zero matches (`v_counter = 0`) is a normal silent no-op (neither the `DELETE` nor the
+  history event runs). **Has its own `EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN`**
+  (lines 1984-1989).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1968-1989`
+
+### S-TICKET-044
+
+- **routines:** add_related_file
+- **claim:** SELECT INTO site #64 (inventory line 2007): `SELECT f.display_name INTO
+  v_file_display_name FROM mc.mc_file f, mc.mc_file_release r, tt.ticket t WHERE t.id =
+  p_ticket_id AND f.id = p_related_file_id and r.mc_file_id = f.id AND t.company_id =
+  r.company_id` — the routine's OWN inline comment states the `t.company_id =
+  r.company_id` join predicate is a DELIBERATE same-company authorization guard, so a
+  cross-company file/ticket pairing is EXPECTED to raise `NO_DATA_FOUND` here, not merely
+  tolerated. `TOO_MANY_ROWS` is structurally bounded by `mc.mc_file.id`'s PK and
+  `mc.mc_file_release`'s per-company uniqueness assumption (not independently re-verified
+  against `ddl/generated/schema.oracle.sql` for this plan — see Assumptions). **Has a
+  2-arm handler**: `WHEN NO_DATA_FOUND THEN plog.err(c_prefix||'MC File or ticket does
+  not exits or they belong to different companies.'); RETURN` (an intentionally
+  descriptive message reflecting the dual-purpose of this lookup) and
+  `WHEN OTHERS THEN plog.err(...); RETURN` (lines 2019-2027).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2003-2027`
+
+### S-TICKET-045
+
+- **routines:** remove_related_file
+- **claim:** SELECT INTO site #65 (inventory line 2046): `SELECT COUNT(*) INTO v_counter
+  FROM tt.ticket2mc_file t2f WHERE t2f.ticket_id = p_ticket_id AND t2f.mc_file_id =
+  p_related_file_id` — `COUNT` aggregate, no `STRICT` concern. SELECT INTO site #66
+  (inventory line 2051), reached only if `v_counter > 0`: `SELECT mcf.display_name INTO
+  v_file_display_name FROM mc.mc_file mcf WHERE mcf.id = p_related_file_id` — `mc_file`'s
+  PK, `TOO_MANY_ROWS` impossible; zero rows would be structurally surprising here (the
+  relation just confirmed to exist implies the file id is real) but is NOT re-verified
+  against a same-company guard the way `add_related_file` (S-TICKET-044) is — a
+  deliberate asymmetry between the two mirror routines, not an oversight this spec
+  papers over. **Has only `WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2064-2069) —
+  no `NO_DATA_FOUND` arm; a bad `p_related_file_id` (orphaned `ticket2mc_file` row) would
+  be caught by `WHEN OTHERS` rather than a dedicated `NO_DATA_FOUND` arm.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2044-2069`
+
+### S-TICKET-046
+
+- **routines:** get_next_recent_ticket, replace_id_placeholders
+- **claim:** **The FUNCTION/PROCEDURE-COMMIT trace this plan's threat register (T-02-28)
+  requires.** This package declares exactly TWO `FUNCTION`s
+  (`ddl/src/pkg/tt_ticket_interface.sql:394, 423`). `get_next_recent_ticket`'s full body
+  (S-TICKET-033) issues one aggregate `SELECT`, no `INSERT`/`UPDATE`/`DELETE`, and calls
+  NOTHING else — it cannot transitively reach a `COMMIT`. `replace_id_placeholders`'s
+  full body (S-TICKET-037) is pure string manipulation with no database access and no
+  calls to anything — it likewise cannot transitively reach a `COMMIT`. **Neither
+  `FUNCTION` has a FUNCTION/PROCEDURE-COMMIT hazard.** This matters because
+  `migration/spec/tt.util.md`'s `TT.UTIL` (this package's cycle-mate) DOES `COMMIT`
+  (S-UTIL, lines 234/244 per that spec) — but neither of THIS package's two `FUNCTION`s
+  calls `TT.UTIL` at all (only `change_status_event_id_out`, itself a `PROCEDURE`, calls
+  `tt.util.update_status_valid_until`, per S-TICKET-010's neighbor logic at lines
+  519-523) — so no cross-package FUNCTION/PROCEDURE-COMMIT collision is currently
+  reachable through either of this package's two `FUNCTION`s. `pg_kind` remains
+  PROVISIONAL for all 38 routines regardless (Phase 3 XCUT-04), per
+  `migration/README.md`'s standing warning — this clause confirms no COMMIT-reachability
+  hazard exists WITHIN this package's own two `FUNCTION`s, it does not settle the final
+  PostgreSQL FUNCTION-vs-PROCEDURE shape for any of the 38.
+- **source:** `ddl/src/pkg/tt_ticket_interface.sql:394, 423`, `ddl/src/pkgb/tt_ticket_interface.sql:1437-1465, 1647-1657`
+
+### S-TICKET-047
+
+- **routines:** classify_request
+- **claim:** SELECT INTO site #67 (inventory line 2105): `SELECT COUNT(*) INTO v_counter
+  FROM tt.ticket_request_classification WHERE ticket_id = p_ticket_id` — `COUNT`
+  aggregate, no `STRICT` concern, used to decide `UPDATE` vs `INSERT` (a hand-rolled
+  upsert, not a native `MERGE`). **A classification value outside `{1,2,3}` (including
+  `NULL`) silently defaults to `2` ("standard")** (lines 2093-2103) — no error is raised,
+  contradicting the package spec's doc comment implying only 1/2/3 are valid inputs
+  (`ddl/src/pkg/tt_ticket_interface.sql:547` "1 = very precise, 2 = standard, 3 =
+  imprecise" does not mention a default-on-invalid behavior). **Has its own
+  `EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2120-2124) covering the
+  whole body.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2090-2124`
+
+### S-TICKET-048
+
+- **routines:** clear_todo_list
+- **claim:** Deletes ALL `todo_item` rows for the ticket unconditionally (line 2143,
+  regardless of whether any exist — zero matches is a normal silent no-op for a
+  `DELETE`). SELECT INTO site #68 (inventory line 2149), reached ONLY if
+  `p_add_history_event = 1` (the default): `SELECT t.host_id, t.company_id INTO
+  v_host_id, v_company_id FROM tt.ticket t WHERE id = p_ticket_id` — `TICKET_PK`,
+  `TOO_MANY_ROWS` impossible, zero rows reachable for a bad `p_ticket_id`. **No
+  `EXCEPTION` block of its own** (confirmed reading the full 41-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:2132-2173`) — propagates fully unhandled. Note
+  that if `p_add_history_event = 0`, this `SELECT INTO` never executes at all, so a bad
+  `p_ticket_id` in that mode would still succeed in deleting zero todo items and
+  resetting the step counters, without ever touching `tt.ticket` — a real, if narrow,
+  path-dependent behavior worth naming.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2143-2171`
+
+### S-TICKET-049
+
+- **routines:** add_todo_item
+- **claim:** SELECT INTO site #69 (inventory line 2193): `SELECT todoitem_seq.NextVal
+  INTO p_todo_item_id FROM dual` — sequence pull, no `STRICT` concern. **No `EXCEPTION`
+  block of its own** (confirmed reading the full 37-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:2181-2217`). Per its own doc comment, this
+  routine deliberately does NOT write a history event — callers batch multiple
+  `add_todo_item` calls under one shared history event written separately, a
+  package-level convention this spec records but does not enforce (nothing in the body
+  prevents a caller from omitting the follow-up history event entirely).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2192-2217`
+
+### S-TICKET-050
+
+- **routines:** update_todo_item_status
+- **claim:** SELECT INTO site #70 (inventory line 2244): `SELECT tis.name, ti.details,
+  ti.is_public, tis.id INTO ... FROM tt.todo_item ti LEFT JOIN tt.todo_item_status tis ON
+  (ti.todo_item_status_id = tis.id) WHERE ti.ticket_id = p_ticket_id AND ti.seq_no =
+  p_seq_no` — the `LEFT JOIN` means a todo item with an orphaned/NULL
+  `todo_item_status_id` would still match (with `tis.*` columns NULL), so zero rows here
+  specifically means "no todo item row at all for this `(ticket_id, seq_no)` pair," not
+  "the item exists but its status doesn't resolve"; `TOO_MANY_ROWS` is structurally
+  impossible if `(ticket_id, seq_no)` is that table's effective key (not independently
+  re-verified against `ddl/generated/schema.oracle.sql` for this plan — flagged in
+  Assumptions). SELECT INTO site #71 (line 2256), unconditional: ticket host/company
+  (`TICKET_PK`). SELECT INTO site #72 (line 2261): NEW status name by
+  `p_todo_item_status_id` (`TODO_ITEM_STATUS` PK, `TOO_MANY_ROWS` impossible, zero rows
+  reachable for a bad status id). **No `EXCEPTION` block anywhere in this 87-line
+  routine** (confirmed reading the full body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:2223-2309`) — all three sites propagate fully
+  unhandled.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2244-2264`
+
+### S-TICKET-051
+
+- **routines:** updateTicketFlow
+- **claim:** SELECT INTO site #76 (inventory line 2381), inside its OWN local
+  `BEGIN...EXCEPTION WHEN NO_DATA_FOUND THEN v_flow_id := NULL` block (lines 2380-2386):
+  `SELECT tf.id, tf.FLOW_IN_DATE INTO v_flow_id, v_flow_in_date FROM tt.ticket_flow tf
+  where ticket_id = p_ticket_id AND flow_out_date IS NULL` — zero rows (no OPEN flow
+  entry) is the EXPECTED common case for a ticket not currently in the MCC queue, not an
+  error; `TOO_MANY_ROWS` would require two simultaneously-open flow entries for the same
+  ticket, which the routine's own subsequent logic (insert-if-none-open,
+  close-if-one-open) implies should not happen but is not independently schema-enforced
+  (flagged in Assumptions). SELECT INTO site #77 (inventory line 2391), unconditional,
+  AFTER that block closes: `SELECT t.handled_by_mcc, t.type_id, t.status_id,
+  t.last_status_change_date INTO ... FROM tt.ticket t where t.id = p_ticket_id` —
+  `TICKET_PK`, `TOO_MANY_ROWS` impossible, zero rows reachable for a bad `p_ticket_id`.
+  **No procedure-level `EXCEPTION` block** (confirmed reading the full 74-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:2366-2439`) — site #77's failure propagates fully
+  unhandled, unlike site #76.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2380-2393`
+
+### S-TICKET-052
+
+- **routines:** deleteTicket
+- **claim:** **The precise cascade enumeration, in the exact statement order Oracle
+  executes them (31 statements total).** NULLs out foreign-key references FIRST (7
+  `UPDATE ... SET x = NULL` statements across `prx.prx_policy_item`, `tt.ticket`'s own
+  self-references — `merged_into_ticket_id`, `last_public_event_id`,
+  `customer_ticket_rating_id`, `engineer_ticket_rating_id` twice more via a different
+  predicate each — `mcaudit.record`, `mc.isp_link_history`, `mss.
+  installation_project_item`, `mc.isp_link_maintenance_history`,
+  `mc.host_maintenance_history`), THEN deletes dependent rows in an order that respects
+  FK dependency (docs pages, ticket_flow, both directions of ticket2related_ticket,
+  attachments, ticket_time_statistic, guma2.suppressed_signature, nids.ticket2rule,
+  fw.rule2ticket, fw.source_nat_rule2ticket, fw.destination_nat_rule2ticket,
+  ticket2mc_file, ticket_rating rows keyed by the ticket's events AND by the ticket's own
+  rating-id columns — three separate `DELETE`s for ratings alone, reflecting that a
+  rating can be reachable via either path), THEN deletes `tt.event` rows for the ticket,
+  THEN deletes maintenance/service-window-dependent rows (`maintenance_window`,
+  `cust_maintenance_window`, `host2service_window`,
+  `mss.deleted_host2service_window`, `service_window` itself — each keyed via a
+  subquery on the ticket's own `service_window` ids), THEN `event_notification`,
+  `todo_item`, `ticket_request_classification`, `change_request`, `fw.change`, and
+  FINALLY `DELETE FROM TT.TICKET WHERE ID = p_ticket_id` as the LAST statement. **Does
+  NOT cascade/clean**: any table not explicitly listed here (this spec does not claim
+  the 31-statement list is exhaustive of every table with a logical FK to `tt.ticket` in
+  the wider schema — only what THIS routine's body actually touches, verified by reading
+  every line of the 42-line body,
+  `ddl/src/pkgb/tt_ticket_interface.sql:2441-2482`, in full). **No `SELECT INTO`
+  anywhere** (several `DELETE`/`UPDATE` statements use `IN (SELECT ...)` subqueries,
+  which carry NO `STRICT` concern — that syntax is not `SELECT INTO`). **No `EXCEPTION`
+  block at all** — a constraint violation partway through (e.g. an FK this routine
+  doesn't know about, elsewhere in the schema, referencing `tt.ticket`) aborts with
+  whatever statements already ran left pending in the caller's transaction, since this
+  package never issues `COMMIT`/`ROLLBACK` (Checklist dimension 5).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2441-2482`
+
+### S-TICKET-053
+
+- **routines:** (none directly — private helper only)
+- **claim:** **A genuine, previously-undocumented bug in the private
+  `add_status_change_event`**, used by `change_customer_reference`,
+  `change_partner_reference`, `change_emergency`, `change_always_visible`,
+  `change_notification`, and `change_summary`. It declares `cust_id NUMBER;` (line 1670)
+  and inserts it verbatim as the new event's `company_id` (line 1688) — but **`cust_id`
+  is NEVER ASSIGNED anywhere in this 40-line body** (confirmed reading the full routine,
+  `ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`, in full — no `SELECT ... INTO
+  cust_id` exists). Every "attribute change" audit event written through THIS private
+  routine therefore has `company_id = NULL` in the `tt.event` row, regardless of the
+  ticket's actual company — unlike every OTHER `change_*` routine in this package that
+  writes its own audit event directly (e.g. `change_worker`, `change_subject`,
+  `change_service_host`), which all correctly resolve and set a real `company_id`.
+  Documented faithfully as a genuine Oracle behavior (a bug, not a feature) — per the
+  plan's own instruction that the body is authoritative, and the precedent set by
+  `TT.EVENT_INTERFACE.moveevent`'s self-acknowledged bug
+  (`migration/spec/tt.event_interface.md` S-EVENT-033). SELECT INTO site #57 (inventory
+  line 1697), unconditional: `SELECT event_sequence.CurrVal INTO event_id FROM dual` —
+  sequence pull (same `NextVal`-then-`CurrVal` pattern as S-TICKET-031), no `STRICT`
+  concern. **No `EXCEPTION` block of its own** — any failure (including the `INSERT`
+  itself, or the subsequent `TT.OSAG_NOTIFY.event_notify` call) propagates fully
+  unhandled to whichever `change_*` routine called this one, each of which (per their own
+  clauses above) has no `EXCEPTION` block of its own either — the failure ultimately
+  reaches the ORIGINAL caller of the public `change_*` routine.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`
+
+### S-TICKET-054
+
+- **routines:** (none directly — private helper only)
+- **claim:** `handleDeferredTransitions`, called only from `change_status_event_id_out`
+  when a ticket transitions into or out of "deferred" (status 60). SELECT INTO site #61
+  (inventory line 1875), unconditional: `SELECT escalation_status_id INTO
+  v_escalation_status FROM ticket WHERE id = p_ticket_id` — `TICKET_PK`, `TOO_MANY_ROWS`
+  impossible, zero rows reachable for a bad `p_ticket_id` (structurally near-impossible
+  here since its only caller already validated the ticket exists moments earlier, per
+  S-TICKET-008, but not assumed safe merely for that reason). **Has its own
+  `EXCEPTION WHEN OTHERS THEN plog.err(c_prefix||'unexpected error: '||sqlerrm); RETURN`**
+  covering the entire 61-line body (lines 1915-1919) — logs and swallows, never
+  propagates back to `change_status_event_id_out`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1872-1919`
+
+### S-TICKET-055
+
+- **routines:** (none directly — private helper only)
+- **claim:** `updateTicketTimeStats`, called only from `change_status_event_id_out` for a
+  fixed set of statuses (2, 11, 12, 60, 61, 101). SELECT INTO sites #73-#75 (inventory
+  lines 2330, 2335, 2343), all inside ONE local `BEGIN...EXCEPTION` block
+  (lines 2328-2344): site #73, `SELECT ts.id INTO v_stats_id FROM
+  tt.ticket_time_statistic ts WHERE ts.ticket_id = p_ticket_id` — zero rows is the
+  EXPECTED case for a ticket's first-ever time-stat write, caught by
+  `WHEN NO_DATA_FOUND`, which then (site #74) pulls a NEW id via `SELECT tt.
+  tickettimestatistic_seq.nextval INTO v_stats_id FROM dual` (sequence, no `STRICT`
+  concern), performs a `MERGE ... WHEN NOT MATCHED THEN INSERT` explicitly designed to
+  avoid a race against a CONCURRENT session creating the same row, THEN (site #75)
+  RE-does the SAME `SELECT ts.id INTO v_stats_id ...` query — because, per the routine's
+  own inline comment, the `MERGE` "may not have inserted a new record" (a concurrent
+  session may have won the race), so the re-`SELECT` picks up whichever row actually
+  exists after the `MERGE`, own or the concurrent winner's. `tt.ticket_time_statistic.
+  ticket_id` is presumed unique (not independently re-verified against
+  `ddl/generated/schema.oracle.sql` for this plan — see Assumptions), which is what makes
+  `TOO_MANY_ROWS` structurally impossible at sites #73/#75 either way.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2328-2344`
+
+### S-TICKET-056
+
+- **routines:** newticket_new, change_status_event_id_out, updateTicketFlow
+- **claim:** All three of `newticket_new` (line 270), `change_status_event_id_out` (line
+  555, passing the OLD status/date as `p_prev_status_id`/`p_prev_status_change_date`),
+  and `merge_tickets` (transitively, via its two `change_status` calls, S-TICKET-036)
+  eventually call `updateTicketFlow` — this is the corpus-wide "callers that change
+  status/type/worker must also update the MCC queue" convention the package spec's doc
+  comment for `updateTicketFlow` states explicitly
+  (`ddl/src/pkg/tt_ticket_interface.sql:610-613`, "Should be called by state/type/worker
+  changes that may influence if a ticket is in the MCC queue or not"). `change_worker`
+  (S-TICKET-014, line 754) and `change_type` (S-TICKET-030, line 1375) ALSO call it. This
+  spec records the convention as observed in the actual call sites, not as a rule this
+  package enforces structurally (nothing prevents a NEW future `change_*` routine from
+  omitting the call).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:270, 555, 754, 1375`
+
+### S-TICKET-057
+
+- **routines:** newticket_new, change_status_event_id_out, change_deferral_date, add_docs_page, remove_docs_page, add_related_ticket, remove_related_ticket, add_related_file, remove_related_file, classify_request, clear_todo_list, update_todo_item_status, trigger_escalation, merge_tickets, change_summary
+- **claim:** **The mutual recursion with `TT.EVENT_INTERFACE`, this package's OUTBOUND
+  half (the reverse of `migration/spec/tt.event_interface.md`'s inbound calls TO this
+  package, e.g. its S-EVENT-009 dozen call sites into `get_next_recent_ticket`,
+  `change_status`, `change_type`).** This package calls `TT.EVENT_INTERFACE` from:
+  `newticket_new` (line 237, `add_history_event`; line 250, `exec_event_type_actions`),
+  `change_deferral_date` (line 303, `addevent_new`), `change_status_event_id_out` (lines
+  459, 475, `add_history_event`; lines 509, 513, `addevent_new`), `add_docs_page`/
+  `remove_docs_page`/`add_related_ticket`/`remove_related_ticket`/`add_related_file`/
+  `remove_related_file`/`classify_request`/`update_todo_item_status` (each via
+  `addevent_new` or `add_history_event`, one call site apiece), `clear_todo_list` (line
+  2155, `add_history_event`), `trigger_escalation` (lines 1718, 1731, `add_history_event`
+  then `exec_event_type_actions`), `merge_tickets` (line 1542, `addevent_new`). Per
+  `migration/analyze/known_cycles.json`'s accepted `TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|
+  TT.TICKET_INTERFACE|TT.UTIL` cycle group, **this cycle does not fail Phase 1's
+  topological sort — it is an accepted mutual-recursion group that must be translated as
+  ONE batch**. PL/pgSQL does not resolve function/procedure bodies at `CREATE` time
+  (only at CALL time), so the two packages' PostgreSQL translations CAN be `CREATE`d in
+  either order — only EXECUTING a call across the cycle requires both sides to already
+  exist. This is the identical conclusion `tt.event_interface.md`'s own cycle note
+  reaches from the other direction, recorded here for consistency, not re-derived from
+  scratch.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:237, 250, 303, 459, 475, 509, 513, 1542, 1718, 1731, 2155`
+
+### S-TICKET-058
+
+- **routines:** newticket_new, change_status_event_id_out, addevent_new-reachable routines
+- **claim:** This package also calls `TT.OSAG_NOTIFY.event_notify` directly (`newticket_new`
+  line 234; `add_status_change_event` line 1700) and `TT.OSAG_NOTIFY.
+  delete_ticket_notifications` (`change_status_event_id_out` line 497, on delete-status
+  120), and `TT.UTIL.update_status_valid_until` (`change_status_event_id_out` lines 520,
+  522) — the SAME two current call sites into `TT.UTIL` that `migration/spec/
+  tt.event_interface.md`'s S-EVENT-029 already documents for `addevent_new`; both current
+  callers of `TT.UTIL.update_status_valid_until` (this routine and `addevent_new`) are
+  declared `PROCEDURE`, so no FUNCTION/PROCEDURE-COMMIT collision currently exists
+  through EITHER path into `TT.UTIL`'s `COMMIT`-bearing code — consistent with
+  S-TICKET-046's conclusion that neither of THIS package's own two `FUNCTION`s reaches a
+  `COMMIT`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:234, 497, 520, 522, 1700`
 
