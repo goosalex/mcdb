@@ -200,3 +200,9 @@ None — no external service configuration required.
 ---
 *Phase: 02-spec-method-test-harness-pilot*
 *Completed: 2026-07-13*
+
+## Self-Check: PASSED
+
+All 8 created files confirmed present on disk (6 translation/FINDINGS pairs, the empty
+schema-fix ledger, this SUMMARY.md). All 5 commit hashes (`7840235`, `64f524a`,
+`ae27720`, `bed763e`, `391dc99`) confirmed present in git history.
