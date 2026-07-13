@@ -59,7 +59,16 @@ DEFAULT_INVENTORY_PATH = REPO_ROOT / "migration" / "analyze" / "inventory.json"
 DEFAULT_NAME_MAP_PATH = REPO_ROOT / "migration" / "mapping" / "name-map.csv"
 DEFAULT_CHECKLIST_PATH = SPEC_DIR / "CHECKLIST.md"
 
-EXCLUDED_FILENAMES = {"TEMPLATE.md", "CHECKLIST.md", "README.md", "TEST-AMENDMENTS.md"}
+# Docs that live in this directory but are NOT package specs. A package spec is named
+# <schema>.<package>.md; anything else here is supporting material and must not be linted
+# against the spec structure (front-matter, ## Routines, ## Clauses, ...).
+EXCLUDED_FILENAMES = {
+    "TEMPLATE.md",
+    "CHECKLIST.md",
+    "README.md",
+    "TEST-AMENDMENTS.md",
+    "DYNAMIC-SQL-TRACE.md",  # 02-06's manual trace of TT.EVENT_INTERFACE's EXECUTE IMMEDIATE
+}
 
 REQUIRED_FRONTMATTER_FIELDS = [
     "oracle_schema",
