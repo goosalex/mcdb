@@ -1,0 +1,4 @@
+psql:migration/test/regress/sql/tt__event_interface__errors.sql:28: ERROR:  no data found
+CONTEXT:  PL/pgSQL function tt.event_interface_demote_event(numeric,numeric) line 1 at SQL statement
+psql:migration/test/regress/sql/tt__event_interface__errors.sql:32: ERROR:  no data found
+CONTEXT:  PL/pgSQL function tt.event_interface_promote_event(numeric,numeric) line 1 at SQL statement
