@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: spec-method-test-harness-pilot
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-13T15:09:12.999Z"
+stopped_at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
+last_updated: "2026-07-13T15:30:36.928Z"
 last_activity: 2026-07-12
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 8
+  completed_plans: 9
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 02 (spec-method-test-harness-pilot) — EXECUTING
-Plan: 6 of 13
+Plan: 7 of 13
 Status: Ready to execute
 Last activity: 2026-07-12 — Phase 02 execution started
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P04 | ~2h | 3 tasks | 10 files |
 | Phase 02 P05 | ~2h | 3 tasks | 5 files |
 | Phase 02 P06 | 45min | 3 tasks | 4 files |
+| Phase 02 P07 | 2.5h | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase ?]: TT.OSAG_NOTIFY: TOO_MANY_ROWS is never caller-observable as a raised exception anywhere in this package -- both structurally-reachable sites swallow it; tests assert on return value/plog content instead
 - [Phase 02]: Carried DYNAMIC-SQL-TRACE.md's EXECUTE format() verdict into tt.event_interface.md unchanged, including its own UNRESOLVED allowlist-scope sub-item
 - [Phase 02]: Closed the plan's flagged FUNCTION/PROCEDURE question: ticket_type_for_event_type has zero DB access, so no COMMIT hazard via TT.UTIL
+- [Phase 02]: TICKET_INTERFACE public_routines front-matter set to 37 (dedup) to match spec_lint.py's name-keyed inventory check; both change_label overloads remain fully specced as distinct routines — spec_lint.py cross-checks front-matter public_routines against inventory.json's routine NAME set, which collapses the change_label overload pair to one entry
 
 ### Pending Todos
 
@@ -109,6 +111,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-13T15:08:45.529Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-07-13T15:30:36.922Z
+Stopped at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
 Resume file: None
