@@ -1516,3 +1516,289 @@ plan's SUMMARY.
   `COMMIT`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:234, 497, 520, 522, 1700`
 
+## Checklist
+
+### 1. Empty-string / NULL handling
+
+**Three distinct findings from tracing every `VARCHAR2`/`CLOB` identifier through every
+`IS NULL`/`IS NOT NULL`/`=`/`!=`/`||` site across the full 2,484-line body:**
+
+1. **`change_customer_reference` and `change_partner_reference` (S-TICKET-018,
+   S-TICKET-022) — a genuine, narrow AUDIT-TEXT-ONLY divergence.** Both routines'
+   `IF (p_x IS NOT NULL) THEN '...' || p_x ELSE '...<empty>...'` pattern takes Oracle's
+   `ELSE` branch for BOTH a caller-supplied `NULL` and a caller-supplied `''` (Oracle's
+   universal `''`≡`NULL` collapsing for this comparison), producing `'... changed to
+   <empty>'`. A literal PostgreSQL port of the SAME `IS NOT NULL` check would ALSO take
+   the `ELSE` branch for `NULL` (no collapsing needed for that case) but would take the
+   `THEN` branch for `''` (a real, distinct value in PostgreSQL), producing `'...
+   changed to '` with a trailing empty string instead of `'... changed to <empty>'`.
+   Both `tt.ticket.customer_reference` and `tt.ticket.partner_reference` permit `''` at
+   the column level (no `NOT NULL`/check constraint forbidding it,
+   `ddl/generated/schema.oracle.sql:203`), so this is reachable, not theoretical — though
+   it affects ONLY the generated audit-event text, never the `UPDATE` that writes the
+   actual column (which stores whatever was passed, verbatim, in both engines). Boundary
+   normalization decision: `NULLIF(p_x, '')` before the `IS NOT NULL` check (or an
+   explicit `p_x IS NOT NULL AND p_x != ''` test) closes the gap.
+2. **`change_notification`'s prefix-only-if-non-NULL pattern (S-TICKET-027) — CORRECTLY
+   handled already, no divergence.** `v_event_details_public`/`_private` are assigned
+   `EVENT_DETAILS_PREFIX || p_change_text_x` ONLY inside an `IF p_change_text_x IS NOT
+   NULL` guard — the variable is left at its declared NULL (never concatenated) when the
+   input is NULL, so there is no `NULL || 'x'`-collapsing-vs-not divergence to translate
+   (unlike `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator
+   pattern, which DOES concatenate onto a NULL-seeded variable across multiple `||`
+   calls). A caller-supplied `''` is never NULL in either engine, so the `IS NOT NULL`
+   check behaves identically for that input too.
+3. **`add_status_change_event`'s "hide the event" NULL check (its own inline comment,
+   `ddl/src/pkgb/tt_ticket_interface.sql:1676-1678`) is EXPLICITLY flagged by Oracle's own
+   author as fragile**: `IF (p_public_change_text IS NULL AND p_private_change_text IS
+   NOT NULL) THEN v_public_event := 0` — the comment reads "if you ever decide to make
+   this procedure public this has to be checked more carefully (whitespace-only
+   strings...)". Since this routine stays PRIVATE in the translation (per this spec's
+   naming convention), the check's known fragility (it does not treat `''` or
+   whitespace-only public text as "hidden") is inherited as-is from all 6 current
+   callers, none of which currently passes `''` for `p_public_change_text` (each passes
+   either a real string or `NULL`) — recorded as a live caveat for Phase 4 if a future
+   caller ever changes that.
+
+Every other `IS NULL`/`IS NOT NULL`/`||` site in the package body (the `change_*` family's
+audit-string builders, `merge_tickets`' partner-reference/rating/event merge logic,
+`change_summary`'s `NVL(..., '<empty>')` calls) was reviewed and found to be either (a) a
+numeric/id comparison with no `''`-collapsing relevance (`v_company_id IS NULL`,
+`v_old_label_id IS NULL`, etc.), or (b) a `VARCHAR2` comparison against a value never
+assigned `''` anywhere in this package's own code (e.g. `change_service_host`'s
+`'<empty>'`/`NULL` defaults are Oracle string LITERALS chosen by this package, not
+caller input subject to collapsing), or (c) `change_summary`'s `!=`-with-NULLs pattern
+(S-TICKET-029), which is standard three-valued SQL logic identical in both engines.
+
+### 2. SELECT INTO strictness
+
+**All 77 sites from the Phase 1 inventory's `select_into_sites` array for
+`TT.TICKET_INTERFACE` are enumerated in the dedicated table below, one row each, none
+omitted.** Verdict legend (same as `migration/spec/tt.osag_notify.md` and
+`migration/spec/tt.event_interface.md`, reused for consistency, not reinvented):
+`STRICT + handler` = Oracle had a handler at or immediately above this site and it must
+be reproduced; `STRICT, unhandled` = Oracle had no handler anywhere reachable before this
+specific call chain's boundary and the raise propagates, matching Oracle's actual
+contract (13 `NO_DATA_FOUND` handlers against 77 sites means the large majority of sites
+in this package are `STRICT, unhandled` — that is Oracle's real, if occasionally
+latent-bug-looking, contract, not something this spec "improves"); `no STRICT` = zero
+rows is structurally impossible (an aggregate query: `COUNT`, `MIN`, `MAX`, or a
+`sequence.NEXTVAL`/`CURRVAL` pull via `DUAL`).
+
+### SELECT INTO strictness
+
+| # | ddl/src/pkgb/tt_ticket_interface.sql:LINE | target(s) | zero rows possible? | multi rows possible? | Oracle handler | PG translation | clause |
+|---|---|---|---|---|---|---|---|
+| 1 | `ddl/src/pkgb/tt_ticket_interface.sql:86` | `v_company_id` (`mss.host` by id) | yes (bad `p_host_id`) | no (`HOST_PK`) | none; `newticket_new` has no `EXCEPTION` block at all | STRICT, unhandled | S-TICKET-001 |
+| 2 | `ddl/src/pkgb/tt_ticket_interface.sql:89` | `v_mss_service_id` (`mss.host2service` by host id) | yes | **yes** (`mss.host2service` PK is `(host_id, service_id)`, not unique on `host_id`) | none | STRICT, unhandled | S-TICKET-001 |
+| 3 | `ddl/src/pkgb/tt_ticket_interface.sql:98` | `v_company_id` (`stop.contact` by id) | yes (bad `p_contact_id`) | no (`CONTACT_PK`) | none | STRICT, unhandled | S-TICKET-002 |
+| 4 | `ddl/src/pkgb/tt_ticket_interface.sql:108` | `v_count` (admin-permission `COUNT(*)`) | no (aggregate) | no (aggregate) | n/a | no STRICT | S-TICKET-003 |
+| 5 | `ddl/src/pkgb/tt_ticket_interface.sql:125` | `v_event_source_id` (`tt.event_type` by id) | yes (bad `p_event_type_id`) | no (`EVENTTYPE_PK`) | none | STRICT, unhandled | S-TICKET-003 |
+| 6 | `ddl/src/pkgb/tt_ticket_interface.sql:133` | `v_contact_company_id` (`stop.contact` by id) | yes (bad `p_worker_id`) | no (`CONTACT_PK`) | none | STRICT, unhandled | S-TICKET-004 |
+| 7 | `ddl/src/pkgb/tt_ticket_interface.sql:141` | `p_ticket_id` (`ticket_sequence.NEXTVAL`) | no (sequence) | no (sequence) | n/a | no STRICT | S-TICKET-005 |
+| 8 | `ddl/src/pkgb/tt_ticket_interface.sql:142` | `p_event_id` (`event_sequence.NEXTVAL`) | no (sequence) | no (sequence) | n/a | no STRICT | S-TICKET-005 |
+| 9 | `ddl/src/pkgb/tt_ticket_interface.sql:254` | `v_cr_id` (`changerequest_seq.NEXTVAL`, only if `v_create_cr=1`) | no (sequence) | no (sequence) | n/a | no STRICT | S-TICKET-005 |
+| 10 | `ddl/src/pkgb/tt_ticket_interface.sql:289` | `v_ticket_status_id` (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_deferral_date` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-006 |
+| 11 | `ddl/src/pkgb/tt_ticket_interface.sql:295` | `v_host_id` (`tt.ticket` by id, only if status=60) | yes | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-006 |
+| 12 | `ddl/src/pkgb/tt_ticket_interface.sql:381` | `v_cur_status` etc. (8-col `tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_status_event_id_out` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-008 |
+| 13 | `ddl/src/pkgb/tt_ticket_interface.sql:389` | `v_last_public_event_type_id` (`tt.event` by id, only if not null) | yes | no (`EVENT_PK`) | none | STRICT, unhandled | S-TICKET-008 |
+| 14 | `ddl/src/pkgb/tt_ticket_interface.sql:416` | `status_name` (`status` by id) | yes (bad `p_status_id`) | no (`STATUS_PK`) | none | STRICT, unhandled | S-TICKET-009 |
+| 15 | `ddl/src/pkgb/tt_ticket_interface.sql:417` | `v_cur_status_name` (`status` by id) | yes | no (`STATUS_PK`) | none | STRICT, unhandled | S-TICKET-009 |
+| 16 | `ddl/src/pkgb/tt_ticket_interface.sql:435` | `l_ticket_type_id` (`tt.ticket` by id — dead variable) | yes | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-009 |
+| 17 | `ddl/src/pkgb/tt_ticket_interface.sql:549` | `v_ux_timeout_start` (`tt.event` by `event_id`, conditional) | structurally near-impossible (own just-inserted event) | no (`EVENT_PK`) | none | STRICT, unhandled | S-TICKET-010 |
+| 18 | `ddl/src/pkgb/tt_ticket_interface.sql:579` | `v_type_id` etc. (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `update_ux_timeout_for_ticket` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-011 |
+| 19 | `ddl/src/pkgb/tt_ticket_interface.sql:619` | `v_ticket_has_service_window` (`tt.service_window` `COUNT(*)`) | no (aggregate) | no (aggregate) | n/a | no STRICT | S-TICKET-012 |
+| 20 | `ddl/src/pkgb/tt_ticket_interface.sql:625` | `v_service_window_end` (`tt.service_window`, `ROWNUM=1`) | structurally near-impossible (count just confirmed >0) | no (capped by `ROWNUM=1` — must become `LIMIT 1`, not merely dropped) | none | STRICT, unhandled (translate `ROWNUM=1` as `LIMIT 1`) | S-TICKET-012 |
+| 21 | `ddl/src/pkgb/tt_ticket_interface.sql:675` | `new_shrt, v_worker_id` (`stop.contact` by id) | yes (bad `p_worker_id`) | no (`CONTACT_PK`) | local `WHEN NO_DATA_FOUND` (lines 679-684), defaults to synthetic "MCC" | STRICT + handler | S-TICKET-013 |
+| 22 | `ddl/src/pkgb/tt_ticket_interface.sql:688` | `old_shrt, v_handled_by_mcc` (join `stop.contact`/`tt.ticket`) | yes (unassigned worker or bad ticket) | no (both PK-keyed) | local `WHEN NO_DATA_FOUND` (lines 693-698) | STRICT + handler | S-TICKET-014 |
+| 23 | `ddl/src/pkgb/tt_ticket_interface.sql:715` | `cust_id` (`ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_worker` has no procedure-level `EXCEPTION` block | STRICT, unhandled | S-TICKET-014 |
+| 24 | `ddl/src/pkgb/tt_ticket_interface.sql:779` | `cust_id` (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_service_host` has no procedure-level `EXCEPTION` block | STRICT, unhandled | S-TICKET-015 |
+| 25 | `ddl/src/pkgb/tt_ticket_interface.sql:784` | `v_service_id_old, v_service_label_old` (join `mss.service_type`/`mss.service`/`tt.ticket`) | yes | no (PK-keyed joins) | local `WHEN NO_DATA_FOUND` (lines 792-795) | STRICT + handler | S-TICKET-016 |
+| 26 | `ddl/src/pkgb/tt_ticket_interface.sql:799` | `v_service_label_new` (join `mss.service_type`/`mss.service` by `p_service_id`) | yes | no (PK-keyed) | local `WHEN NO_DATA_FOUND` (lines 806-809) | STRICT + handler | S-TICKET-016 |
+| 27 | `ddl/src/pkgb/tt_ticket_interface.sql:813` | `v_host_label_old` (join `mss.host`/`tt.ticket`) | yes | no (PK-keyed) | local `WHEN NO_DATA_FOUND` (lines 818-821) | STRICT + handler | S-TICKET-016 |
+| 28 | `ddl/src/pkgb/tt_ticket_interface.sql:825` | `v_host_label_new` (`mss.host` by `p_host_id`) | yes | no (`HOST_PK`) | local `WHEN NO_DATA_FOUND` (lines 829-832) | STRICT + handler | S-TICKET-016 |
+| 29 | `ddl/src/pkgb/tt_ticket_interface.sql:873` | `cust_id` (`ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_subject` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-017 |
+| 30 | `ddl/src/pkgb/tt_ticket_interface.sql:877` | `sub_old` (`tt.ticket` by id) | yes | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-017 |
+| 31 | `ddl/src/pkgb/tt_ticket_interface.sql:959` | `v_company_id, v_old_label_id` (`ticket` by id, `change_label` 3/4-arg overload) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; this overload has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-020 |
+| 32 | `ddl/src/pkgb/tt_ticket_interface.sql:965` | `v_old_label_name` (`label` by id, conditional) | yes (orphaned `v_old_label_id`) | no (`LABEL` PK) | none | STRICT, unhandled | S-TICKET-020 |
+| 33 | `ddl/src/pkgb/tt_ticket_interface.sql:972` | `v_label_name` (`label` by `p_label_id`, conditional) | yes (bad `p_label_id`) | no (`LABEL` PK) | none | STRICT, unhandled | S-TICKET-020 |
+| 34 | `ddl/src/pkgb/tt_ticket_interface.sql:1073` | `first_name, last_name` (`stop.contact` by `p_owner_id`) | yes (bad `p_owner_id`) | no (`CONTACT_PK`) | none; `change_owner` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-023 |
+| 35 | `ddl/src/pkgb/tt_ticket_interface.sql:1079` | `v_company_id` (`stop.contact` by `p_owner_id`, re-query) | yes | no (`CONTACT_PK`) | none | STRICT, unhandled | S-TICKET-023 |
+| 36 | `ddl/src/pkgb/tt_ticket_interface.sql:1086` | `v_company_id` (`tt.ticket` by id, ELSE branch) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-023 |
+| 37 | `ddl/src/pkgb/tt_ticket_interface.sql:1135` | `v_old_company_id, v_old_host_id` (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_company` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-024 |
+| 38 | `ddl/src/pkgb/tt_ticket_interface.sql:1138` | `v_old_host_name` (`mss.host` by id, conditional) | yes | no (`HOST_PK`) | none | STRICT, unhandled | S-TICKET-024 |
+| 39 | `ddl/src/pkgb/tt_ticket_interface.sql:1144` | `v_old_company_short` (`stop.company` by id, conditional) | yes | no (`COMPANY` PK) | none | STRICT, unhandled | S-TICKET-024 |
+| 40 | `ddl/src/pkgb/tt_ticket_interface.sql:1157` | `v_companyshort` (`stop.company` by `p_company_id`) | yes (bad `p_company_id`) | no (`COMPANY` PK) | local `WHEN NO_DATA_FOUND THEN v_companyshort := '<empty>'` (lines 1160-1163) | STRICT + handler | S-TICKET-024 |
+| 41 | `ddl/src/pkgb/tt_ticket_interface.sql:1302` | `old_summary_private` etc. (`ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_summary` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-028 |
+| 42 | `ddl/src/pkgb/tt_ticket_interface.sql:1355` | `v_company_id` (`ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `change_type` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-030 |
+| 43 | `ddl/src/pkgb/tt_ticket_interface.sql:1358` | `v_old_type_name` (join `ticket_type`/`ticket`) | yes (structurally near-impossible for a live ticket) | no (PK-keyed) | none | STRICT, unhandled | S-TICKET-030 |
+| 44 | `ddl/src/pkgb/tt_ticket_interface.sql:1361` | `v_type_name` (`ticket_type` by `p_type_id`) | yes (bad `p_type_id`) | no (`TICKETTYPE_PK`) | none | STRICT, unhandled | S-TICKET-030 |
+| 45 | `ddl/src/pkgb/tt_ticket_interface.sql:1372` | `p_event_id` (`event_sequence.CurrVal`) | no (session-local sequence state) | no | n/a | no STRICT (needs `currval()` paired with preceding `nextval()` in same routine) | S-TICKET-031 |
+| 46 | `ddl/src/pkgb/tt_ticket_interface.sql:1397` | `v_company_id` (`ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; site has no local handler and routine has no procedure-level `EXCEPTION` block | STRICT, unhandled | S-TICKET-032 |
+| 47 | `ddl/src/pkgb/tt_ticket_interface.sql:1401` | `v_old_service_component_code` (join `mss.service_component`/`ticket`) | yes (no service component set) | no (`SERVICECOMPONENT_PK`) | local `WHEN NO_DATA_FOUND` (lines 1403-1406, covers both 1401 and 1402) | STRICT + handler | S-TICKET-032 |
+| 48 | `ddl/src/pkgb/tt_ticket_interface.sql:1402` | `v_old_service_component_name` (same join) | yes | no | same local handler as #47 | STRICT + handler | S-TICKET-032 |
+| 49 | `ddl/src/pkgb/tt_ticket_interface.sql:1410` | `v_service_component_code` (`mss.service_component` by `p_service_component_id`) | yes (bad id) | no (`SERVICECOMPONENT_PK`) | local `WHEN NO_DATA_FOUND` (lines 1412-1415, covers both 1410 and 1411) | STRICT + handler | S-TICKET-032 |
+| 50 | `ddl/src/pkgb/tt_ticket_interface.sql:1411` | `v_service_component_name` (same lookup) | yes | no | same local handler as #49 | STRICT + handler | S-TICKET-032 |
+| 51 | `ddl/src/pkgb/tt_ticket_interface.sql:1428` | `p_event_id` (`event_sequence.CurrVal`) | no (session-local sequence state) | no | n/a | no STRICT | S-TICKET-031 |
+| 52 | `ddl/src/pkgb/tt_ticket_interface.sql:1449` | `v_ticketid` (`tt.ticket` filtered `MIN(id)`) | no (aggregate, NULL on no match) | no (aggregate) | whole-function `WHEN OTHERS THEN ...RETURN NULL` (lines 1461-1465) | no STRICT (function-level catch-all regardless) | S-TICKET-033 |
+| 53 | `ddl/src/pkgb/tt_ticket_interface.sql:1498` | `v_partner_ref` etc. (source `ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `merge_tickets` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-034 |
+| 54 | `ddl/src/pkgb/tt_ticket_interface.sql:1504` | `v_last_public_event_date` (`tt.event`, conditional) | yes (orphaned event id) | no (`EVENT_PK`) | none | STRICT, unhandled | S-TICKET-034 |
+| 55 | `ddl/src/pkgb/tt_ticket_interface.sql:1508` | `v_mpartner_ref` etc. (target `ticket` by `p_mticket_id`) | yes (bad `p_mticket_id`) | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-034 |
+| 56 | `ddl/src/pkgb/tt_ticket_interface.sql:1514` | `v_mlast_public_event_date` (`tt.event`, conditional) | yes | no (`EVENT_PK`) | none | STRICT, unhandled | S-TICKET-034 |
+| 57 | `ddl/src/pkgb/tt_ticket_interface.sql:1697` | `event_id` (`add_status_change_event`, `event_sequence.CurrVal`) | no (session-local sequence state) | no | n/a | no STRICT | S-TICKET-053 |
+| 58 | `ddl/src/pkgb/tt_ticket_interface.sql:1754` | `p_rating_id` (`ticketrating_seq.NextVal`) | no (sequence) | no (sequence) | n/a | no STRICT | S-TICKET-039 |
+| 59 | `ddl/src/pkgb/tt_ticket_interface.sql:1795` | `p_ticket_docs_page_id` (`ticketdocspage_seq.NextVal`) | no (sequence) | no (sequence) | whole-routine `WHEN OTHERS` (lines 1808-1810) | no STRICT (routine-level catch-all regardless) | S-TICKET-040 |
+| 60 | `ddl/src/pkgb/tt_ticket_interface.sql:1830` | `v_page_id` etc. (`ticket_docs_page` by id) | yes (bad `p_ticket_docs_page_id`) | no (that table's PK) | `WHEN NO_DATA_FOUND THEN NULL` + `WHEN OTHERS` (lines 1841-1846) | STRICT + handler | S-TICKET-041 |
+| 61 | `ddl/src/pkgb/tt_ticket_interface.sql:1875` | `v_escalation_status` (`ticket` by id, `handleDeferredTransitions`) | yes (structurally near-impossible, ticket pre-validated by caller) | no (`TICKET_PK`) | whole-routine `WHEN OTHERS` (lines 1915-1919) | STRICT + handler (routine-level) | S-TICKET-054 |
+| 62 | `ddl/src/pkgb/tt_ticket_interface.sql:1936` | `v_counter` (`tt.ticket` `COUNT(*) ... IN (...)`) | no (aggregate) | no (aggregate) | whole-routine `WHEN OTHERS` (lines 1951-1955) | no STRICT | S-TICKET-042 |
+| 63 | `ddl/src/pkgb/tt_ticket_interface.sql:1970` | `v_counter` (`tt.ticket2related_ticket` `COUNT(*)`) | no (aggregate) | no (aggregate) | whole-routine `WHEN OTHERS` (lines 1984-1989) | no STRICT | S-TICKET-043 |
+| 64 | `ddl/src/pkgb/tt_ticket_interface.sql:2007` | `v_file_display_name` (3-way join, same-company guard) | yes (bad id OR cross-company mismatch, by design) | no (PK/guard-bounded) | `WHEN NO_DATA_FOUND` (descriptive message) + `WHEN OTHERS` (lines 2019-2027) | STRICT + handler | S-TICKET-044 |
+| 65 | `ddl/src/pkgb/tt_ticket_interface.sql:2046` | `v_counter` (`tt.ticket2mc_file` `COUNT(*)`) | no (aggregate) | no (aggregate) | whole-routine `WHEN OTHERS` (lines 2064-2069) | no STRICT | S-TICKET-045 |
+| 66 | `ddl/src/pkgb/tt_ticket_interface.sql:2051` | `v_file_display_name` (`mc.mc_file` by id, conditional) | structurally surprising but not re-verified (see Assumptions) | no (`mc_file` PK) | whole-routine `WHEN OTHERS` (same as #65) | STRICT + handler (routine-level) | S-TICKET-045 |
+| 67 | `ddl/src/pkgb/tt_ticket_interface.sql:2105` | `v_counter` (`tt.ticket_request_classification` `COUNT(*)`) | no (aggregate) | no (aggregate) | whole-routine `WHEN OTHERS` (lines 2120-2124) | no STRICT | S-TICKET-047 |
+| 68 | `ddl/src/pkgb/tt_ticket_interface.sql:2149` | `v_host_id, v_company_id` (`tt.ticket` by id, conditional) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `clear_todo_list` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-048 |
+| 69 | `ddl/src/pkgb/tt_ticket_interface.sql:2193` | `p_todo_item_id` (`todoitem_seq.NextVal`) | no (sequence) | no (sequence) | n/a; `add_todo_item` has no `EXCEPTION` block | no STRICT | S-TICKET-049 |
+| 70 | `ddl/src/pkgb/tt_ticket_interface.sql:2244` | `v_old_status_name` etc. (`tt.todo_item` LEFT JOIN `tt.todo_item_status`) | yes (no todo item for `(ticket_id, seq_no)`) | no (assumed key, see Assumptions) | none; `update_todo_item_status` has no `EXCEPTION` block | STRICT, unhandled | S-TICKET-050 |
+| 71 | `ddl/src/pkgb/tt_ticket_interface.sql:2256` | `v_host_id, v_company_id` (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none | STRICT, unhandled | S-TICKET-050 |
+| 72 | `ddl/src/pkgb/tt_ticket_interface.sql:2261` | `v_status_name` (`tt.todo_item_status` by id) | yes (bad status id) | no (`TODO_ITEM_STATUS` PK) | none | STRICT, unhandled | S-TICKET-050 |
+| 73 | `ddl/src/pkgb/tt_ticket_interface.sql:2330` | `v_stats_id` (`tt.ticket_time_statistic` by ticket id) | yes (first-ever stats write) | no (assumed unique on `ticket_id`, see Assumptions) | local `WHEN NO_DATA_FOUND` (lines 2332-2344) | STRICT + handler | S-TICKET-055 |
+| 74 | `ddl/src/pkgb/tt_ticket_interface.sql:2335` | `v_stats_id` (`tt.tickettimestatistic_seq.nextval`, inside handler) | no (sequence) | no (sequence) | (inside handler above) | no STRICT | S-TICKET-055 |
+| 75 | `ddl/src/pkgb/tt_ticket_interface.sql:2343` | `v_stats_id` (re-`SELECT` after `MERGE`, inside handler) | structurally near-impossible (row now guaranteed to exist) | no | (inside handler above) | STRICT + handler | S-TICKET-055 |
+| 76 | `ddl/src/pkgb/tt_ticket_interface.sql:2381` | `v_flow_id, v_flow_in_date` (`tt.ticket_flow`, open entry) | yes (expected common case — no open entry) | unverified/assumed-no (see Assumptions) | local `WHEN NO_DATA_FOUND THEN v_flow_id := NULL` (lines 2383-2386) | STRICT + handler | S-TICKET-051 |
+| 77 | `ddl/src/pkgb/tt_ticket_interface.sql:2391` | `v_mcc_flag` etc. (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `updateTicketFlow` has no procedure-level `EXCEPTION` block | STRICT, unhandled | S-TICKET-051 |
+
+### 3. Exception codes
+
+**Zero `RAISE_APPLICATION_ERROR` calls and zero named-exception declarations or raises
+exist anywhere in this 2,484-line package body** (confirmed: `grep -c
+RAISE_APPLICATION_ERROR` and `grep -c "^\s*RAISE\b"` both return 0 against
+`ddl/src/pkgb/tt_ticket_interface.sql`; matches `migration/analyze/inventory.json`'s
+`raise_application_error: []` for `TT.TICKET_INTERFACE`). This is a real, structural
+contrast with its cycle-mate `TT.EVENT_INTERFACE`, which DOES raise one named exception
+through a companion `*_STATE` package
+(`EVENT_INTERFACE_STATE.S_ERRNO_TICKET_CLOSED`, `migration/spec/tt.event_interface.md`
+S-EVENT-021) — nothing here required the same by-hand trace this plan's sibling had to
+do for that constant. The only exception surface this package presents to callers is the
+large set of `STRICT, unhandled` sites in the table above (13 `NO_DATA_FOUND` handlers
+against 77 sites, 0 `TOO_MANY_ROWS` handlers, 10 `WHEN OTHERS` handlers — all matching
+`migration/analyze/inventory.json`'s `exception_handlers` counts exactly) — a plain,
+un-numbered `NO_DATA_FOUND`/`TOO_MANY_ROWS`, or whatever constraint-violation exception
+an `INSERT`/`UPDATE`/`DELETE` triggers (e.g. `deleteTicket`'s FK-dependent cascade,
+S-TICKET-052). There is nothing package-specific for XCUT-01 to map here beyond the
+general, cross-package requirement (already stated identically in both sibling specs)
+that PL/pgSQL's default `NO_DATA_FOUND` SQLSTATE (`P0002`) and `TOO_MANY_ROWS` SQLSTATE
+(`P0003`) must propagate to these routines' callers exactly as Oracle's `ORA-01403`/
+`ORA-01422` do today. Mapping decision deferred to Phase 3.
+
+### 4. Package state
+
+None. Verified two ways: (1) `migration/analyze/inventory.json` lists `package_state: []`
+and `has_init_block: false` for `TT.TICKET_INTERFACE`; (2) confirmed independently by
+reading the full 2,484-line package body — it opens directly with three private-routine
+FORWARD DECLARATIONS (`ddl/src/pkgb/tt_ticket_interface.sql:7-29`, signature-only, no
+variable declarations), immediately followed by `newticket_new`'s own declaration section
+at line 35 — there is no package-level `DECLARE`-equivalent section between `IS`
+(line 3) and the first routine body. The file ends at line 2484
+(`END ticket_interface;`) with no trailing unnamed initialization block.
+
+### 5. FUNCTION vs PROCEDURE
+
+**Zero `COMMIT`, zero `ROLLBACK`, zero `PRAGMA AUTONOMOUS_TRANSACTION` anywhere in this
+package** (confirmed: `grep -ciE "COMMIT|ROLLBACK|PRAGMA"` against
+`ddl/src/pkgb/tt_ticket_interface.sql` returns 0; matches
+`migration/analyze/inventory.json`'s `has_commit: false, has_rollback: false,
+autonomous_transaction: false`). This package declares exactly TWO `FUNCTION`s —
+`get_next_recent_ticket` and `replace_id_placeholders` — both fully traced in
+S-TICKET-046: neither calls anything that could reach a `COMMIT`
+(`get_next_recent_ticket` issues one aggregate `SELECT` and calls nothing else;
+`replace_id_placeholders` is pure string manipulation with zero database access and zero
+calls to anything). **Neither `FUNCTION` has a FUNCTION/PROCEDURE-COMMIT hazard.** This
+package's own two current call sites into `TT.UTIL` (which DOES `COMMIT`, per
+`migration/spec/tt.util.md`) are both from `change_status_event_id_out`
+(S-TICKET-058), a `PROCEDURE` — not from either `FUNCTION` — so no cross-package
+collision is currently reachable through this package's `FUNCTION`s either. `pg_kind`
+remains PROVISIONAL for all 38 routines (Phase 3 XCUT-04), per `migration/README.md`'s
+standing warning — this dimension confirms no COMMIT-reachability hazard exists WITHIN
+this package, it does not settle the final PostgreSQL FUNCTION-vs-PROCEDURE shape for any
+of the 38 routines, including the two `FUNCTION`s themselves (a Phase 3 decision could
+still choose to make either a `PROCEDURE` with an OUT parameter for consistency with the
+rest of the package, independent of whether a COMMIT-reachability hazard exists).
+
+## Assumptions / Unresolved
+
+- **The doc/body disagreement in `expire_status`** (S-TICKET-021): the package spec's
+  comment claims it "calls change_label() and change_status()"; the body only calls
+  `change_status`. This spec records the body's actual behavior as authoritative (per
+  this plan's own instruction) and flags the discrepancy rather than guessing which one
+  is "more correct" — no live Oracle exists to test which behavior production code
+  actually depends on.
+- **The `add_status_change_event` `cust_id`-never-assigned bug** (S-TICKET-053): every
+  audit event written through this private routine has `company_id = NULL`. Whether this
+  is a LATENT bug nobody has noticed (because `company_id` on these specific audit
+  events is never read by any UI/report), or a bug that IS visible somewhere downstream,
+  cannot be determined from static source alone — no live Oracle or application code was
+  available to this phase to check. Recorded as a faithful behavior to preserve in
+  translation (a translation that "fixes" this by adding a real `SELECT company_id INTO
+  cust_id ...` would silently change behavior relative to the Oracle original, which is
+  exactly what this phase's methodology forbids) — if Phase 4/5 wants to actually fix it,
+  that is a deliberate, documented deviation decision for that phase to make explicitly,
+  not something this spec should quietly paper over.
+- **Three structural-uniqueness assumptions this spec relies on but did not independently
+  re-verify against every relevant constraint in `ddl/generated/schema.oracle.sql` for
+  this plan** (each is used to justify a "no STRICT concern beyond zero-row" verdict in
+  the table above): (a) `tt.ticket_time_statistic.ticket_id` is unique (site #73/#75,
+  S-TICKET-055) — the routine's own `MERGE ... WHEN NOT MATCHED` race-avoidance logic
+  strongly implies this is intended to be enforced, but this spec did not locate and cite
+  the specific unique constraint/index by name; (b) `tt.ticket_flow` cannot have two
+  simultaneously-open (`flow_out_date IS NULL`) rows for the same ticket (site #76,
+  S-TICKET-051) — implied by the routine's own insert-if-none-open logic, not
+  independently confirmed via a partial unique index; (c) `(tt.todo_item.ticket_id,
+  tt.todo_item.seq_no)` is unique (site #70, S-TICKET-050) — implied by the routine
+  addressing "the" todo item by that pair, not independently confirmed. None of these
+  affects the STRICT-vs-unhandled verdict in the table (each site would need `STRICT`
+  regardless of whether the assumption holds, to correctly surface `TOO_MANY_ROWS` if it
+  ever turns out to be wrong) — flagged so Phase 4/5 knows these three are inferred from
+  routine behavior, not independently schema-confirmed.
+- **`add_related_file` vs `remove_related_file`'s asymmetric same-company guard**
+  (S-TICKET-044 vs S-TICKET-045): `add_related_file`'s file-name lookup deliberately
+  joins through `mc.mc_file_release` to enforce `t.company_id = r.company_id`;
+  `remove_related_file`'s mirror lookup does not. Whether this asymmetry is intentional
+  (removal doesn't need the same authorization check because the relation's existence was
+  already checked) or an oversight cannot be determined from static source alone — no
+  live Oracle exists to probe actual authorization intent. Recorded faithfully as
+  written, not silently harmonized.
+- **The private-routine naming convention** (`__` double-underscore prefix, see "Private
+  routines" above) is REUSED from `migration/spec/tt.osag_notify.md`/
+  `migration/spec/tt.event_interface.md`, not reinvented — but, per those specs' own
+  standing caveat, it remains outside `migration/mapping/name-map.csv` and is not
+  finalized by this spec. Flagged again in this plan's SUMMARY.
+- **`pg_kind` (FUNCTION vs PROCEDURE) remains PROVISIONAL for all 38 routines**, per
+  `migration/README.md`'s standing warning — Checklist dimension 5 confirms no
+  COMMIT/ROLLBACK/autonomous-transaction hazard exists WITHIN this package for either of
+  its two current `FUNCTION`s, but the final call belongs to Phase 3's XCUT-04.
+- **The exact PostgreSQL syntax for `sequence.NEXTVAL`/`sequence.CurrVal` FROM DUAL**
+  (used at 9 sites across this package, e.g. S-TICKET-005, S-TICKET-031, S-TICKET-053,
+  S-TICKET-055) is a corpus-wide translation mechanic (`nextval('tt.<sequence>')`/
+  `currval('tt.<sequence>')`), not something this package-specific spec can settle in
+  isolation — noted here so whichever plan performs the actual translation does not have
+  to re-derive it, consistent with `migration/spec/tt.event_interface.md`'s S-EVENT-011
+  and `migration/spec/tt.osag_notify.md`'s S-NOTIFY-015.
+- **The mutual recursion with `TT.EVENT_INTERFACE`** (S-TICKET-057) is an ACCEPTED cycle
+  group per `migration/analyze/known_cycles.json` — both packages must be translated as
+  one batch. This spec and `migration/spec/tt.event_interface.md` independently reach the
+  identical conclusion about `CREATE`-time vs call-time resolution in PL/pgSQL; recorded
+  here for consistency, not re-derived from scratch.
+- Nothing else is unresolved: all 38 public routines (both `change_label` overloads
+  specced as distinct routines, cross-checked programmatically against
+  `migration/analyze/inventory.json`), all 77 `SELECT ... INTO` sites (cross-checked
+  programmatically — all 77 present with an explicit STRICT verdict), all 13
+  `NO_DATA_FOUND` handlers, all 10 `WHEN OTHERS` handlers, the confirmed absence of any
+  `TOO_MANY_ROWS` handler, the full absence of package state, the full absence of
+  `COMMIT`/`ROLLBACK`/`PRAGMA AUTONOMOUS_TRANSACTION`, and the `static_resolution:
+  "complete"` status (no dynamic SQL anywhere in this package) were reviewed against the
+  complete text of `ddl/src/pkg/tt_ticket_interface.sql` and
+  `ddl/src/pkgb/tt_ticket_interface.sql`, cross-referenced against
+  `migration/analyze/inventory.json`, `migration/mapping/name-map.csv`'s 38
+  `TT.TICKET_INTERFACE` rows, and `migration/analyze/known_cycles.json`'s cycle-group
+  entry for this package.
+
