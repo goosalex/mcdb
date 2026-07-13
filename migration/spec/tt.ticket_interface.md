@@ -325,7 +325,7 @@ scope is reduced by this front-matter bookkeeping detail.
   — used by `TT.EVENT_INTERFACE.newevent_new`'s recent-ticket search loop (per
   `migration/spec/tt.event_interface.md` S-EVENT-009). **Has its own `EXCEPTION WHEN OTHERS`
   that logs and returns `NULL`** rather than propagating (S-TICKET-034) — see
-  S-TICKET-091 for the FUNCTION/PROCEDURE-COMMIT trace (this routine calls nothing, and
+  S-TICKET-046 for the FUNCTION/PROCEDURE-COMMIT trace (this routine calls nothing, and
   commits nothing).
 
 ### merge_tickets (PUBLIC)
@@ -522,14 +522,14 @@ scope is reduced by this front-matter bookkeeping detail.
 - **PostgreSQL name:** `tt.ticket_interface_deleteticket` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_ticket_interface.sql:624`
 - **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:2441-2482`
-- See S-TICKET-059/060 for the exact cascade/non-cascade enumeration (a strict sequence of
+- See S-TICKET-052 for the exact cascade/non-cascade enumeration (a strict sequence of
   31 `UPDATE .. SET x = NULL` / `DELETE` statements across 20+ tables, in the specific
   order Oracle executes them, ending with the `TT.TICKET` row itself). **No `SELECT INTO`
   anywhere** (only `UPDATE`/`DELETE`, several with `IN (SELECT ...)` subqueries that are
   NOT `SELECT INTO` and carry no `STRICT` concern). **No `EXCEPTION` block at all** — any
   constraint violation partway through propagates fully unhandled, leaving whatever
   statements already ran committed-pending in the CALLER's transaction (no `COMMIT`
-  anywhere in this package, per Checklist dimension 5) (S-TICKET-059).
+  anywhere in this package, per Checklist dimension 5) (S-TICKET-052).
 
 ## Private routines (used internally, no `name-map.csv` row)
 
@@ -548,7 +548,7 @@ plan's SUMMARY.
 - **`add_status_change_event`** (`ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`) — the
   shared audit-event writer used by `change_customer_reference`, `change_partner_reference`,
   `change_emergency`, `change_always_visible`, `change_notification`, `change_summary`. See
-  S-TICKET-060 for **a genuine, previously-undocumented bug**: it declares `cust_id
+  S-TICKET-053 for **a genuine, previously-undocumented bug**: it declares `cust_id
   NUMBER;` and inserts it as the event's `company_id` — but NEVER assigns `cust_id`
   anywhere in its 40-line body. Every audit event this routine writes has `company_id =
   NULL`, regardless of the ticket's real company. Documented faithfully as a real Oracle
@@ -557,11 +557,11 @@ plan's SUMMARY.
 - **`handleDeferredTransitions`** (`ddl/src/pkgb/tt_ticket_interface.sql:1859-1919`) —
   called only from `change_status_event_id_out` when the ticket transitions into or out of
   deferred (status 60); manages the escalation-status side effects of that transition. Has
-  its own `EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN` (S-TICKET-061).
+  its own `EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN` (S-TICKET-054).
 - **`updateTicketTimeStats`** (`ddl/src/pkgb/tt_ticket_interface.sql:2313-2359`) — called
   only from `change_status_event_id_out`, accumulates per-status elapsed time into
   `tt.ticket_time_statistic`, using a `SELECT`-then-`MERGE`-then-re-`SELECT` pattern to
-  avoid a race on first-row creation (S-TICKET-062). No `EXCEPTION` block of its own beyond
+  avoid a race on first-row creation (S-TICKET-055). No `EXCEPTION` block of its own beyond
   the local `NO_DATA_FOUND` guarding the create-row path.
 
 ## Clauses
@@ -933,7 +933,7 @@ plan's SUMMARY.
 - **routines:** change_emergency
 - **claim:** No `SELECT INTO` at this routine's own level — it delegates its audit write
   to `add_status_change_event` (inheriting that private routine's own findings,
-  S-TICKET-060), then updates `emergency` and the ratchet `was_emergency :=
+  S-TICKET-053), then updates `emergency` and the ratchet `was_emergency :=
   GREATEST(p_emergency, was_emergency)` (a value that, once set to 1, this routine can
   never reset to 0 — by design, per the column name "was ever emergency"). No
   `EXCEPTION` block of its own.
