@@ -1,0 +1,18 @@
+-- migration/test/schema-fixes/21_p09_fixes.sql
+--
+-- Plan 02-09 (translation of MSS.OSAG_DBPROP, AUTH.OSAG_AUTH, TT.UTIL) checked whether
+-- these three packages' tables/views (mss.key, mss.value, auth.login, auth.profile,
+-- auth.login2profile, auth.user_permission, auth.user_company_scope,
+-- auth.user_company_unit_scope, auth.user_unit_scope, auth.user_service_scope,
+-- auth.user_service_type_scope, auth.consented_term, mss.news_entry_2_login,
+-- stop.contact, mcaudit.record, tt.ticket, tt.event, tt.status, mc.isp_link_history)
+-- surfaced any further ora2pg schema errors beyond the ones plan 02-03 already
+-- ledgered in SCHEMA-FIXES.md / 10_ora2pg_fixes.sql.
+--
+-- RESULT: none. Every one of the tables above loaded cleanly from mcdb_tmpl with the
+-- exact column names/types the three packages' Oracle source and pgTAP/regress fixtures
+-- assume (verified live, per-package, while writing migration/pgsql/{mss,auth,tt}/*.sql
+-- and running their test suites against mcdb_test_p09). This file is intentionally
+-- empty of fixes -- its presence records that this path was checked for this plan, per
+-- migration/test/SCHEMA-FIXES.md's own convention (an empty-but-present file is a real
+-- result, not an oversight).

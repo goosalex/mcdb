@@ -41,7 +41,27 @@ if [ ! -d "$TRANS_DIR" ]; then
   exit 0
 fi
 
+# osag/osag_plog.sql is a deliberate exception, not a gap: plog is the locked D-P5a
+# stub ("the simplest thing that works" -- 02-CONTEXT.md), built explicitly WITHOUT the
+# spec-first cycle this script polices for every real package translation (no
+# migration/spec/osag.osag_plog.md, no migration/test/{pgtap,regress/sql}/osag__osag_plog__*.sql
+# exist, or ever will, by design -- see migration/pgsql/osag/osag_plog.FINDINGS.md). It
+# predates this script (plan 02-03 vs. 02-02) and would fail this check forever, for a
+# reason unrelated to anti-circularity: it never had a spec/test pair to be circular
+# about. Found and exempted in plan 02-09 while gating the first real translations.
+EXEMPT_TRANS_FILES=("migration/pgsql/osag/osag_plog.sql")
+
 mapfile -t trans_files < <(find "$TRANS_DIR" -mindepth 2 -maxdepth 2 -type f -name '*.sql' | sort)
+
+filtered_trans_files=()
+for tf in "${trans_files[@]}"; do
+  skip=0
+  for ex in "${EXEMPT_TRANS_FILES[@]}"; do
+    [ "$tf" = "$ex" ] && skip=1 && break
+  done
+  [ "$skip" -eq 0 ] && filtered_trans_files+=("$tf")
+done
+trans_files=("${filtered_trans_files[@]}")
 
 if [ "${#trans_files[@]}" -eq 0 ]; then
   echo "provenance_lint: 0 packages translated (no *.sql under $TRANS_DIR/<schema>/) -- nothing to check"
