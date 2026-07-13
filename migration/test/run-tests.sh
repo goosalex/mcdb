@@ -30,6 +30,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PGTAP_DIR="${SCRIPT_DIR}/pgtap"
 REGRESS_SQL_DIR="${SCRIPT_DIR}/regress/sql"
 REGRESS_EXPECTED_DIR="${SCRIPT_DIR}/regress/expected"
@@ -197,7 +198,24 @@ for f in "${REGRESS_FILES[@]:-}"; do
 
   # ON_ERROR_STOP=0 deliberately: an expected-output test is allowed to
   # provoke an error and assert on the error text.
-  sudo -u postgres psql -X -q -v ON_ERROR_STOP=0 -d "$DB" -f "$f" > "$result" 2>&1 || true
+  #
+  # psql embeds the exact -f argument in its own "psql:<path>:<line>:"
+  # error/notice prefixes. Every golden file under regress/expected/ was
+  # authored against the repo-root-relative form (e.g.
+  # "psql:migration/test/regress/sql/foo.sql:11:"), so -f is passed relative
+  # to REPO_ROOT (with cwd set there) rather than the absolute $f this script
+  # discovers files with -- otherwise no expected-output golden with a
+  # pinned error/notice line could ever match, regardless of translation
+  # correctness (found in plan 02-09, mss.osag_dbprop's error-path golden).
+  # client_min_messages=warning suppresses server-side NOTICE output (e.g. the
+  # plog stub's own `RAISE NOTICE '[plog stub ...`, migration/pgsql/osag/osag_plog.sql)
+  # from the captured stream. No golden file under regress/expected/ pins a NOTICE
+  # line -- every one of them was authored expecting only ERROR/CONTEXT output and
+  # ordinary query results, so this does not hide anything any existing golden
+  # depends on (found in plan 02-09 against mss.osag_dbprop's error-path golden).
+  rel_f="${f#"${REPO_ROOT}"/}"
+  (cd "$REPO_ROOT" && sudo -u postgres psql -X -q -v ON_ERROR_STOP=0 -d "$DB" \
+      -c "SET client_min_messages TO WARNING;" -f "$rel_f") > "$result" 2>&1 || true
 
   if [[ ! -f "$expected" ]]; then
     echo "--- REGRESS FAIL: ${f} (no golden file: ${expected}) ---"
