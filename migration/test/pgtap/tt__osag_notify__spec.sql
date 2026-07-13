@@ -20,7 +20,8 @@ SELECT plan(10);
 -- suppression gate and the company-unit-resolution branch (S-NOTIFY-007) are skipped
 -- cleanly (see selectinto.sql for the sites that need populated host/service data).
 INSERT INTO tt.ticket_type (id, name) VALUES (900101, 'pilot ticket type');
-INSERT INTO tt.event_type (id, name, source) VALUES (900102, 'pilot event type', 1);
+INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_message_template_id)
+    VALUES (900102, 'pilot event type', 1, 1, 2);
 INSERT INTO tt.ticket (id, type_id) VALUES (900103, 900101);
 INSERT INTO tt.event (id, type_id, ticket_id) VALUES (900104, 900102, 900103);
 

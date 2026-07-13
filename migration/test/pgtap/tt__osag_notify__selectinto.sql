@@ -171,7 +171,8 @@ SELECT ok(
 -------------------------------------------------------------------------------
 
 INSERT INTO tt.ticket_type (id, name) VALUES (900211, 'pilot ticket type');
-INSERT INTO tt.event_type (id, name, source) VALUES (900212, 'pilot multi-group event type', 1);
+INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_message_template_id)
+    VALUES (900212, 'pilot multi-group event type', 1, 1, 2);
 INSERT INTO tt.event_type2event_type_group (event_type_group_id, event_type_id) VALUES (1, 900212);
 INSERT INTO tt.event_type2event_type_group (event_type_group_id, event_type_id) VALUES (2, 900212);
 INSERT INTO tt.ticket (id, type_id, event_notify_count) VALUES (900213, 900211, NULL);
