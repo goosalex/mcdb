@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: spec-method-test-harness-pilot
 status: executing
 stopped_at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
-last_updated: "2026-07-14T21:13:23.711Z"
+last_updated: "2026-07-14T22:10:19.589Z"
 last_activity: 2026-07-12
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 02 (spec-method-test-harness-pilot) — EXECUTING
-Plan: 10 of 13
+Plan: 11 of 13
 Status: Ready to execute
 Last activity: 2026-07-12 — Phase 02 execution started
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P08 | 95min | 3 tasks | 5 files |
 | Phase 02 P09 | ~3h | 3 tasks | 9 files |
 | Phase 02 P10 | 50min | 2 tasks | 3 files |
+| Phase 02 P11 | 3h10m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Traced all 3 XCUT-04 candidate FUNCTIONs full-body: none transitively reaches TT.UTIL's COMMIT today
 - [Phase ?]: Applied the established 'no data found' message-parity shim only at externally-reachable unhandled NO_DATA_FOUND sites, matching the spec's XCUT-01 requirement without unverifiable scope creep.
 - [Phase ?]: Did not touch any file under migration/test/ despite finding 4 reproducible test-file defects (pgTAP throws_ok overload footgun, off-by-one plan() count, missing fixture row, non-deterministic golden DETAIL text); documented with proposed fixes in FINDINGS.md instead.
+- [Phase ?]: TT.EVENT_INTERFACE dynamic-SQL site (Oracle line 971) translated as EXECUTE format() with a narrow TT.ESCALATION_INTERFACE allowlist gate placed outside the Oracle-fidelity swallow handler; the trace's broader-vs-narrower allowlist-scope question remains unresolved for Phase 4
+- [Phase ?]: tt.event/tt.ticket.contact_zitadel_id schema gap (changelog-current.sql applied but missing from ddl/migrated's frozen export baseline) fixed via additive schema-fix; build-template.sh generalized to load all schema-fixes files
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T21:12:54.871Z
+Last session: 2026-07-14T22:09:52.119Z
 Stopped at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
 Resume file: None
