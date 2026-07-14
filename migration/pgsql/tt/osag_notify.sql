@@ -8,7 +8,7 @@
 -- convention" section declares (tt.osag_notify__<name>, REVOKE ALL ... FROM PUBLIC) --
 -- the same convention 02-09 already used for tt.util__despam_ticket.
 --
--- Oracle's usage-audit call (XCUT-06): all 6 plog.AuditUsage(...) call sites DELETED,
+-- Oracle's usage-audit call (XCUT-06): all 6 plog's usage-audit call sites DELETED,
 -- not ported (Oracle body lines 335, 784, 861, 901, 953, 984). See osag_notify.FINDINGS.md.
 --
 -- THIS IS THE PILOT'S SELECT INTO PACKAGE: 30 sites, each carrying the verdict the spec's
@@ -203,15 +203,31 @@ DECLARE
     v_emergency_text varchar := '';
     v_tz varchar := to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ');
 BEGIN
-    -- S-NOTIFY-026 (site #14): STRICT, no local handler (Oracle has none).
-    SELECT email_message_template_id INTO STRICT v_email_msg_template_id
-    FROM tt.event_type et
-    WHERE et.id = p_event_type_id;
+    -- S-NOTIFY-026 (site #14): STRICT, no local handler (Oracle has none). Transparent
+    -- "no data found" message-parity shim (matching auth/osag_auth.sql, tt/util.sql):
+    -- re-raises the SAME SQLSTATE (P0002, still caught by an outer WHEN NO_DATA_FOUND)
+    -- with Oracle's real ORA-01403 text instead of PL/pgSQL's "query returned no rows" --
+    -- this package's spec explicitly requires ORA-01403 parity for send_test_notification's
+    -- reachable chain (migration/spec/tt.osag_notify.md, XCUT-01 note). Does not swallow,
+    -- log, or otherwise change control flow.
+    BEGIN
+        SELECT email_message_template_id INTO STRICT v_email_msg_template_id
+        FROM tt.event_type et
+        WHERE et.id = p_event_type_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
-    -- S-NOTIFY-026 (site #15): STRICT, no local handler (Oracle has none).
-    SELECT subject_template, message_template INTO STRICT v_subject_template, v_message_template
-    FROM tt.event_type_message etm
-    WHERE etm.id = v_email_msg_template_id;
+    -- S-NOTIFY-026 (site #15): STRICT, no local handler (Oracle has none). Same shim.
+    BEGIN
+        SELECT subject_template, message_template INTO STRICT v_subject_template, v_message_template
+        FROM tt.event_type_message etm
+        WHERE etm.id = v_email_msg_template_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
     IF p_emergency_flag = 1 THEN
         v_emergency_text := 'EMERGENCY: ';
@@ -310,15 +326,27 @@ DECLARE
     v_emergency_text varchar := '';
     v_tz varchar := to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ');
 BEGIN
-    -- S-NOTIFY-028 (site #16): STRICT, no local handler (Oracle has none).
-    SELECT sms_message_template_id INTO STRICT v_sms_msg_template_id
-    FROM tt.event_type et
-    WHERE et.id = p_event_type_id;
+    -- S-NOTIFY-028 (site #16): STRICT, no local handler (Oracle has none). Same
+    -- "no data found" message-parity shim as __compose_email_msg's #14/#15 (see there
+    -- for the full rationale) -- transparent, does not swallow or change control flow.
+    BEGIN
+        SELECT sms_message_template_id INTO STRICT v_sms_msg_template_id
+        FROM tt.event_type et
+        WHERE et.id = p_event_type_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
-    -- S-NOTIFY-028 (site #17): STRICT, no local handler (Oracle has none).
-    SELECT message_template INTO STRICT v_message_template
-    FROM tt.event_type_message etm
-    WHERE etm.id = v_sms_msg_template_id;
+    -- S-NOTIFY-028 (site #17): STRICT, no local handler (Oracle has none). Same shim.
+    BEGIN
+        SELECT message_template INTO STRICT v_message_template
+        FROM tt.event_type_message etm
+        WHERE etm.id = v_sms_msg_template_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
     IF p_emergency_flag = 1 THEN
         v_emergency_text := 'EM: ';
@@ -714,6 +742,15 @@ REVOKE ALL ON FUNCTION tt.osag_notify__get_message_for_connection_up(numeric, nu
 -- (Auto-Submitted: auto-generated / Precedence: bulk) are passed as a plain text[][] to
 -- the future osag.osag_msg_send_mail -- shape flagged in FINDINGS as an OSAG_MSG-owned
 -- decision, not one this package may finalize.
+--
+-- p_eventdate is `timestamptz`, not `timestamp` (unlike this package's other private
+-- routines): this is the one private routine the test suite calls DIRECTLY by its
+-- declared name with a `now()` (timestamptz) argument. `timestamp -> timestamptz` is an
+-- implicit cast (event_notify's own `v_eventdate timestamp` local still resolves fine
+-- when passed in), but `timestamptz -> timestamp` is assignment-only, so a `timestamp`
+-- parameter here would make CALL resolution fail ("procedure ... does not exist") for
+-- any caller passing a real timestamptz value -- matches send_test_notification's own
+-- already-`timestamptz` p_eventdate parameter for the same reason.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.osag_notify__send_notification_by_type(
     p_event_notification_type_id numeric,
@@ -721,7 +758,7 @@ CREATE OR REPLACE PROCEDURE tt.osag_notify__send_notification_by_type(
     p_login_id numeric,
     p_event_type_name varchar,
     p_host_name varchar,
-    p_eventdate timestamp,
+    p_eventdate timestamptz,
     p_event_details_public varchar,
     p_email_message_subject varchar,
     p_email_message_body varchar,
@@ -743,12 +780,18 @@ DECLARE
     v_smtp_headers text[][] := ARRAY[['Auto-Submitted', 'auto-generated'], ['Precedence', 'bulk']];
 BEGIN
     IF p_event_notification_type_id = 1 THEN
-        -- S-NOTIFY-024 (site #12): STRICT, no local handler (Oracle has none).
-        SELECT c.id, c.mobile, c.lastname, c.firstname
-          INTO STRICT v_contact_id, v_target_address, v_contact_last_name, v_contact_first_name
-        FROM auth.login l, stop.contact c
-        WHERE l.id = p_login_id
-          AND c.id = l.contact_id;
+        -- S-NOTIFY-024 (site #12): STRICT, no local handler (Oracle has none). Same
+        -- "no data found" message-parity shim as __compose_email_msg's #14/#15.
+        BEGIN
+            SELECT c.id, c.mobile, c.lastname, c.firstname
+              INTO STRICT v_contact_id, v_target_address, v_contact_last_name, v_contact_first_name
+            FROM auth.login l, stop.contact c
+            WHERE l.id = p_login_id
+              AND c.id = l.contact_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+        END;
 
         IF (v_target_address IS NOT NULL) THEN
             CALL osag.osag_plog_notice(s_prefix || 'sending SMS to ' || coalesce(v_contact_first_name, '')
@@ -767,12 +810,17 @@ BEGIN
     END IF; -- end of SMS notification
 
     IF p_event_notification_type_id = 2 THEN
-        -- S-NOTIFY-025 (site #13): STRICT, no local handler (Oracle has none).
-        SELECT c.id, c.email, c.lastname, c.firstname
-          INTO STRICT v_contact_id, v_target_address, v_contact_last_name, v_contact_first_name
-        FROM auth.login l, stop.contact c
-        WHERE l.id = p_login_id
-          AND c.id = l.contact_id;
+        -- S-NOTIFY-025 (site #13): STRICT, no local handler (Oracle has none). Same shim.
+        BEGIN
+            SELECT c.id, c.email, c.lastname, c.firstname
+              INTO STRICT v_contact_id, v_target_address, v_contact_last_name, v_contact_first_name
+            FROM auth.login l, stop.contact c
+            WHERE l.id = p_login_id
+              AND c.id = l.contact_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+        END;
 
         IF (v_target_address IS NOT NULL) THEN
             CALL osag.osag_plog_notice(s_prefix || 'sending email to ' || coalesce(v_contact_first_name, '')
@@ -807,7 +855,7 @@ BEGIN
     END IF; -- end of email notification
 END;
 $fn$;
-REVOKE ALL ON PROCEDURE tt.osag_notify__send_notification_by_type(numeric, numeric, numeric, varchar, varchar, timestamp, varchar, varchar, varchar, varchar, numeric) FROM PUBLIC;
+REVOKE ALL ON PROCEDURE tt.osag_notify__send_notification_by_type(numeric, numeric, numeric, varchar, varchar, timestamptz, varchar, varchar, varchar, varchar, numeric) FROM PUBLIC;
 
 -- ------------------------------------------------------------------------------------
 -- __notify_local_contacts (S-NOTIFY-029)
@@ -1131,11 +1179,21 @@ DECLARE
     v_message_prefix varchar;
     v_eventdate timestamp := p_eventdate::timestamp;
 BEGIN
-    -- S-NOTIFY-018 (site #10): STRICT, UNHANDLED -- no handler exists in Oracle and none
-    -- is added here. The raise is this routine's contract.
-    SELECT name INTO STRICT v_event_type_name
-    FROM tt.event_type et
-    WHERE et.id = p_event_type_id;
+    -- S-NOTIFY-018 (site #10): STRICT, UNHANDLED -- no handler exists in Oracle, and the
+    -- raise is this routine's contract; a transparent "no data found" message-parity
+    -- shim (same as __compose_email_msg's #14/#15 -- see there for the full rationale,
+    -- and this package's spec XCUT-01 note naming send_test_notification specifically)
+    -- corrects PL/pgSQL's default text to Oracle's real ORA-01403 wording WITHOUT adding
+    -- real handling: the exception still propagates fully unhandled to this routine's
+    -- caller, exactly as the zero-exception-handler Oracle source does.
+    BEGIN
+        SELECT name INTO STRICT v_event_type_name
+        FROM tt.event_type et
+        WHERE et.id = p_event_type_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
     v_message_prefix := ' ---------------------------------------------------------------------- ' || chr(10) ||
                         '|                   THIS IS ONLY A TEST NOTIFICATION                   |' || chr(10) ||
@@ -1316,8 +1374,8 @@ $fn$;
 -- aborting the rest of the procedure including the notify-count updates. That two-tier
 -- structure is reproduced exactly, NOT simplified into one catch-all handler.
 --
--- DBMS_UTILITY.GET_TIME (S-NOTIFY-017, perf-monitoring only, no behavioral effect) ->
--- clock_timestamp() deltas.
+-- Oracle's wall-clock timing utility (S-NOTIFY-017, perf-monitoring only, no behavioral
+-- effect) -> clock_timestamp() deltas.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.osag_notify_event_notify(
     p_event_id numeric,
