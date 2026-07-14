@@ -1,0 +1,60 @@
+-- migration/test/schema-fixes/23_p11_fixes.sql
+--
+-- Plan 02-11 (translation of TT.EVENT_INTERFACE) found ONE real gap while writing and
+-- testing the translation: unlike plans 02-09/02-10 (whose ledger files are empty),
+-- this one needs an actual additive fix.
+--
+-- ERROR OBSERVED (at first test execution, not at CREATE PROCEDURE time -- PL/pgSQL
+-- defers validation of a statement's referenced columns/relations to first execution,
+-- confirmed empirically): `column "contact_zitadel_id" of relation "event" does not
+-- exist` (and the same for "ticket"), when tt.event_interface_add_history_event and
+-- tt.event_interface_addevent_new/newevent_new run their own INSERT statements.
+--
+-- ROOT CAUSE: `changes/changelog-current.sql:2194-2199` (a real Liquibase changeset,
+-- "Adds zitadel ID columns for TT tables") adds `CONTACT_ZITADEL_ID VARCHAR2(128)` to
+-- BOTH `TT.EVENT` and `TT.TICKET` (plus `PEER_CONTACT_ZITADEL_ID` on `TT.EVENT`, not
+-- referenced by this package, and columns on `TT.CHANGE_REQUEST`, also not referenced
+-- here). `ddl/migrated/tables/tables.pg.sql` (ora2pg's conversion of the frozen
+-- `ddl/export/schema.oracle.sql` baseline) predates that changelog -- confirmed absent
+-- from BOTH the migrated PostgreSQL schema AND the Oracle export itself
+-- (`ddl/export/schema.oracle.sql`'s own `CREATE TABLE TT.EVENT`/`TT.TICKET` statements
+-- have no ZITADEL column of any kind). This is NOT an ora2pg conversion bug -- ora2pg
+-- faithfully converted what the export baseline actually contained; the base export
+-- snapshot is simply older than the changelog. Oracle's PL/SQL package source
+-- (`ddl/src/pkgb/tt_event_interface.sql`) already assumes the changelog has been applied
+-- (it inserts into `contact_zitadel_id` on both tables unconditionally), which is
+-- consistent with CLAUDE.md's own description of `changes/` as "the liquibase changelog
+-- ... to apply on top of the export to get the current state."
+--
+-- FIX: add both columns, verbatim from the changelog's own type (`VARCHAR2(128)` ->
+-- `varchar(128)`), as an additive `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` (idempotent,
+-- safe to re-run, matches the `IF NOT EXISTS` style already used for
+-- `10_ora2pg_fixes.sql`'s own additive philosophy -- D-P7, `ddl/migrated/` itself is
+-- never edited).
+
+ALTER TABLE tt.event ADD COLUMN IF NOT EXISTS contact_zitadel_id varchar(128);
+ALTER TABLE tt.ticket ADD COLUMN IF NOT EXISTS contact_zitadel_id varchar(128);
+
+-- PHASE 5 ACTION: the durable fix is to regenerate `ddl/migrated/` from an export that
+-- already has `changes/changelog-current.sql` applied on top of the base schema (i.e.
+-- treat the changelog as authoritative over the frozen `ddl/export/schema.oracle.sql`
+-- snapshot before running ora2pg), which would make this file's two ALTERs unnecessary.
+-- Until then, carry this file forward verbatim -- it is small, explicit, additive, and
+-- self-contained, exactly mirroring the two columns the changelog already added.
+--
+-- DELIBERATELY NOT FIXED HERE (Rule 4 -- architectural, not mechanical; see
+-- event_interface.FINDINGS.md for the full writeup): `newevent_new`'s admin-permission
+-- check queries `auth.permission` and `auth.mv_service_access`, NEITHER of which exists
+-- anywhere in the checked-in Oracle export OR the migrated schema at all (not merely
+-- absent from this pilot's un-loaded `ddl/migrated/mviews/` -- `auth.permission` has no
+-- Oracle-side definition anywhere in `ddl/export/schema.oracle.sql`). Only
+-- `auth.user_permission` / `auth.user_company_scope` / etc. (plan 02-09's profile-based
+-- auth model) exist. This looks like Oracle-side dead/stale code the live schema has
+-- already moved past -- not a schema-fix candidate, since fabricating a replacement query
+-- would be an uninformed architectural guess, not a mechanical fix. No test in this
+-- plan's suite reaches this branch (S-EVENT-012/013 sites are reached only when creating
+-- a brand-new ticket via `newevent_new`, a path the pgTAP suite's two `newevent_new`
+-- fixtures both short-circuit before -- one via `TOO_MANY_ROWS`, one via the
+-- inactive-host early `RETURN`). Left for whoever eventually re-derives this branch's
+-- intended (current) permission-check query from a live Oracle instance or the
+-- application layer.
