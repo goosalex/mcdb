@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: spec-method-test-harness-pilot
 status: executing
 stopped_at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
-last_updated: "2026-07-13T16:28:26.784Z"
+last_updated: "2026-07-14T21:13:23.711Z"
 last_activity: 2026-07-12
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 Phase: 02 (spec-method-test-harness-pilot) — EXECUTING
-Plan: 9 of 13
+Plan: 10 of 13
 Status: Ready to execute
 Last activity: 2026-07-12 — Phase 02 execution started
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P07 | 2.5h | 3 tasks | 1 files |
 | Phase 02 P08 | 95min | 3 tasks | 5 files |
 | Phase 02 P09 | ~3h | 3 tasks | 9 files |
+| Phase 02 P10 | 50min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase ?]: close_old_dev_tickets translated as plain PROCEDURE + real COMMIT (option 1), accepting the semantic delta from Oracle's autonomous transaction; XCUT-05 owns the final call
 - [Phase ?]: no data found message-parity shim: transparent WHEN NO_DATA_FOUND re-raise with corrected text only, no control-flow change, applied corpus-wide pending XCUT-01
 - [Phase ?]: Traced all 3 XCUT-04 candidate FUNCTIONs full-body: none transitively reaches TT.UTIL's COMMIT today
+- [Phase ?]: Applied the established 'no data found' message-parity shim only at externally-reachable unhandled NO_DATA_FOUND sites, matching the spec's XCUT-01 requirement without unverifiable scope creep.
+- [Phase ?]: Did not touch any file under migration/test/ despite finding 4 reproducible test-file defects (pgTAP throws_ok overload footgun, off-by-one plan() count, missing fixture row, non-deterministic golden DETAIL text); documented with proposed fixes in FINDINGS.md instead.
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-13T16:27:42.036Z
+Last session: 2026-07-14T21:12:54.871Z
 Stopped at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
 Resume file: None
