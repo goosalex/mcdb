@@ -78,6 +78,7 @@ INSERT INTO auth.login (id, login, contact_id, company_id, enabled, locked)
 SELECT throws_ok(
     $$CALL auth.osag_auth_grant_role(900204, 99)$$,
     '22023',
+    NULL,
     'S-AUTH-008: grant_role raises for any p_role_id other than 3 (VALUE_ERROR -> PostgreSQL invalid_parameter_value)'
 );
 

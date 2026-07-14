@@ -110,6 +110,7 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_worker(906099998, 906003, 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-014: change_worker propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id at site #23 (company_id lookup, AFTER both local handler blocks have already closed)'
 );
 
@@ -120,6 +121,7 @@ SELECT throws_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_subject(906099997, 'new subject', 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-017: change_subject propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #29, company_id lookup)'
 );
 
@@ -242,6 +244,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_service_host(906099994, 906007, 906005, 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-015: change_service_host propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #24, the one UN-guarded lookup in this routine)'
 );
 
@@ -263,6 +266,7 @@ SELECT ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_owner(906010, 906099991, 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-023: change_owner propagates NO_DATA_FOUND unhandled for a nonexistent p_owner_id (site #34, stop.contact lookup) when Zitadel names are not both supplied'
 );
 
@@ -601,6 +605,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_update_todo_item_status(906027, 999, 2, 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-050: update_todo_item_status propagates NO_DATA_FOUND unhandled for a nonexistent (ticket_id, seq_no) pair (site #70, the LEFT JOIN to todo_item_status still requires a matching tt.todo_item row)'
 );
 

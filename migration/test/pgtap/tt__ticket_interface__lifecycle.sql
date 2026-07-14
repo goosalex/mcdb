@@ -80,24 +80,28 @@ INSERT INTO tt.ticket_flow (id, ticket_id, flow_in_date, flow_out_date)
 SELECT throws_ok(
     $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 905006, 905099999, 'pub', 'priv')$$,
     'P0002',
+    NULL,
     'S-TICKET-001: newticket_new propagates NO_DATA_FOUND unhandled for a nonexistent p_host_id (site #1, mss.host lookup)'
 );
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 905006, NULL, 'pub', 'priv', 905099998)$$,
     'P0002',
+    NULL,
     'S-TICKET-002: newticket_new propagates NO_DATA_FOUND unhandled for a nonexistent p_contact_id when p_host_id is NULL (site #3, stop.contact lookup)'
 );
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 905099997, NULL, 'pub', 'priv')$$,
     'P0002',
+    NULL,
     'S-TICKET-003: newticket_new propagates NO_DATA_FOUND unhandled for a nonexistent p_event_type_id (site #5, tt.event_type lookup)'
 );
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 905006, NULL, 'pub', 'priv', NULL, 905099996)$$,
     'P0002',
+    NULL,
     'S-TICKET-004: newticket_new propagates NO_DATA_FOUND unhandled for a nonexistent p_worker_id when p_host_id is NULL (site #6, stop.contact lookup)'
 );
 
@@ -125,6 +129,7 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_deferral_date(905099995, 905002, now()::date, 'pub')$$,
     'P0002',
+    NULL,
     'S-TICKET-006: change_deferral_date propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #10, tt.ticket lookup)'
 );
 
@@ -191,6 +196,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_update_ux_timeout_for_ticket(905099992, FALSE)$$,
     'P0002',
+    NULL,
     'S-TICKET-011: update_ux_timeout_for_ticket propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #18, 5-column tt.ticket lookup)'
 );
 
@@ -261,12 +267,14 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_merge_tickets(905099989, 905014, 905002)$$,
     'P0002',
+    NULL,
     'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled for a nonexistent source p_ticket_id (site #53, source tt.ticket lookup)'
 );
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_merge_tickets(905013, 905099988, 905002)$$,
     'P0002',
+    NULL,
     'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled for a nonexistent target p_mticket_id (site #55, target tt.ticket lookup)'
 );
 

@@ -76,6 +76,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.event_interface_demote_event(900699999, NULL)$$,
     'P0002',
+    NULL,
     'S-EVENT-043: demote_event propagates NO_DATA_FOUND unhandled for a nonexistent p_event_id (zero EXCEPTION blocks in the routine)'
 );
 
@@ -93,6 +94,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.event_interface_promote_event(900699999, NULL)$$,
     'P0002',
+    NULL,
     'S-EVENT-044: promote_event propagates the same unhandled NO_DATA_FOUND shape as demote_event'
 );
 
@@ -129,6 +131,7 @@ INSERT INTO mss.host2service (host_id, service_id) VALUES (900604, 900606);
 SELECT throws_ok(
     $$CALL tt.event_interface_newevent_new(NULL, 101001, 900604, 'evt details')$$,
     'P0003',
+    NULL,
     'S-EVENT-001: newevent_new propagates TOO_MANY_ROWS unhandled for a host mapped to two services (WHEN OTHERS THEN RAISE re-raises; no outer net exists)'
 );
 
@@ -192,6 +195,7 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.event_interface_exec_event_type_actions(900699999)$$,
     'P0002',
+    NULL,
     'S-EVENT-035: exec_event_type_actions, called directly, propagates NO_DATA_FOUND unhandled for a nonexistent p_event_id (no wrapping outer handler exists at this call path)'
 );
 

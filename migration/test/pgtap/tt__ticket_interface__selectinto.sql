@@ -56,6 +56,7 @@ INSERT INTO mss.host2service (host_id, service_id) VALUES (907003, 907005);
 SELECT throws_ok(
     $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 907006, 907003, 'pub', 'priv')$$,
     'P0003',
+    NULL,
     'S-TICKET-001: newticket_new propagates TOO_MANY_ROWS unhandled at site #2 (mss.host2service lookup) for a host mapped to more than one service -- the ONE multi-row hazard in this routine, distinct from every zero-row hazard already covered in tt__ticket_interface__lifecycle.sql'
 );
 
@@ -82,6 +83,7 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907011, 1, 2,
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(907011, 907099998, 907002, 'pub')$$,
     'P0002',
+    NULL,
     'S-TICKET-009: change_status_event_id_out propagates NO_DATA_FOUND unhandled at site #14 (status name lookup by the NEW p_status_id) for a nonexistent status id'
 );
 
@@ -140,6 +142,7 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907016, 1, 2,
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_label(907016, 907099995, 907002)$$,
     'P0002',
+    NULL,
     'S-TICKET-020: the 3/4-arg change_label overload propagates NO_DATA_FOUND unhandled at site #33 (NEW label lookup) for a nonexistent p_label_id'
 );
 
@@ -151,6 +154,7 @@ SELECT throws_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_owner(907099994, NULL, 907002)$$,
     'P0002',
+    NULL,
     'S-TICKET-023: change_owner propagates NO_DATA_FOUND unhandled at site #36 (ELSE branch, tt.ticket lookup) for a nonexistent p_ticket_id when p_owner_id is NULL and no Zitadel names are supplied'
 );
 
@@ -303,6 +307,7 @@ INSERT INTO tt.todo_item (id, ticket_id, seq_no, details, todo_item_status_id, i
 SELECT throws_ok(
     $$CALL tt.ticket_interface_update_todo_item_status(907028, 1, 907099985, 907002)$$,
     'P0002',
+    NULL,
     'S-TICKET-050: update_todo_item_status propagates NO_DATA_FOUND unhandled at site #72 (NEW status-name lookup) for a nonexistent p_todo_item_status_id'
 );
 

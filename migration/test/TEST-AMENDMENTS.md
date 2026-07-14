@@ -86,3 +86,52 @@ A test that cannot fail is worthless; this one can, and does.
 
 `tt.osag_notify`: **15/24 → 22/24** pgTAP assertions passing. No translation file was modified in the
 amending commit. `provenance_lint.sh` passes.
+
+---
+
+## A-002 — the same `throws_ok` defect in 5 more test files (23 assertions)
+
+| | |
+|---|---|
+| **Date** | 2026-07-13 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **Assertions affected** | 23 |
+| **User approved** | Yes — same defect class as A-001, approved remedy applied to all identical instances |
+
+### Why this exists
+
+A-001 fixed 7 instances in one file. A sweep then found the **identical** pgTAP misuse in 5 more files —
+every spec/test agent independently made the same mistake:
+
+| File | Instances |
+|---|---|
+| `auth__osag_auth__spec.sql` | 1 |
+| `tt__event_interface__spec.sql` | 4 |
+| `tt__ticket_interface__changes.sql` | 5 |
+| `tt__ticket_interface__lifecycle.sql` | 8 |
+| `tt__ticket_interface__selectinto.sql` | 5 |
+
+These were fixed **before** plans 02-11 and 02-12 run. Left in place, they would have made 23 assertions
+unpassable no matter how correct those translations were — sending both agents to hunt phantom bugs in
+correct code, and very likely provoking exactly the kind of "fix" that corrupts a translation to satisfy a
+broken test.
+
+### The amendment
+
+Mechanically identical to A-001: insert `NULL` as the message argument, promoting each 3-arg call to the
+unambiguous 4-arg `throws_ok(sql, errcode, errmsg, description)`. The asserted SQLSTATE is unchanged in
+every case; only the sentence's role changes from "expected message" to "label". Still falsifiable — a
+wrong SQLSTATE still fails (proven under A-001).
+
+### Effect
+
+`auth.osag_auth`: **8/10 → 9/10**. The `tt.event_interface` and `tt.ticket_interface` assertions remain red
+only because their translations do not exist yet (plans 02-11 and 02-12) — which is correct, and is what
+the RED baseline confirms: with no translation installed, those packages still report **0** passes.
+
+### Standing warning for 02-13
+
+The RED baseline (`run-tests.sh` with no `--install`) shows `tt.ticket_interface` at **6/129** — six
+assertions pass with **no translation loaded at all**. A test that passes when the code under test does not
+exist is not testing that code. These six are prime candidates for the mutation check to expose, and must
+be examined before the phase can claim a clean red→green.
