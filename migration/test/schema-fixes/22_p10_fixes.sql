@@ -1,0 +1,20 @@
+-- migration/test/schema-fixes/22_p10_fixes.sql
+--
+-- Plan 02-10 (translation of TT.OSAG_NOTIFY, 51 %TYPE anchors across mss.host,
+-- mss.interface, mss.interface2isp_link, mss.isp_link, mss.city, mss.country, mss.address,
+-- mss.service, mss.service_type, stop.contact, stop.company, tt.event, tt.event_type,
+-- tt.event_type_message, tt.event_notification_type, tt.ticket, tt.ticket_type,
+-- tt.event_type2event_type_group, auth.login, auth.permission, auth.mv_service_access,
+-- mc.connection_interrupt_open) checked whether any of them surfaced a further ora2pg
+-- schema error beyond what plans 02-03/02-09 already ledgered.
+--
+-- RESULT: none. `migration/pgsql/tt/osag_notify.sql` loads cleanly against mcdb_tmpl with
+-- zero errors -- every %TYPE anchor resolves against the migrated schema exactly as the
+-- Oracle source and this package's pgTAP/regress fixtures assume (verified live while
+-- writing the translation and running its suite against mcdb_test_p10b). The only NOTICEs
+-- emitted during load are the two informational "type reference tt.ticket.emergency%TYPE
+-- converted to smallint" lines, which are PL/pgSQL's normal narrowing notice for a
+-- %TYPE-anchored NUMBER(1) column, not a failure. This file is intentionally empty of
+-- fixes -- its presence records that this path was checked for this plan, per
+-- migration/test/SCHEMA-FIXES.md's own convention (an empty-but-present file is a real
+-- result, not an oversight).
