@@ -255,3 +255,8 @@ None - no external service configuration required.
 ---
 *Phase: 02-spec-method-test-harness-pilot*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+All 4 referenced files confirmed present on disk; all 3 commit hashes
+(`ac13cdb`, `55e3798`, `edd91fd`) confirmed present in `git log --oneline --all`.
