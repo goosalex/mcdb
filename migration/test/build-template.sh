@@ -74,9 +74,18 @@ echo "--- Step 3/6: bootstrap/30_sequences.sql (30 files, 309 sequences) ---"
 psql_super -f "${SCRIPT_DIR}/bootstrap/30_sequences.sql"
 
 # --- Step 4: schema-fixes (additive, D-P7 -- ddl/migrated/ itself untouched) -
+# Loads every *.sql under schema-fixes/, sorted by filename (10_, 21_, 22_, 23_, ...).
+# Generalized by plan 02-11 from a single hardcoded 10_ora2pg_fixes.sql reference: prior
+# per-plan ledger files (21_p09_fixes.sql, 22_p10_fixes.sql) happened to need zero actual
+# SQL (comment-only, safe no-ops either way), but 23_p11_fixes.sql (TT.EVENT_INTERFACE)
+# needs a real additive ALTER TABLE -- which was previously inert (never loaded into
+# mcdb_tmpl) despite being ledgered. This loop is the mechanical, forward-compatible fix.
 echo ""
-echo "--- Step 4/6: schema-fixes/10_ora2pg_fixes.sql (15 FK type fixes + 3 lost CHECKs) ---"
-psql_super -f "${SCRIPT_DIR}/schema-fixes/10_ora2pg_fixes.sql"
+echo "--- Step 4/6: schema-fixes/*.sql (all additive per-plan fixes, sorted) ---"
+while IFS= read -r -d '' f; do
+  echo "    applying $(basename "$f")"
+  psql_super -f "$f"
+done < <(find "${SCRIPT_DIR}/schema-fixes" -maxdepth 1 -type f -name '*.sql' -print0 | sort -z)
 
 # --- Step 5: fixtures (masterdata/, HARN-03) --------------------------------
 echo ""

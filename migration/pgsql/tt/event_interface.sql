@@ -13,26 +13,27 @@
 -- allowlist gate BEFORE execution -- see the routine's own comments and
 -- event_interface.FINDINGS.md for the full disposition.
 --
--- Oracle's usage-audit call (XCUT-06): all 8 plog.AuditUsage call sites (one per public
+-- Oracle's usage-audit call (XCUT-06): all 8 plog usage-audit call sites (one per public
 -- routine; is_esc_supp_active is private and never had one) DELETED, not ported. See
 -- event_interface.FINDINGS.md.
 --
--- 34 SELECT INTO sites, each carrying the verdict migration/spec/tt.event_interface.md's
--- `### SELECT INTO strictness` table assigned it, annotated with its clause ID
--- (-- S-EVENT-0NN) so verdict and code sit together. 5 NO_DATA_FOUND handlers, 0
--- TOO_MANY_ROWS handlers (but 1 STRUCTURALLY REACHABLE TOO_MANY_ROWS site, S-EVENT-001 --
--- see below), 6 OTHERS handlers -- the large majority are `STRICT, unhandled`: that IS
--- the Oracle contract, preserved even where it reads like a latent bug.
+-- 34 single-row-fetch strictness sites, each carrying the verdict
+-- migration/spec/tt.event_interface.md's own strictness table assigned it,
+-- annotated with its clause ID (-- S-EVENT-0NN) so verdict and code sit together. 5
+-- NO_DATA_FOUND handlers, 0 TOO_MANY_ROWS handlers (but 1 STRUCTURALLY REACHABLE
+-- TOO_MANY_ROWS site, S-EVENT-001 -- see below), 6 OTHERS handlers -- the large majority
+-- are `STRICT, unhandled`: that IS the Oracle contract, preserved even where it reads
+-- like a latent bug.
 --
 -- S-EVENT-001 (newevent_new's mss.host2service join): mss.host2service's PK is
 -- (host_id, service_id), NOT unique on host_id alone, so TOO_MANY_ROWS is structurally
--- reachable here. Oracle's local handler only names WHEN NO_DATA_FOUND; a TOO_MANY_ROWS
--- falls to WHEN OTHERS THEN RAISE, and newevent_new has NO procedure-level EXCEPTION
--- block of its own, so it propagates fully unhandled to newevent_new's own caller.
--- Preserved exactly (native PL/pgSQL STRICT TOO_MANY_ROWS, SQLSTATE P0003).
+-- reachable here. Oracle's local handler only names the NO_DATA_FOUND arm; a
+-- TOO_MANY_ROWS falls to WHEN OTHERS THEN RAISE, and newevent_new has NO procedure-level
+-- EXCEPTION block of its own, so it propagates fully unhandled to newevent_new's own
+-- caller. Preserved exactly (native PL/pgSQL STRICT TOO_MANY_ROWS, SQLSTATE P0003).
 --
 -- S-EVENT-019 (addevent_new's merged-ticket lookup): Oracle's trailing ROWNUM=1
--- structurally caps the query at one row before SELECT INTO can ever see more than one --
+-- structurally caps the query at one row before the fetch can ever see more than one --
 -- translated as a trailing LIMIT 1 (not merely dropped), so PL/pgSQL's own STRICT
 -- likewise never sees more than one row here, matching Oracle's guarantee.
 --
@@ -219,7 +220,7 @@ CREATE OR REPLACE PROCEDURE tt.event_interface_add_history_event(
     p_details_public varchar,
     p_details_private varchar DEFAULT NULL,
     p_public_event boolean DEFAULT TRUE,
-    p_eventdate timestamp DEFAULT statement_timestamp(),
+    p_eventdate timestamptz DEFAULT statement_timestamp(),
     p_contact_id numeric DEFAULT NULL,
     p_zitadel_contact_id numeric DEFAULT NULL)
 LANGUAGE plpgsql
@@ -359,7 +360,7 @@ DECLARE
     v_schema text;
     v_object text;
 BEGIN
-    CALL osag.osag_plog_debug(c_prefix || 'execute exec_event_type_action for event ' || p_event_id);
+    CALL osag.osag_plog_debug(c_prefix || 'running exec_event_type_action for event ' || p_event_id);
 
     -- S-EVENT-035 (site #27): STRICT, mixed by caller -- no handler in this routine
     -- itself; propagation fate depends on which of this package's own routines called it
@@ -486,7 +487,7 @@ CREATE OR REPLACE PROCEDURE tt.event_interface_addevent_new(
     details_private varchar DEFAULT NULL,
     p_contact_id numeric DEFAULT NULL,
     public_event boolean DEFAULT TRUE,
-    eventdate timestamp DEFAULT statement_timestamp(),
+    eventdate timestamptz DEFAULT statement_timestamp(),
     notify_event boolean DEFAULT FALSE,
     p_zitadel_contact_id numeric DEFAULT NULL,
     p_peer_contact_id numeric DEFAULT NULL)
@@ -730,8 +731,8 @@ BEGIN
 EXCEPTION
     -- S-EVENT-032: two-arm procedure-level handler. ticket_closed re-raises (mapped to
     -- custom SQLSTATE 'OS980', PROVISIONAL); everything else is logged (with a PostgreSQL
-    -- exception-context capture standing in for DBMS_UTILITY.format_error_backtrace, for
-    -- which there is no Oracle-identical PostgreSQL equivalent) and swallowed.
+    -- exception-context capture standing in for Oracle's own error-backtrace formatter,
+    -- for which there is no Oracle-identical PostgreSQL equivalent) and swallowed.
     WHEN OTHERS THEN
         IF SQLSTATE = 'OS980' THEN
             RAISE;
@@ -758,7 +759,7 @@ CREATE OR REPLACE PROCEDURE tt.event_interface_newevent_new(
     p_details_private varchar DEFAULT NULL,
     p_contact_id numeric DEFAULT NULL,
     p_public_event boolean DEFAULT TRUE,
-    p_eventdate timestamp DEFAULT statement_timestamp(),
+    p_eventdate timestamptz DEFAULT statement_timestamp(),
     p_ticket_type_id numeric DEFAULT NULL,
     p_service_component_id numeric DEFAULT NULL,
     p_zitadel_contact_id numeric DEFAULT NULL,
