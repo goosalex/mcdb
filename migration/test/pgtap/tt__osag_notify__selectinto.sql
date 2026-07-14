@@ -27,12 +27,14 @@ SELECT plan(14);
 SELECT throws_ok(
     $$CALL tt.osag_notify_send_test_notification('+41000000000', 1, 900201, 'subj', 'host', 900299999, now())$$,
     'P0002',
+    NULL,
     'S-NOTIFY-018: send_test_notification (SMS branch) propagates NO_DATA_FOUND unhandled for a nonexistent p_event_type_id (site #10)'
 );
 
 SELECT throws_ok(
     $$CALL tt.osag_notify_send_test_notification('test@example.com', 2, 900201, 'subj', 'host', 900299999, now())$$,
     'P0002',
+    NULL,
     'S-NOTIFY-018: send_test_notification (email branch) propagates the SAME unhandled site #10 for a nonexistent p_event_type_id'
 );
 
@@ -52,12 +54,14 @@ INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_mess
 SELECT throws_ok(
     $$CALL tt.osag_notify_send_test_notification('+41000000000', 1, 900201, 'subj', 'host', 900202, now())$$,
     'P0002',
+    NULL,
     'S-NOTIFY-028: send_test_notification (SMS) -> compose_sms_msg propagates NO_DATA_FOUND unhandled for a dangling sms_message_template_id (site #17)'
 );
 
 SELECT throws_ok(
     $$CALL tt.osag_notify_send_test_notification('test@example.com', 2, 900201, 'subj', 'host', 900202, now())$$,
     'P0002',
+    NULL,
     'S-NOTIFY-026: send_test_notification (email) -> compose_email_msg propagates NO_DATA_FOUND unhandled for a dangling email_message_template_id (site #15)'
 );
 
@@ -72,12 +76,14 @@ SELECT throws_ok(
 SELECT throws_ok(
     $$CALL tt.osag_notify__send_notification_by_type(1, 900201, 900299996, 'evt', 'host', now(), 'details', 'subj', 'body', 'sms', 1)$$,
     'P0002',
+    NULL,
     'S-NOTIFY-024: send_notification_by_type (SMS branch, type=1) propagates NO_DATA_FOUND unhandled for a nonexistent p_login_id (site #12)'
 );
 
 SELECT throws_ok(
     $$CALL tt.osag_notify__send_notification_by_type(2, 900201, 900299996, 'evt', 'host', now(), 'details', 'subj', 'body', 'sms', 1)$$,
     'P0002',
+    NULL,
     'S-NOTIFY-025: send_notification_by_type (email branch, type=2) propagates the SAME unhandled site #13 for a nonexistent p_login_id'
 );
 
@@ -91,6 +97,7 @@ SELECT throws_ok(
 SELECT throws_ok(
     $$CALL tt.osag_notify_add_notification_event(900201, NULL, 'x', NULL)$$,
     '23502',
+    NULL,
     'S-NOTIFY-022: add_notification_event has no input validation -- a NULL p_event_type_id raises a bare NOT NULL violation, uncaught'
 );
 
