@@ -171,17 +171,41 @@ for f in "${PGTAP_FILES[@]:-}"; do
   sudo -u postgres pg_prove --ext .sql -d "$DB" "$f" >"$TAP_OUT" 2>&1
   RC=$?
   set -e
-  PASSED=$(grep -oE '^Files=[0-9]+, Tests=[0-9]+' "$TAP_OUT" | grep -oE 'Tests=[0-9]+' | grep -oE '[0-9]+' || echo 0)
-  [[ -z "$PASSED" ]] && PASSED=0
-  PGTAP_TOTAL["$pkg"]=$(( PGTAP_TOTAL["$pkg"] + PASSED ))
-  if [[ $RC -eq 0 ]]; then
-    PGTAP_PASS["$pkg"]=$(( PGTAP_PASS["$pkg"] + PASSED ))
+  # Count assertions HONESTLY, per file. The old logic credited a file's passing
+  # assertions only when the WHOLE file passed (RC==0), so a 9-of-10 file reported
+  # "0/10" -- and an aborted file reported "0/0", hiding its planned assertions
+  # entirely. Both misreport HARN-04's per-package pass/fail contract.
+  #
+  # pg_prove gives us two shapes:
+  #   partial: "Failed 1/10 subtests"   + "(Wstat: 0   Tests: 10 Failed: 1)"
+  #   aborted: "Failed 20/20 subtests"  + "(Wstat: 768 Tests: 0  Failed: 0)"
+  #   all-ok : (no "Failed X/Y" line)   + "(Wstat: 0   Tests: 10 Failed: 0)"
+  # The "Failed X/Y subtests" line carries the PLANNED total (Y) even when the file
+  # aborted after 0 assertions, so prefer it; fall back to "Tests: N" when absent.
+  SUBTEST_LINE=$(grep -oE 'Failed [0-9]+/[0-9]+ subtests' "$TAP_OUT" | head -1 || true)
+  if [[ -n "$SUBTEST_LINE" ]]; then
+    NFAILED=$(sed -E 's|Failed ([0-9]+)/([0-9]+) subtests|\1|' <<<"$SUBTEST_LINE")
+    NTOTAL=$(sed -E 's|Failed ([0-9]+)/([0-9]+) subtests|\2|' <<<"$SUBTEST_LINE")
   else
+    # All-pass case: pg_prove prints no "(Wstat: ...)" line at all, only the
+    # "Files=1, Tests=10, ..." summary (note '=' not ':').
+    NTOTAL=$(grep -oE 'Tests=[0-9]+' "$TAP_OUT" | head -1 | grep -oE '[0-9]+' || true)
+    [[ -z "$NTOTAL" ]] && NTOTAL=$(grep -oE 'Tests: +[0-9]+' "$TAP_OUT" | head -1 | grep -oE '[0-9]+' || true)
+    NFAILED=0
+  fi
+  [[ -z "$NTOTAL" ]] && NTOTAL=0
+  [[ -z "$NFAILED" ]] && NFAILED=0
+  NPASSED=$(( NTOTAL - NFAILED ))
+  (( NPASSED < 0 )) && NPASSED=0
+
+  PGTAP_TOTAL["$pkg"]=$(( PGTAP_TOTAL["$pkg"] + NTOTAL ))
+  PGTAP_PASS["$pkg"]=$(( PGTAP_PASS["$pkg"] + NPASSED ))
+  if [[ $RC -ne 0 ]]; then
     PKG_FAILED["$pkg"]=1
     echo "--- pgTAP FAIL: ${f} ---"
     cat "$TAP_OUT"
   fi
-  TOTAL_TESTS_RUN=$(( TOTAL_TESTS_RUN + PASSED ))
+  TOTAL_TESTS_RUN=$(( TOTAL_TESTS_RUN + NTOTAL ))
   rm -f "$TAP_OUT"
 done
 
