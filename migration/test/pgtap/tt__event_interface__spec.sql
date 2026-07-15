@@ -69,7 +69,7 @@ SELECT lives_ok(
 
 SELECT is(
     (SELECT demoted FROM tt.event WHERE id = 900602),
-    1::numeric,
+    1::smallint,
     'S-EVENT-043: demote_event sets tt.event.demoted = 1 (fixture started at 0 -- a no-op CALL cannot vacuously satisfy this)'
 );
 
@@ -87,7 +87,7 @@ SELECT lives_ok(
 
 SELECT is(
     (SELECT demoted FROM tt.event WHERE id = 900602),
-    0::numeric,
+    0::smallint,
     'S-EVENT-044: promote_event sets tt.event.demoted back to 0 (fixture was set to 1 by the prior demote_event call)'
 );
 
