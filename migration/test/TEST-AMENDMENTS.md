@@ -239,3 +239,78 @@ all 13 assertions went green.
 ### Effect
 
 `tt__osag_notify__selectinto.sql`: **13/14 (TAP plan failure) → 13/13 PASS**.
+
+---
+
+## A-006 — `tt__ticket_interface__*.sql`: 19 × `throws_ok` 3-arg overload misuse (third sweep)
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **Files** | `tt__ticket_interface__changes.sql` (6), `tt__ticket_interface__lifecycle.sql` (3), `tt__ticket_interface__selectinto.sql` (10) |
+| **Assertions affected** | 19 |
+| **Surfaced by** | plan 02-12, which correctly REFUSED to touch them and documented them in `ticket_interface.FINDINGS.md` |
+| **User approved** | Yes — same defect class as A-001/A-002, approved remedy applied to all identical instances |
+
+### Why a third sweep was needed
+
+A-002 swept these same three files and fixed 18 instances. **19 more survived** — the earlier sweep's
+pattern missed calls whose description argument contained embedded double quotes or spanned an
+unusual line shape. The lesson for 02-13's method review: a text-pattern sweep for this defect class
+is not reliable; the only sound detector is *running* the suite and looking for the
+`threw <SQLSTATE>: <long sentence>` output shape.
+
+### The defect and the amendment
+
+Mechanically identical to A-001 (see there for the full reproduction). Each call passed a human
+description as arg3, where pgTAP's SQLSTATE overload expects the *expected error message*, making the
+assertion unsatisfiable. Fixed by inserting `NULL` as the message argument (4-arg form). The asserted
+SQLSTATE is unchanged in all 19 cases.
+
+**Verified still falsifiable and verified genuinely passing:** e.g. `changes.sql` test 16 previously
+reported `caught: P0002: query returned no rows` / `wanted: P0002: <the description sentence>` — the
+translation was raising the correct SQLSTATE with the correct Oracle-parity message all along.
+
+---
+
+## A-007 — `tt__ticket_interface__changes.sql`: `ROW()::record` column-type mismatch (cascade of 40)
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 1 directly, **40 more by cascade** |
+| **User approved** | Yes — same class as A-003 (expected-value type mismatch against real column types) |
+
+### The defect
+
+The S-TICKET-024 `change_company` assertion compared
+`ROW(company_id, contact_id, mss_service_id, host_id)` against an all-`numeric` `ROW(...)::record`.
+In the real ora2pg-migrated schema `tt.ticket.mss_service_id` and `host_id` are **bigint** (only
+`company_id`/`contact_id` are numeric). PostgreSQL raises
+`cannot compare dissimilar column types bigint and numeric at record column 3` — a hard ERROR that
+aborts the transaction, so the file ran only 30 of its planned 70 assertions and pg_prove reported
+`Bad plan`. **40 assertions were being lost to one wrong cast.**
+
+### Independently verified as a test defect, not a translation defect
+
+Probed `change_company` directly against the installed translation:
+
+```
+company_id=907099989 contact_id=NULL mss_service_id=NULL host_id=NULL
+```
+
+— exactly the values the assertion demands. The translation was correct; only the comparison's
+column typing prevented it from executing.
+
+### The amendment
+
+`NULL::numeric` → `NULL::bigint` for the `mss_service_id` and `host_id` columns. The asserted VALUES
+(new company id, and NULL for the three reset columns) are unchanged.
+
+### Combined effect of A-006 + A-007
+
+`tt.ticket_interface`: **57/129 → 111/129** pgTAP. No translation file touched by the amending commit;
+`provenance_lint.sh` passes. No other package regressed.

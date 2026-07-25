@@ -71,8 +71,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_public_event_id)
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(907010, 3, 907002, 'pub')$$,
     'P0002',
-    'S-TICKET-008: change_status_event_id_out propagates NO_DATA_FOUND unhandled at site #13 (tt.event lookup) when the ticket''s last_public_event_id points at an event row that does not exist'
-);
+    NULL,
+    'S-TICKET-008: change_status_event_id_out propagates NO_DATA_FOUND unhandled at site #13 (tt.event lookup) when the ticket''s last_public_event_id points at an event row that does not exist');
 
 -------------------------------------------------------------------------------
 -- Site #14 (S-TICKET-009): the NEW status name lookup, by a bad p_status_id.
@@ -98,8 +98,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907012, 1, 90
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(907012, 3, 907002, 'pub')$$,
     'P0002',
-    'S-TICKET-009: change_status_event_id_out propagates NO_DATA_FOUND unhandled at site #15 (status name lookup by the ticket''s OWN, orphaned, CURRENT status_id) even though the NEW status (3) resolves fine'
-);
+    NULL,
+    'S-TICKET-009: change_status_event_id_out propagates NO_DATA_FOUND unhandled at site #15 (status name lookup by the ticket''s OWN, orphaned, CURRENT status_id) even though the NEW status (3) resolves fine');
 
 -------------------------------------------------------------------------------
 -- Site #20 (S-TICKET-012): the ROWNUM=1-must-become-LIMIT-1 site. Only the
@@ -130,8 +130,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, label_id) VALUES (907
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_label(907015, 3, 907002)$$,
     'P0002',
-    'S-TICKET-020: the 3/4-arg change_label overload propagates NO_DATA_FOUND unhandled at site #32 (OLD label lookup) when the ticket''s current label_id is orphaned'
-);
+    NULL,
+    'S-TICKET-020: the 3/4-arg change_label overload propagates NO_DATA_FOUND unhandled at site #32 (OLD label lookup) when the ticket''s current label_id is orphaned');
 
 -------------------------------------------------------------------------------
 -- Site #33 (S-TICKET-020): the NEW label lookup, by a bad p_label_id.
@@ -168,8 +168,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, host_id) VALUES (9070
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_company(907017, 907001, 907002)$$,
     'P0002',
-    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled at site #38 (OLD host name lookup) when the ticket''s current host_id is orphaned'
-);
+    NULL,
+    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled at site #38 (OLD host name lookup) when the ticket''s current host_id is orphaned');
 
 -------------------------------------------------------------------------------
 -- Site #39 (S-TICKET-024): change_company's OLD company short-name lookup,
@@ -181,8 +181,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907018, 1, 90
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_company(907018, 907001, 907002)$$,
     'P0002',
-    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled at site #39 (OLD company short-name lookup) when the ticket''s current company_id is orphaned'
-);
+    NULL,
+    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled at site #39 (OLD company short-name lookup) when the ticket''s current company_id is orphaned');
 
 -------------------------------------------------------------------------------
 -- Site #43 (S-TICKET-030): change_type's OLD type-name lookup, reached for a
@@ -203,6 +203,7 @@ SELECT throws_ok(
     $do11$;
     $test11$,
     'P0002',
+    NULL,
     'S-TICKET-030: change_type propagates NO_DATA_FOUND unhandled at site #43 (OLD type-name lookup) for a ticket whose current type_id is orphaned -- reachable despite the spec calling this "structurally near-impossible for a live ticket", since it is not schema-forbidden'
 );
 
@@ -222,8 +223,8 @@ SELECT throws_ok(
     $do12$;
     $test12$,
     'P0002',
-    'S-TICKET-030: change_type propagates NO_DATA_FOUND unhandled at site #44 (NEW type-name lookup) for a nonexistent p_type_id'
-);
+    NULL,
+    'S-TICKET-030: change_type propagates NO_DATA_FOUND unhandled at site #44 (NEW type-name lookup) for a nonexistent p_type_id');
 
 -------------------------------------------------------------------------------
 -- Sites #54 / #56 (S-TICKET-034): merge_tickets' conditional tt.event lookups,
@@ -237,8 +238,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907022, 1, 2,
 SELECT throws_ok(
     $$CALL tt.ticket_interface_merge_tickets(907021, 907022, 907002)$$,
     'P0002',
-    'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled at site #54 (source ticket''s conditional tt.event lookup) when the SOURCE''s last_public_event_id is orphaned'
-);
+    NULL,
+    'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled at site #54 (source ticket''s conditional tt.event lookup) when the SOURCE''s last_public_event_id is orphaned');
 
 INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907023, 1, 2, 907001);
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_public_event_id) VALUES (907024, 1, 2, 907001, 907099988);
@@ -246,8 +247,8 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_public_event_id)
 SELECT throws_ok(
     $$CALL tt.ticket_interface_merge_tickets(907023, 907024, 907002)$$,
     'P0002',
-    'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled at site #56 (target ticket''s conditional tt.event lookup) when the TARGET''s last_public_event_id is orphaned'
-);
+    NULL,
+    'S-TICKET-034: merge_tickets propagates NO_DATA_FOUND unhandled at site #56 (target ticket''s conditional tt.event lookup) when the TARGET''s last_public_event_id is orphaned');
 
 -------------------------------------------------------------------------------
 -- Site #61 (S-TICKET-054): handleDeferredTransitions, reached only when
@@ -292,6 +293,7 @@ INSERT INTO tt.todo_item (id, ticket_id, seq_no, details, todo_item_status_id, i
 SELECT throws_ok(
     $$CALL tt.ticket_interface_update_todo_item_status(907099986, 1, 2, 907002)$$,
     'P0002',
+    NULL,
     'S-TICKET-050: update_todo_item_status propagates NO_DATA_FOUND unhandled at site #71 (SECOND tt.ticket lookup) when the todo item itself resolves (site #70 succeeds) but its ticket_id is orphaned -- constructible only via a deferred FK, since site #70''s own join otherwise shadows this site for an ordinary nonexistent ticket'
 );
 

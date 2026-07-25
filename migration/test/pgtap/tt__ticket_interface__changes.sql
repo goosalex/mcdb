@@ -197,6 +197,7 @@ SELECT ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_label(906099995, 2, 906002)$$,
     'P0002',
+    NULL,
     'S-TICKET-020: the 3/4-arg change_label(p_ticket_id, p_label_id, p_contact_id, ...) overload propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #31) -- a DIFFERENT strictness profile than the 2-arg overload''s silent no-op above, proving PostgreSQL dispatched the OTHER signature for a 3-argument call'
 );
 
@@ -287,8 +288,8 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_company(906099990, 906023, 906002)$$,
     'P0002',
-    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #37, the routine''s own old company/host lookup)'
-);
+    NULL,
+    'S-TICKET-024: change_company propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #37, the routine''s own old company/host lookup)');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_company(906013, 906099989, 906002)$$,
@@ -297,7 +298,10 @@ SELECT lives_ok(
 
 SELECT is(
     (SELECT ROW(company_id, contact_id, mss_service_id, host_id) FROM tt.ticket WHERE id = 906013),
-    ROW(906099989::numeric, NULL::numeric, NULL::numeric, NULL::numeric)::record,
+    -- A-007: mss_service_id/host_id are bigint in ddl/migrated (company_id/contact_id are
+    -- numeric); an all-numeric ROW() makes is() raise "cannot compare dissimilar column
+    -- types", aborting the transaction and every later assertion in this file.
+    ROW(906099989::numeric, NULL::numeric, NULL::bigint, NULL::bigint)::record,
     'S-TICKET-024: change_company wrote the new company_id AND reset contact_id/mss_service_id/host_id to NULL -- a company change invalidates all of them, per the routine''s own logic'
 );
 
@@ -357,8 +361,8 @@ SELECT lives_ok(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_summary(906099988, 'priv', 'pub', 906002)$$,
     'P0002',
-    'S-TICKET-028: change_summary propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #41, the routine''s own old-summary lookup)'
-);
+    NULL,
+    'S-TICKET-028: change_summary propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #41, the routine''s own old-summary lookup)');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_summary(906014, 'new private summary', 'new public summary', 906002)$$,
@@ -385,8 +389,8 @@ SELECT throws_ok(
     $do3$;
     $test3$,
     'P0002',
-    'S-TICKET-030: change_type propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #42, company id lookup)'
-);
+    NULL,
+    'S-TICKET-030: change_type propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #42, company id lookup)');
 
 SELECT lives_ok(
     $test4$
@@ -423,8 +427,8 @@ SELECT throws_ok(
     $do5$;
     $test5$,
     'P0002',
-    'S-TICKET-032: change_service_component propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #46, the one UN-guarded lookup in this routine)'
-);
+    NULL,
+    'S-TICKET-032: change_service_component propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #46, the one UN-guarded lookup in this routine)');
 
 SELECT lives_ok(
     $test6$
@@ -554,8 +558,8 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_clear_todo_list(906099981, 906002)$$,
     'P0002',
-    'S-TICKET-048: clear_todo_list propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id when p_add_history_event=1 (the default) -- site #68''s tt.ticket lookup runs unconditionally on this path'
-);
+    NULL,
+    'S-TICKET-048: clear_todo_list propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id when p_add_history_event=1 (the default) -- site #68''s tt.ticket lookup runs unconditionally on this path');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_clear_todo_list(906099980, 906002, 0)$$,

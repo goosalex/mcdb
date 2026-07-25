@@ -156,8 +156,8 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(905099994, 3, 905002, 'pub')$$,
     'P0002',
-    'S-TICKET-007: change_status (pure delegator) propagates change_status_event_id_out''s S-TICKET-008 unhandled NO_DATA_FOUND for a nonexistent p_ticket_id (site #12)'
-);
+    NULL,
+    'S-TICKET-007: change_status (pure delegator) propagates change_status_event_id_out''s S-TICKET-008 unhandled NO_DATA_FOUND for a nonexistent p_ticket_id (site #12)');
 
 SELECT throws_ok(
     $test2$
@@ -170,8 +170,8 @@ SELECT throws_ok(
     $do2$;
     $test2$,
     'P0002',
-    'S-TICKET-008: change_status_event_id_out propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #12, 8-column tt.ticket lookup)'
-);
+    NULL,
+    'S-TICKET-008: change_status_event_id_out propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #12, 8-column tt.ticket lookup)');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_status(905010, 2, 905002, 'no-op same status')$$,
@@ -233,6 +233,7 @@ SELECT is(
 SELECT throws_ok(
     $$CALL tt.ticket_interface_updateticketflow(905099991)$$,
     'P0002',
+    NULL,
     'S-TICKET-051: updateTicketFlow propagates NO_DATA_FOUND unhandled for a nonexistent p_ticket_id (site #77, unconditional tt.ticket lookup) -- site #76''s local NO_DATA_FOUND handler runs first and cannot mask this later, unguarded site'
 );
 
