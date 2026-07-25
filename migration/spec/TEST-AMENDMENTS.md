@@ -12,6 +12,18 @@ to manufacture a green run.
 prevents the test from asserting what it already intended. A change that makes a failing test pass by
 asserting *less* is not an amendment — it is a translation bug being covered up, and it is forbidden.
 
+**Plan 02-13 correction — file relocated to its documented path.** This file previously lived at
+`migration/test/TEST-AMENDMENTS.md`. `provenance_lint.sh` (`TEST_AMENDMENTS="$SPEC_DIR/TEST-AMENDMENTS.md"`,
+`SPEC_DIR="migration/spec"`) and `migration/spec/README.md` ("The TEST-AMENDMENTS.md escape hatch")
+both hard-code `migration/spec/TEST-AMENDMENTS.md` as the ledger's real location. None of A-001..A-008
+below tripped this — every amendment commit touched only a test file, never the translation file in
+the same commit, so `provenance_lint.sh`'s combined-commit check (the only place it reads this ledger)
+never fired. But the gap was real: had a future amendment ever needed to land in the SAME commit as a
+translation file (the documented, sanctioned escape-hatch shape `migration/spec/README.md` describes),
+`provenance_lint.sh` would have found no ledger at its hard-coded path and rejected a properly-recorded
+amendment outright — fail-closed, not a security hole, but a latent tooling break. Moved to the path
+the tooling and documentation already specify (`git mv`, history preserved); see 02-13-SUMMARY.md.
+
 ---
 
 ## A-001 — `tt__osag_notify__selectinto.sql`: 7 × `throws_ok` 3-arg overload misuse
