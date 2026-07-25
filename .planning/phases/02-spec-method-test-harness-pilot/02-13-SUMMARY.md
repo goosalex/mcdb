@@ -195,6 +195,27 @@ None - no external service configuration required.
 - **Outstanding, adjudication-required items** (not blockers to closing Phase 2, but real open items for whoever picks them up): 4 pgTAP fixture defects in `tt.ticket_interface`'s `selectinto.sql` (root-caused, fix described, not applied); 5 regress goldens recommended for regeneration (not performed); the `SYS.OSAG_TABLE_REDEFINITION` roadmap-scoping question raised but not answered.
 - Every disposable database this plan created during verification (`mcdb_test_mut*`, `mcdb_test_final*`, `mcdb_test_closing`, etc.) was dropped after use; `mcdb_tmpl` was rebuilt clean as the final artifact and left in place for the next plan/session to clone from.
 
+## Self-Check: PASSED
+
+- All 5 created files verified present on disk (`[ -f ]`): `migration/test/run-all.sh`,
+  `migration/test/REDGREEN-EVIDENCE.md`, `migration/PHASE2-FINDINGS.md`,
+  `migration/spec/METHOD-REVIEW.md`, `migration/test/schema-fixes/25_p13_fixes.sql`.
+- Relocated file verified present at its new path: `migration/spec/TEST-AMENDMENTS.md`.
+- All 7 commit hashes verified in `git log --oneline --all`: `1592ca4`, `99787ed`,
+  `5c5a04f`, `dea9847`, `6aa35f3`, `6f46fea`, `a914be7`.
+- Plan-level verification re-run: `bash migration/spec/spec_lint.py` (6/6 OK),
+  `bash migration/spec/trace_lint.py` (16/16 OK), `bash migration/spec/provenance_lint.sh`
+  (6/6 packages OK) — all three gates green. `bash migration/test/run-all.sh
+  --rebuild-template --db mcdb_test_closing` runs end-to-end and prints the final
+  per-package table (2/7 PASS, 5/7 FAIL, all explained in `REDGREEN-EVIDENCE.md`/
+  `PHASE2-FINDINGS.md`) and exits non-zero, matching this document's own claims exactly
+  — no discrepancy between what is reported here and what the harness itself reports.
+- `PHASE2-FINDINGS.md`'s own programmatic verify commands (XCUT-01..06 present,
+  sequence/OSAG_TABLE_REDEFINITION/pg_kind mentioned, all 7 `*.FINDINGS.md` files
+  represented in the rollup) all pass, re-run as part of this self-check.
+- `METHOD-REVIEW.md`'s own programmatic verify commands (amendment rate present, Phase 4
+  extrapolation present, non-empty) all pass, re-run as part of this self-check.
+
 ---
 *Phase: 02-spec-method-test-harness-pilot*
 *Completed: 2026-07-25*
