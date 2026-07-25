@@ -68,6 +68,7 @@ EXCLUDED_FILENAMES = {
     "README.md",
     "TEST-AMENDMENTS.md",
     "DYNAMIC-SQL-TRACE.md",  # 02-06's manual trace of TT.EVENT_INTERFACE's EXECUTE IMMEDIATE
+    "METHOD-REVIEW.md",  # 02-13's phase-closing verdict document -- not a package spec
 }
 
 REQUIRED_FRONTMATTER_FIELDS = [

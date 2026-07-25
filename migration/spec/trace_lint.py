@@ -406,7 +406,8 @@ def merge_coverage(into: Dict[str, Set[str]], src: Dict[str, Set[str]]) -> None:
 
 def print_coverage_report(coverage: Dict[str, Set[str]]) -> None:
     spec_files = sorted(
-        p for p in SPEC_DIR.glob("*.md") if p.name not in {"TEMPLATE.md", "CHECKLIST.md", "README.md", "TEST-AMENDMENTS.md"}
+        p for p in SPEC_DIR.glob("*.md")
+        if p.name not in {"TEMPLATE.md", "CHECKLIST.md", "README.md", "TEST-AMENDMENTS.md", "DYNAMIC-SQL-TRACE.md", "METHOD-REVIEW.md"}
     )
     if not spec_files:
         return
