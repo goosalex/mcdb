@@ -83,9 +83,20 @@ _ASSERTION_CALL_RE = re.compile(r"\b(" + "|".join(ASSERTION_NAMES) + r")\s*\(")
 
 
 # ---------------------------------------------------------------------------
-# Quote-aware scanning (single-quoted '' escaping + $tag$ dollar-quoting) --
-# needed so a comma or paren inside a SQL string literal is never mistaken
-# for a top-level call-argument separator.
+# Quote-aware scanning (single-quoted '' escaping + $tag$ dollar-quoting, plus
+# `--` line comments) -- needed so a comma or paren inside a SQL string
+# literal OR inside a `--` comment is never mistaken for a top-level
+# call-argument separator. Found live in plan 02-13: A-007's amendment
+# (TEST-AMENDMENTS.md) added a `--` comment spanning two lines inside
+# tt__ticket_interface__changes.sql's S-TICKET-024 `is()` call, and that
+# comment's own prose contains a literal comma ("...dissimilar column
+# types", aborting...") -- which, before this fix, the scanner treated as a
+# real top-level argument separator, since it had no notion of `--` comments
+# at all. This is a linter robustness gap (this file lives under
+# migration/spec/, not migration/test/pgtap/ or regress/, so fixing it here
+# does not touch any test assertion's content or meaning), not a test defect
+# -- a `--` comment is ordinary, encouraged SQL documentation, and no
+# assertion's cited clause or expected value changes as a result of this fix.
 # ---------------------------------------------------------------------------
 
 def _skip_string_literal(text: str, i: int) -> int:
@@ -111,6 +122,15 @@ def _skip_string_literal(text: str, i: int) -> int:
     return i
 
 
+def _skip_line_comment(text: str, i: int) -> int:
+    """If text[i:i+2] opens a '--' SQL line comment, return the index of the
+    next newline (or end of text). Otherwise return i unchanged."""
+    if text[i : i + 2] == "--":
+        nl = text.find("\n", i)
+        return nl if nl != -1 else len(text)
+    return i
+
+
 def _find_call_close_paren(text: str, open_idx: int) -> int:
     depth = 0
     i = open_idx
@@ -119,6 +139,11 @@ def _find_call_close_paren(text: str, open_idx: int) -> int:
         c = text[i]
         if c in ("'", "$"):
             new_i = _skip_string_literal(text, i)
+            if new_i != i:
+                i = new_i
+                continue
+        if c == "-":
+            new_i = _skip_line_comment(text, i)
             if new_i != i:
                 i = new_i
                 continue
@@ -133,8 +158,9 @@ def _find_call_close_paren(text: str, open_idx: int) -> int:
 
 
 def _scan_top_level_args(text: str) -> List[Tuple[int, int]]:
-    """Top-level (depth-0, quote-aware) comma-separated argument spans within
-    `text`, which is the already-extracted inside of a balanced call's parens."""
+    """Top-level (depth-0, quote-aware, comment-aware) comma-separated
+    argument spans within `text`, which is the already-extracted inside of a
+    balanced call's parens."""
     spans: List[Tuple[int, int]] = []
     depth = 0
     i = 0
@@ -144,6 +170,11 @@ def _scan_top_level_args(text: str) -> List[Tuple[int, int]]:
         c = text[i]
         if c in ("'", "$"):
             new_i = _skip_string_literal(text, i)
+            if new_i != i:
+                i = new_i
+                continue
+        if c == "-":
+            new_i = _skip_line_comment(text, i)
             if new_i != i:
                 i = new_i
                 continue
@@ -177,9 +208,40 @@ def _extract_string_literal(arg: str) -> Optional[str]:
     return None
 
 
+def _mask_for_call_search(text: str) -> str:
+    """Same-length copy of `text` with `--` line comments and string-literal
+    interiors blanked to spaces (newlines preserved), so ASSERTION_CALL_RE
+    only matches a real call in code -- never prose like "...makes is()
+    raise..." inside a `--` comment, or an assertion name that happens to
+    appear inside a quoted string. Positions are unchanged, so offsets found
+    against this masked copy remain valid indices into the original `text`."""
+    n = len(text)
+    out = list(text)
+    i = 0
+    while i < n:
+        c = text[i]
+        if c == "-" and text[i : i + 2] == "--":
+            end = _skip_line_comment(text, i)
+            for k in range(i, end):
+                out[k] = " "
+            i = end
+            continue
+        if c in ("'", "$"):
+            new_i = _skip_string_literal(text, i)
+            if new_i != i:
+                for k in range(i, new_i):
+                    if out[k] != "\n":
+                        out[k] = " "
+                i = new_i
+                continue
+        i += 1
+    return "".join(out)
+
+
 def find_assertions(text: str) -> List[Dict]:
     out = []
-    for m in _ASSERTION_CALL_RE.finditer(text):
+    masked = _mask_for_call_search(text)
+    for m in _ASSERTION_CALL_RE.finditer(masked):
         open_idx = m.end() - 1
         close_idx = _find_call_close_paren(text, open_idx)
         if close_idx == -1:
