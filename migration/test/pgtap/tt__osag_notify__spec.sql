@@ -90,6 +90,10 @@ SELECT lives_ok(
 -- failure, including the private get_notification_type_name's fully-unhandled
 -- NO_DATA_FOUND (site #30) when a fixture event_notification row references an
 -- event_notification_type_id that does not exist.
+-- A-004 (TEST-AMENDMENTS.md): the cursor INNER-joins stop.contact (c.id = l.contact_id,
+-- ddl/src/pkgb/tt_osag_notify.sql:885-890) -- without this row the loop is empty and
+-- site #30 is never reached, in Oracle exactly as in the translation.
+INSERT INTO stop.contact (id, lastname, firstname) VALUES (900106, 'Pilot', 'Contact');
 INSERT INTO auth.login (id, contact_id, company_id) VALUES (900105, 900106, 900107);
 INSERT INTO tt.event_notification (id, login_id, event_notification_type_id, ticket_id)
     VALUES (900108, 900105, 900199996, 900103);

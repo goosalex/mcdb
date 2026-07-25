@@ -18,7 +18,9 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(14);
+-- A-005 (TEST-AMENDMENTS.md): the file contains 13 assertions; the original plan(14)
+-- was an off-by-one that failed the file's TAP plan even with every assertion passing.
+SELECT plan(13);
 
 -------------------------------------------------------------------------------
 -- S-NOTIFY-018 (site #10, send_test_notification): fully unhandled NO_DATA_FOUND.

@@ -135,3 +135,107 @@ The RED baseline (`run-tests.sh` with no `--install`) shows `tt.ticket_interface
 assertions pass with **no translation loaded at all**. A test that passes when the code under test does not
 exist is not testing that code. These six are prime candidates for the mutation check to expose, and must
 be examined before the phase can claim a clean red→green.
+
+---
+
+## A-003 — `tt__event_interface__spec.sql`: 2 × `is()` smallint/numeric overload mismatch
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 (commit b764d34, entry backfilled) |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__event_interface__spec.sql` |
+| **Assertions affected** | 2 (S-EVENT-043, S-EVENT-044) — plus 12 more killed by the cascade |
+| **User approved** | Yes — "Ok" to the adjudication pass that surfaced it |
+
+### The defect
+
+`tt.event.demoted` is `smallint`. The two demote/promote value checks compared it against
+`1::numeric` / `0::numeric`. pgTAP's `is(anyelement, anyelement)` requires both arguments to
+resolve to the SAME type — `is(smallint, numeric)` resolves to **no function at all**, raising
+`42883 function does not exist`, which aborts the transaction and cascades: every later assertion
+in the file dies with `25P02 current transaction is aborted` (6/20 → the file's floor).
+
+### The amendment
+
+Changed the two expected literals to `1::smallint` / `0::smallint`. The asserted VALUE (1, 0) is
+unchanged — only the cast is corrected so the comparison can execute at all. The three
+S-EVENT-034 `is()` calls correctly keep `::numeric` (that function returns `numeric`).
+
+### Effect
+
+`tt.event_interface`: **6/20 → 20/20** pgTAP. No translation file touched; `provenance_lint.sh` passes.
+
+---
+
+## A-004 — `tt__osag_notify__spec.sql`: S-NOTIFY-021 fixture missing the `stop.contact` row
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__osag_notify__spec.sql` |
+| **Assertions affected** | 1 red (`ok(... 'deletion of notifications ... failed')`) + 1 vacuously green (`lives_ok`) |
+| **User approved** | Yes — user adjudicated S-NOTIFY-021 "fix now"; diagnosis revised from translation to fixture (below) |
+
+### The defect — and a corrected diagnosis
+
+The S-NOTIFY-021 test inserts `auth.login (900105, contact_id => 900106, ...)` and an
+`event_notification` referencing a nonexistent `event_notification_type_id`, intending the
+delete-loop to hit private `get_notification_type_name`'s SELECT INTO (site #30), raise
+NO_DATA_FOUND, and prove the outer `WHEN OTHERS` swallows + logs. But it never inserted
+`stop.contact` row 900106 — and the cursor INNER-joins contact
+(`c.id = l.contact_id`, Oracle `ddl/src/pkgb/tt_osag_notify.sql:885-890`). With no contact row
+the loop iterates ZERO times, site #30 is never reached, nothing raises, nothing is logged —
+**in Oracle exactly as in the translation**. This test could never pass against the Oracle
+original either.
+
+The initial adjudication evidence blamed a missing `STRICT` in the translation. That was wrong:
+site #30 (`migration/pgsql/tt/osag_notify.sql`, `__get_notification_type_name`) already has
+`SELECT ... INTO STRICT` per the spec's site #30 verdict ("STRICT + handler (indirect)").
+
+### Independently reproduced (not taken on trust)
+
+Probe against a fresh template clone with the translation installed:
+
+- **Fixture as-is (no contact 900106):** loop empty — `0` matching plog rows, notification row untouched.
+- **Fixture + `INSERT INTO stop.contact (id, ...) VALUES (900106, ...)`:** site #30 STRICT raises
+  `no data found`, outer WHEN OTHERS fires, BOTH Oracle-parity warnings logged
+  (`deletion of notifications for ticket 900103 failed` + `exception: query returned no rows`).
+
+### The amendment
+
+Add the missing fixture row `INSERT INTO stop.contact (id, lastname, firstname) VALUES (900106, ...)`
+before the login insert. No assertion text, SQLSTATE, or expected value changed — the fixture now
+constructs the scenario the test's own comment block describes.
+
+### Effect
+
+`tt__osag_notify__spec.sql`: **8/10 → 10/10**. No translation file touched.
+
+---
+
+## A-005 — `tt__osag_notify__selectinto.sql`: `plan(14)` off-by-one (13 actual assertions)
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__osag_notify__selectinto.sql` |
+| **Assertions affected** | 0 (plan line only) |
+| **User approved** | Covered by the S-NOTIFY-021 "fix now" adjudication (surfaced by the same green run) |
+
+### The defect
+
+The file declares `SELECT plan(14)` but contains exactly **13** assertions (verified by grep and by
+pg_prove: `ok 1..ok 13`, zero failures, then `Parse errors: Bad plan. You planned 14 tests but ran 13`).
+Present since the original commit (f4fe690); masked while real failures existed, exposed the moment
+all 13 assertions went green.
+
+### The amendment
+
+`plan(14)` → `plan(13)`. No assertion added, removed, or changed.
+
+### Effect
+
+`tt__osag_notify__selectinto.sql`: **13/14 (TAP plan failure) → 13/13 PASS**.
