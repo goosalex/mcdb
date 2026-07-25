@@ -796,11 +796,20 @@ DECLARE
     v_ux_timeout_delta interval;
     v_ticket_has_service_window numeric;
 BEGIN
-    -- S-TICKET-011 (site #18): STRICT, unhandled.
-    SELECT type_id, emergency, ux_timeout_start, handled_by_mcc, status_id
-    INTO STRICT v_type_id, v_emergency, v_ux_timeout_start, v_handled_by_mcc, v_status_id
-    FROM tt.ticket
-    WHERE id = p_ticket_id;
+    -- S-TICKET-011 (site #18): STRICT, unhandled. "no data found" message-parity shim
+    -- (XCUT-01 convention, matching tt.event_interface's demote_event/promote_event
+    -- precedent): re-raises the SAME SQLSTATE (P0002) with Oracle's ORA-01403 text
+    -- instead of PL/pgSQL's native "query returned no rows" -- required for regress
+    -- golden parity (migration/test/regress/expected/tt__ticket_interface__errors.out).
+    BEGIN
+        SELECT type_id, emergency, ux_timeout_start, handled_by_mcc, status_id
+        INTO STRICT v_type_id, v_emergency, v_ux_timeout_start, v_handled_by_mcc, v_status_id
+        FROM tt.ticket
+        WHERE id = p_ticket_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
 
     -- no timeouts for: tickets of type "third party incident"(4) or "customer
     -- incident"(5); non MCC tickets; ticket status other than "new"(1), "open"(2),
@@ -2305,11 +2314,19 @@ BEGIN
         -- S-TICKET-048 (site #68): STRICT, unhandled -- clear_todo_list has no
         -- EXCEPTION block of its own. If p_add_history_event = 0, this SELECT INTO
         -- never executes at all -- a bad p_ticket_id in that mode still succeeds in
-        -- deleting zero todo items and resetting the step counters.
-        SELECT t.host_id, t.company_id
-        INTO STRICT v_host_id, v_company_id
-        FROM tt.ticket t
-        WHERE id = p_ticket_id;
+        -- deleting zero todo items and resetting the step counters. "no data found"
+        -- message-parity shim (XCUT-01, same rationale as
+        -- update_ux_timeout_for_ticket's site #18 above) -- required for regress golden
+        -- parity (migration/test/regress/expected/tt__ticket_interface__errors.out).
+        BEGIN
+            SELECT t.host_id, t.company_id
+            INTO STRICT v_host_id, v_company_id
+            FROM tt.ticket t
+            WHERE id = p_ticket_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+        END;
 
         v_private_details := 'Todo list cleared';
         CALL tt.event_interface_add_history_event(v_event_id,
@@ -2478,7 +2495,7 @@ $fn$;
 -- propagates fully unhandled, unlike site #76's local NO_DATA_FOUND handler.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.ticket_interface_updateticketflow(
-    p_ticket_id numeric, p_prev_status_id numeric DEFAULT NULL, p_prev_status_change_date timestamp DEFAULT NULL)
+    p_ticket_id numeric, p_prev_status_id numeric DEFAULT NULL, p_prev_status_change_date timestamptz DEFAULT NULL)
 LANGUAGE plpgsql
 AS $fn$
 DECLARE
@@ -2534,13 +2551,13 @@ BEGIN
             UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
             -- update flow relevant open time if status change was reason for queue exit
         ELSIF (p_prev_status_id = 2) THEN
-            v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date)));
+            v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date::timestamp)));
             UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
         END IF;
 
         -- only open time change iff ticket was open before, but is no longer
     ELSIF (v_flow_id IS NOT NULL AND p_prev_status_id = 2 AND v_status_id != 2) THEN
-        v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date)));
+        v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date::timestamp)));
         UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
     END IF;
 END;
