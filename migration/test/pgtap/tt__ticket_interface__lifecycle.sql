@@ -31,30 +31,34 @@ INSERT INTO mss.host (id, name, operating_system_id, service_company_id, author)
 INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_message_template_id)
     VALUES (905006, 'pilot ti event type', 1, 1, 2);
 
+-- A-008: every ticket fixture below carries last_status_change_date. newticket_new
+-- always writes it (ticket_interface.sql:417), so a NULL is a state the application
+-- never produces; updateTicketTimeStats' `open_time + v_status_time` then yields NULL
+-- and violates NOT NULL -- in Oracle (ORA-01407) exactly as in PostgreSQL.
 -- Ticket A: open (status 2), fully populated -- the "happy path" ticket used by
 -- change_status/change_status_event_id_out/update_ux_timeout_for_ticket/
 -- updateTicketFlow/trigger_escalation.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, worker_id, host_id)
-    VALUES (905010, 1, 2, 905001, 905002, 905003, 905005);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, worker_id, host_id, last_status_change_date)
+    VALUES (905010, 1, 2, 905001, 905002, 905003, 905005, now() - interval '1 hour');
 INSERT INTO tt.event (id, type_id, ticket_id) VALUES (905011, 905006, 905010);
 
 -- Ticket B: deferred (status 60) -- the positive branch of change_deferral_date.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, host_id)
-    VALUES (905012, 1, 60, 905001, 905005);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, host_id, last_status_change_date)
+    VALUES (905012, 1, 60, 905001, 905005, now() - interval '1 hour');
 
 -- Tickets C (source) and D (target) for merge_tickets.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, partner_reference)
-    VALUES (905013, 1, 2, 905001, 905002, 'src-partner-ref');
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id)
-    VALUES (905014, 1, 2, 905001, 905002);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, partner_reference, last_status_change_date)
+    VALUES (905013, 1, 2, 905001, 905002, 'src-partner-ref', now() - interval '1 hour');
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905014, 1, 2, 905001, 905002, now() - interval '1 hour');
 INSERT INTO tt.event (id, type_id, ticket_id) VALUES (905015, 905006, 905013);
 INSERT INTO tt.event (id, type_id, ticket_id) VALUES (905016, 905006, 905014);
 UPDATE tt.ticket SET last_public_event_id = 905015 WHERE id = 905013;
 UPDATE tt.ticket SET last_public_event_id = 905016 WHERE id = 905014;
 
 -- Ticket E, fully cross-referenced, for deleteTicket's cascade/non-cascade proof.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id)
-    VALUES (905017, 1, 2, 905001, 905002);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905017, 1, 2, 905001, 905002, now() - interval '1 hour');
 INSERT INTO tt.event (id, type_id, ticket_id) VALUES (905020, 905006, 905017);
 INSERT INTO tt.todo_item (id, ticket_id, seq_no, details, todo_item_status_id)
     VALUES (905021, 905017, 1, 'pilot todo', 1);
@@ -64,12 +68,12 @@ INSERT INTO tt.ticket_rating (id, rating, event_id) VALUES (905023, 5, 905020);
 UPDATE tt.ticket SET customer_ticket_rating_id = 905023 WHERE id = 905017;
 
 -- Ticket F: no open ticket_flow entry -- the insert-new branch of updateTicketFlow.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc)
-    VALUES (905018, 1, 2, 905001, 1);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_status_change_date)
+    VALUES (905018, 1, 2, 905001, 1, now() - interval '1 hour');
 
 -- Ticket G: has an already-open ticket_flow entry -- the close-existing branch.
-INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc)
-    VALUES (905019, 1, 4, 905001, 0);
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_status_change_date)
+    VALUES (905019, 1, 4, 905001, 0, now() - interval '1 hour');
 INSERT INTO tt.ticket_flow (id, ticket_id, flow_in_date, flow_out_date)
     VALUES (905024, 905019, now() - interval '1 hour', NULL);
 

@@ -314,3 +314,43 @@ column typing prevented it from executing.
 
 `tt.ticket_interface`: **57/129 → 111/129** pgTAP. No translation file touched by the amending commit;
 `provenance_lint.sh` passes. No other package regressed.
+
+---
+
+## A-008 — `tt__ticket_interface__lifecycle.sql`: 7 ticket fixtures missing `last_status_change_date`
+
+| | |
+|---|---|
+| **Date** | 2026-07-25 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 8 (tests 13, 14, 27–32 — the whole `merge_tickets` cluster) |
+| **Surfaced by** | plan 02-12, which correctly refused to touch it |
+
+### The defect
+
+Every `tt.ticket` fixture row was inserted without `last_status_change_date` (nullable, no
+default). Any status change then reaches the private `updateTicketTimeStats`, which computes
+`v_status_time := TRUNC((sysdate - p_last_status_change_date) * 86400)` and applies
+`UPDATE ... SET open_time = open_time + v_status_time`. With a NULL date the arithmetic yields
+NULL and the NOT NULL column rejects it.
+
+### Verified to be a fixture defect, not a translation defect
+
+- The translation (`ticket_interface.sql`, `__updatetickettimestats`) is a **statement-for-statement
+  port** of Oracle `ddl/src/pkgb/tt_ticket_interface.sql:2313-2358`, including the same unguarded
+  arithmetic. Oracle would raise `ORA-01407 cannot update ... to NULL` on the same input.
+- `newticket_new` **always** writes `last_status_change_date` (`ticket_interface.sql:417`), so a
+  ticket with NULL there is a state the application itself never produces. The fixture was
+  constructing an impossible row.
+
+### The amendment
+
+Added `last_status_change_date = now() - interval '1 hour'` to the 7 ticket fixture rows, with a
+comment recording why. No assertion, expected value, or SQLSTATE changed.
+
+### Effect
+
+`tt__ticket_interface__lifecycle.sql`: **30/39 → 38/39**. The one remaining failure is the
+`auth.permission` materialized-view gap (see PHASE2 findings — a harness/schema gap, not a
+translation defect).
