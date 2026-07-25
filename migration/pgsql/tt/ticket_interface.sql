@@ -17,10 +17,10 @@
 -- for this package, preserved even where it reads like a latent bug (13 handlers against
 -- 77 sites).
 --
--- Oracle's usage-audit call (XCUT-06): all 36 plog.AuditUsage call sites (one per
--- routine body, public AND private) DELETED, not ported. See ticket_interface.FINDINGS.md
--- for the exact count and rationale (matches Pitfall 4 / osag_plog.FINDINGS.md's
--- established disposition).
+-- Oracle's per-routine usage-audit call (XCUT-06, the write-only osag.plsql_audit
+-- feature documented in osag_plog.FINDINGS.md): all 36 call sites (one per public
+-- routine that had one -- see ticket_interface.FINDINGS.md for the exact per-routine
+-- count) DELETED outright, not ported, matching Pitfall 4's established disposition.
 --
 -- change_label: BOTH overloads created (2-arg bare form, 4-arg audited form). PostgreSQL
 -- dispatches on argument COUNT natively, exactly as Oracle does -- the 4-arg overload's
@@ -388,9 +388,15 @@ BEGIN
     SELECT nextval('tt.ticket_sequence') INTO STRICT p_ticket_id;
     SELECT nextval('tt.event_sequence') INTO STRICT p_event_id;
 
-    -- replace placeholders for ticket_id and event_id in event details
-    v_details_public := tt.ticket_interface_replace_id_placeholders(p_details_public, p_ticket_id, p_event_id);
-    v_details_private := tt.ticket_interface_replace_id_placeholders(p_details_private, p_ticket_id, p_event_id);
+    -- replace placeholders for ticket_id and event_id in event details.
+    -- Pitfall 2 / S-EVENT-015 precedent: Oracle's SUBSTRB(x,1,30000) inside
+    -- replace_id_placeholders collapses '' to NULL; substr() does not -- NULLIF at this
+    -- boundary reproduces Oracle's collapse (this routine's own IS NOT NULL check three
+    -- lines below depends on it). Not called out by name in the spec's own S-TICKET-037
+    -- clause (which only traces replace_id_placeholders' own body), but required for
+    -- fidelity at this specific call site -- see ticket_interface.FINDINGS.md.
+    v_details_public := NULLIF(tt.ticket_interface_replace_id_placeholders(p_details_public, p_ticket_id, p_event_id), '');
+    v_details_private := NULLIF(tt.ticket_interface_replace_id_placeholders(p_details_private, p_ticket_id, p_event_id), '');
 
     -- if ticket is opened with an incident report (30005), comment from customer (30011)
     -- or a comment by MC (50002) and public details are available, prepend subject to
@@ -1590,5 +1596,1009 @@ BEGIN
             last_summary_update = statement_timestamp()
         WHERE id = p_ticket_id;
     END IF;
+END;
+$fn$;
+
+-- =====================================================================================
+-- PUBLIC routines, Task 2 scope: change_type through deleteTicket (routines 20-38 of 38).
+-- =====================================================================================
+
+-- ------------------------------------------------------------------------------------
+-- change_type (S-TICKET-030..031). No EXCEPTION block -- all three sites propagate fully
+-- unhandled.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_change_type(
+    OUT p_event_id numeric,
+    p_ticket_id numeric,
+    p_type_id numeric,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_company_id numeric;
+    v_old_type_name varchar;
+    v_type_name varchar;
+BEGIN
+    -- S-TICKET-030 (site #42): STRICT, unhandled.
+    SELECT company_id INTO STRICT v_company_id FROM tt.ticket WHERE id = p_ticket_id;
+
+    -- S-TICKET-030 (site #43): STRICT, unhandled.
+    SELECT type.name INTO STRICT v_old_type_name FROM tt.ticket_type type, tt.ticket t WHERE type.id = t.type_id AND t.id = p_ticket_id;
+
+    -- S-TICKET-030 (site #44): STRICT, unhandled.
+    SELECT name INTO STRICT v_type_name FROM tt.ticket_type WHERE id = p_type_id;
+
+    UPDATE tt.ticket SET type_id = p_type_id WHERE id = p_ticket_id;
+
+    INSERT INTO tt.event
+        (id, type_id, company_id, ticket_id, contact_id, details_public, contact_zitadel_id)
+    VALUES (nextval('tt.event_sequence'), 100005, v_company_id, p_ticket_id, p_contact_id,
+            'type changed from ' || v_old_type_name || ' to ' || v_type_name, p_zitadel_contact_id::varchar);
+
+    -- S-TICKET-031 (site #45): session-local sequence state, no STRICT concern.
+    SELECT currval('tt.event_sequence') INTO STRICT p_event_id;
+
+    CALL tt.ticket_interface_update_ux_timeout_for_ticket(p_ticket_id, FALSE);
+    CALL tt.ticket_interface_updateticketflow(p_ticket_id);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- change_service_component (S-TICKET-032). Site #46 propagates unhandled; sites #47-#50
+-- are each locally swallowed by one of two NO_DATA_FOUND blocks.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_change_service_component(
+    OUT p_event_id numeric,
+    p_ticket_id numeric,
+    p_service_component_id numeric,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_company_id numeric;
+    v_old_service_component_code varchar;
+    v_old_service_component_name varchar;
+    v_service_component_code varchar;
+    v_service_component_name varchar;
+BEGIN
+    -- S-TICKET-032 (site #46): STRICT, unhandled.
+    SELECT company_id INTO STRICT v_company_id FROM tt.ticket WHERE id = p_ticket_id;
+
+    BEGIN
+        -- S-TICKET-032 (sites #47-#48): STRICT + local NO_DATA_FOUND handler covering both.
+        SELECT sc.internal_code INTO STRICT v_old_service_component_code FROM mss.service_component sc, tt.ticket t WHERE sc.id = t.service_component_id AND t.id = p_ticket_id;
+        SELECT sc.name INTO STRICT v_old_service_component_name FROM mss.service_component sc, tt.ticket t WHERE sc.id = t.service_component_id AND t.id = p_ticket_id;
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+        v_old_service_component_code := '';
+        v_old_service_component_name := '<empty>';
+    END;
+
+    BEGIN
+        -- S-TICKET-032 (sites #49-#50): STRICT + local NO_DATA_FOUND handler covering both.
+        SELECT internal_code INTO STRICT v_service_component_code FROM mss.service_component WHERE id = p_service_component_id;
+        SELECT name INTO STRICT v_service_component_name FROM mss.service_component WHERE id = p_service_component_id;
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+        v_service_component_code := '';
+        v_service_component_name := '<empty>';
+    END;
+
+    UPDATE tt.ticket SET service_component_id = p_service_component_id WHERE id = p_ticket_id;
+
+    INSERT INTO tt.event
+        (id, type_id, company_id, ticket_id, contact_id, details_public, details_private, contact_zitadel_id)
+    VALUES (nextval('tt.event_sequence'), 100003, v_company_id, p_ticket_id, p_contact_id,
+            'service component changed',
+            'service component changed from ' || v_old_service_component_name || ' (' || v_old_service_component_code || ') to ' || v_service_component_name || ' (' || v_service_component_code || ')',
+            p_zitadel_contact_id::varchar);
+
+    -- S-TICKET-031 (site #51): session-local sequence state, no STRICT concern.
+    SELECT currval('tt.event_sequence') INTO STRICT p_event_id;
+
+    CALL tt.ticket_interface_update_ux_timeout_for_ticket(p_ticket_id, FALSE);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- get_next_recent_ticket (S-TICKET-033, S-TICKET-046). One of the corpus's two
+-- FUNCTIONs. Closes the FUNCTION/PROCEDURE-COMMIT question per the spec's own trace: no
+-- INSERT/UPDATE/DELETE, calls nothing else -- cannot transitively reach a COMMIT. Has its
+-- own whole-function EXCEPTION WHEN OTHERS that logs and returns NULL.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION tt.ticket_interface_get_next_recent_ticket(
+    p_last_ticket_id numeric, p_host_id numeric, p_ticket_type_id numeric, p_resolve_age numeric)
+RETURNS numeric
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'get_next_recent_ticket(): ';
+    v_ticketid numeric := NULL;
+BEGIN
+    -- only look at tickets that haven't been closed (status 102) yet and are not
+    -- deferred (status 60). S-TICKET-033 (site #52): MIN aggregate, no STRICT concern.
+    SELECT MIN(t.id) INTO v_ticketid
+    FROM tt.ticket t
+    WHERE (t.status_id < 102) AND (t.status_id <> 60)
+      AND (p_last_ticket_id IS NULL OR (t.id > p_last_ticket_id))
+      AND (p_host_id IS NULL OR (t.host_id = p_host_id) OR (p_host_id = 0 AND t.host_id IS NULL))
+      AND (p_ticket_type_id IS NULL OR (t.type_id = p_ticket_type_id))
+      AND (p_resolve_age IS NULL
+        OR t.status_id < 60   -- ticket not resolved yet
+        OR ((t.last_resolved_date IS NULL) OR extract(epoch FROM (statement_timestamp()::timestamp - t.last_resolved_date)) <= p_resolve_age)); -- ticket resolved
+
+    RETURN v_ticketid;
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix||'unexpected error 99: '||SQLERRM);
+        RETURN NULL;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- merge_tickets (S-TICKET-034..036). Merges the SOURCE ticket into the TARGET ticket. No
+-- procedure-level EXCEPTION block of its own -- every unhandled SELECT INTO here
+-- propagates fully.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_merge_tickets(
+    p_ticket_id numeric,
+    p_mticket_id numeric,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_event_id numeric;
+    v_partner_ref varchar;
+    v_mpartner_ref varchar;
+    v_fast_resolvable numeric;
+    v_mfast_resolvable numeric;
+    v_last_public_event_id numeric;
+    v_mlast_public_event_id numeric;
+    v_last_public_event_date timestamp;
+    v_mlast_public_event_date timestamp;
+    v_cust_rating_id numeric;
+    v_mcust_rating_id numeric;
+    v_eng_rating_id numeric;
+    v_meng_rating_id numeric;
+    v_mstatus_id numeric;
+    v_mrecoverable_status_id numeric;
+    v_ux_timeout_start timestamp;
+    v_mux_timeout_start timestamp;
+BEGIN
+    -- S-TICKET-034 (site #53): STRICT, unhandled -- merge_tickets has no EXCEPTION block.
+    SELECT partner_reference, fast_resolvable, last_public_event_id, ux_timeout_start, customer_ticket_rating_id, engineer_ticket_rating_id
+    INTO STRICT v_partner_ref, v_fast_resolvable, v_last_public_event_id, v_ux_timeout_start, v_cust_rating_id, v_eng_rating_id
+    FROM tt.ticket
+    WHERE id = p_ticket_id;
+
+    IF (v_last_public_event_id IS NOT NULL) THEN
+        -- S-TICKET-034 (site #54): STRICT, unhandled.
+        SELECT eventdate INTO STRICT v_last_public_event_date FROM tt.event WHERE id = v_last_public_event_id;
+    END IF;
+
+    -- S-TICKET-034 (site #55): STRICT, unhandled -- mirror query for the target ticket.
+    SELECT partner_reference, fast_resolvable, last_public_event_id, recoverable_status_id, status_id, ux_timeout_start, customer_ticket_rating_id, engineer_ticket_rating_id
+    INTO STRICT v_mpartner_ref, v_mfast_resolvable, v_mlast_public_event_id, v_mrecoverable_status_id, v_mstatus_id, v_mux_timeout_start, v_mcust_rating_id, v_meng_rating_id
+    FROM tt.ticket
+    WHERE id = p_mticket_id;
+
+    IF (v_mlast_public_event_id IS NOT NULL) THEN
+        -- S-TICKET-034 (site #56): STRICT, unhandled.
+        SELECT eventdate INTO STRICT v_mlast_public_event_date FROM tt.event WHERE id = v_mlast_public_event_id;
+    END IF;
+
+    -- S-TICKET-035: handle ratings (take most recent by id) -- customer
+    IF (v_cust_rating_id IS NOT NULL) THEN
+        UPDATE tt.ticket SET customer_ticket_rating_id = COALESCE(GREATEST(v_cust_rating_id, v_mcust_rating_id), v_cust_rating_id) WHERE id = p_mticket_id;
+    END IF;
+
+    -- engineer
+    IF (v_eng_rating_id IS NOT NULL) THEN
+        UPDATE tt.ticket SET engineer_ticket_rating_id = COALESCE(GREATEST(v_eng_rating_id, v_meng_rating_id), v_eng_rating_id) WHERE id = p_mticket_id;
+    END IF;
+
+    -- merge all events from ticket to mticket by changing the ticket id in the event
+    -- table, but backup the original ticket id
+    UPDATE tt.event
+    SET org_ticket_id = ticket_id
+    WHERE ticket_id = p_ticket_id AND org_ticket_id IS NULL;
+
+    UPDATE tt.event
+    SET ticket_id = p_mticket_id
+    WHERE ticket_id = p_ticket_id;
+
+    -- add a mergeticket event (event type 100004) to ticket -- we write the p_mticket_id
+    -- in the private details field to give addevent a hint where to redirect when trying
+    -- to add an event to a merged ticket. so do not remove (Oracle's own comment).
+    CALL tt.event_interface_addevent_new(v_event_id,
+        p_mticket_id,
+        100004,
+        NULL,
+        'ticket ' || p_ticket_id || ' merged with ticket no ' || p_mticket_id,
+        p_mticket_id::varchar,
+        p_contact_id,
+        TRUE, statement_timestamp(), FALSE,
+        p_zitadel_contact_id);
+
+    -- Instead of simply connecting this event (in mticket) with the p_ticket, we create
+    -- an exact duplicate of the event and connect p_ticket to this duplicate -> prepare
+    -- migration to MC 7.1 where we don't have shared events anymore.
+    INSERT INTO tt.event
+        (id, company_id, details_private, details_public, eventdate, public_event, type_id, ticket_id, contact_id, host_id, contact_zitadel_id)
+    SELECT nextval('tt.event_sequence'), company_id, details_private, details_public, eventdate, public_event, type_id, p_ticket_id, contact_id, host_id, contact_zitadel_id
+    FROM tt.event
+    WHERE id = v_event_id;
+
+    -- set the merged into ticket field of the source ticket to hold the target ticket
+    UPDATE tt.ticket SET merged_into_ticket_id = p_mticket_id WHERE id = p_ticket_id;
+
+    -- S-TICKET-036: set the p_ticket status to merged (status 110) and set the close and
+    -- resolve date
+    CALL tt.ticket_interface_change_status(p_ticket_id, 110, p_contact_id, NULL, NULL, NULL, NULL, NULL, NULL, p_zitadel_contact_id);
+    UPDATE tt.ticket
+    SET close_date = statement_timestamp(), last_resolved_date = statement_timestamp(), last_public_event_id = NULL
+    WHERE id = p_ticket_id;
+
+    -- delete duplicate ticket notifications
+    DELETE FROM tt.event_notification en1
+    WHERE en1.ticket_id = p_ticket_id
+      AND EXISTS (SELECT * FROM tt.event_notification en2
+                  WHERE en2.ticket_id = p_mticket_id
+                    AND en2.event_notification_type_id = en1.event_notification_type_id
+                    AND en2.login_id = en1.login_id
+                    AND (
+                      ((en2.event_type_id IS NULL AND en1.event_type_id IS NULL) OR (en2.event_type_id = en1.event_type_id))
+                          OR
+                      ((en2.event_type_group_id IS NULL AND en1.event_type_group_id IS NULL) OR (en2.event_type_group_id = en1.event_type_group_id))
+                      ));
+
+    -- move ticket notifications from p_ticket to p_mticket
+    UPDATE tt.event_notification
+    SET ticket_id = p_mticket_id
+    WHERE ticket_id = p_ticket_id;
+
+    -- move any existing change requests from p_ticket to p_mticket
+    UPDATE tt.change_request
+    SET ticket_id = p_mticket_id
+    WHERE ticket_id = p_ticket_id;
+
+    -- if mticket has no partner reference, take over the one from ticket
+    IF (v_mpartner_ref IS NULL AND v_partner_ref IS NOT NULL) THEN
+        v_mpartner_ref := v_partner_ref;
+    END IF;
+
+    -- merge the fast-resolvable state
+    IF (v_fast_resolvable = 0 AND v_mfast_resolvable = 1) THEN
+        v_mfast_resolvable := 0;
+    END IF;
+
+    -- if both tickets have a "last public event", choose the newest -- if the last
+    -- public event changes, the recoverable status is cleared.
+    IF (v_last_public_event_id IS NOT NULL AND v_mlast_public_event_id IS NOT NULL AND v_last_public_event_date > v_mlast_public_event_date) THEN
+        v_mlast_public_event_id := v_last_public_event_id;
+        v_mrecoverable_status_id := NULL;
+        -- if only the source ticket has one, merge it into the target
+    ELSIF (v_last_public_event_id IS NOT NULL AND v_mlast_public_event_id IS NULL) THEN
+        v_mlast_public_event_id := v_last_public_event_id;
+        v_mrecoverable_status_id := NULL;
+    END IF;
+
+    -- update the ux_timeout start if the one from the source ticket is newer -- the
+    -- timeout itself will be updated when the status of the ticket is changed to hot
+    IF (v_ux_timeout_start > v_mux_timeout_start) THEN
+        v_mux_timeout_start := v_ux_timeout_start;
+    END IF;
+
+    -- To make life easier: if the target ticket was resolved (101), make the status
+    -- recoverable
+    IF (v_mstatus_id = 101) THEN
+        v_mrecoverable_status_id := 101;
+    END IF;
+
+    -- move suppressed events to new ticket
+    UPDATE guma2.suppressed_signature
+    SET ticket_id = p_mticket_id
+    WHERE ticket_id = p_ticket_id;
+
+    -- update all requirement attributes of the target ticket
+    UPDATE tt.ticket
+    SET partner_reference = v_mpartner_ref, fast_resolvable = v_mfast_resolvable, last_public_event_id = v_mlast_public_event_id, recoverable_status_id = v_mrecoverable_status_id, ux_timeout_start = v_mux_timeout_start
+    WHERE id = p_mticket_id;
+
+    -- set the status of the merged to ticket to hot (status 3)
+    CALL tt.ticket_interface_change_status(p_mticket_id, 3, p_contact_id, NULL, NULL, NULL, NULL, NULL, 'ticket ' || p_ticket_id || ' merged into this ticket', p_zitadel_contact_id);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- replace_id_placeholders (S-TICKET-037, S-TICKET-046). The package's OTHER FUNCTION.
+-- Pure string substitution, no SELECT of any kind, no call to any other routine, no
+-- EXCEPTION block -- closes the FUNCTION/PROCEDURE-COMMIT question for this routine too:
+-- it cannot transitively reach a COMMIT because it calls nothing at all.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION tt.ticket_interface_replace_id_placeholders(
+    p_text varchar, p_ticket_id numeric, p_event_id numeric)
+RETURNS varchar
+LANGUAGE plpgsql
+IMMUTABLE
+AS $fn$
+DECLARE
+    v_text varchar;
+BEGIN
+    v_text := substr(replace(p_text, '##ticket_id##', p_ticket_id::varchar), 1, 30000);
+    v_text := substr(replace(v_text, '##event_id##', p_event_id::varchar), 1, 30000);
+    RETURN v_text;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- trigger_escalation (S-TICKET-038). No SELECT INTO at this routine's own level. Has its
+-- own EXCEPTION WHEN OTHERS that logs and swallows, never propagates.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_trigger_escalation(
+    p_ticket_id numeric, p_contact_id numeric, p_triggering_event_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'trigger_escalation(): ';
+    v_event_id numeric;
+BEGIN
+    -- event type id is 100007 = escalation triggering event
+    CALL tt.event_interface_add_history_event(v_event_id,
+        p_ticket_id,
+        100007,
+        NULL,     -- no host_id specified
+        NULL,     -- no company_id specified
+        'Explicitly trigger escalation',
+        'Escalation triggered by event '||p_triggering_event_id,
+        TRUE,     -- it is a public event
+        statement_timestamp(),
+        p_contact_id,
+        p_zitadel_contact_id);
+
+    -- execute the event type actions
+    CALL tt.event_interface_exec_event_type_actions(v_event_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix||'unexpected error: '||SQLERRM);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- rate_ticket (S-TICKET-039). No EXCEPTION block of its own -- any INSERT/UPDATE failure
+-- propagates fully unhandled.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_rate_ticket(
+    OUT p_rating_id numeric,
+    p_ticket_id numeric,
+    p_rating_event_id numeric,
+    p_contact_id numeric,
+    p_by_engineer numeric,
+    p_rating_value numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+BEGIN
+    -- S-TICKET-039 (site #58): sequence pull, no STRICT concern.
+    SELECT nextval('tt.ticketrating_seq') INTO STRICT p_rating_id;
+
+    INSERT INTO tt.ticket_rating(id, rating, event_id)
+    VALUES (p_rating_id, p_rating_value, p_rating_event_id);
+
+    -- rating by engineer
+    IF (p_by_engineer > 0) THEN
+        UPDATE tt.ticket
+        SET engineer_ticket_rating_id = p_rating_id
+        WHERE id = p_ticket_id;
+        -- rating by customer
+    ELSE
+        UPDATE tt.ticket
+        SET customer_ticket_rating_id = p_rating_id
+        WHERE id = p_ticket_id;
+        -- if the rating by customer was bad (< 3), make the ticket hot (status 3)
+        IF (p_rating_value < 3) THEN
+            CALL tt.ticket_interface_change_status(p_ticket_id, 3, p_contact_id, NULL, NULL, NULL, NULL, NULL, NULL, p_zitadel_contact_id);
+        END IF;
+    END IF;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- add_docs_page (S-TICKET-040). Has its own EXCEPTION WHEN OTHERS covering the entire
+-- body -- logs and swallows, never propagates.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_add_docs_page(
+    OUT p_ticket_docs_page_id numeric,
+    p_ticket_id numeric,
+    p_page_id numeric,
+    p_page_version numeric,
+    p_page_title varchar,
+    p_hot_issue numeric,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_details_private varchar;
+    v_event_id numeric;
+BEGIN
+    -- S-TICKET-040 (site #59): sequence pull, no STRICT concern; whole-routine WHEN
+    -- OTHERS below covers it regardless.
+    SELECT nextval('tt.ticketdocspage_seq') INTO STRICT p_ticket_docs_page_id;
+
+    INSERT INTO tt.ticket_docs_page(id, ticket_id, page_id, page_version, hot_issue)
+    VALUES (p_ticket_docs_page_id, p_ticket_id, p_page_id, p_page_version, p_hot_issue);
+
+    -- NOTE: if you change the private details, the text might not be replaced by a link
+    -- anymore (see the DOCS_URL_PATTERN in HTML.java -- Oracle's own comment).
+    v_details_private := 'Docs Page "' || p_page_title || '" (ID ' || p_page_id || ', v' || p_page_version
+        || ') has been added to the ticket.';
+    IF (p_hot_issue > 0) THEN
+        v_details_private := 'Hot issue ' || v_details_private;
+    END IF;
+    CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100009, NULL, '', v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err('tt.ticketInterface.add_docs_page: Unexpected error: ' || SQLERRM);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- remove_docs_page (S-TICKET-041). 2-arm handler: NO_DATA_FOUND silently does nothing
+-- further; WHEN OTHERS logs.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_remove_docs_page(
+    p_ticket_docs_page_id numeric,
+    p_page_title varchar,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_details_private varchar;
+    v_page_id numeric;
+    v_page_version numeric;
+    v_ticket_id numeric;
+    v_event_id numeric;
+BEGIN
+    -- S-TICKET-041 (site #60): STRICT + 2-arm handler.
+    SELECT page_id, page_version, ticket_id
+    INTO STRICT v_page_id, v_page_version, v_ticket_id
+    FROM tt.ticket_docs_page
+    WHERE id = p_ticket_docs_page_id;
+
+    DELETE FROM tt.ticket_docs_page WHERE id = p_ticket_docs_page_id;
+    v_details_private := 'Docs Page "' || p_page_title || '" (ID ' || v_page_id || ', v' || v_page_version
+        || ') has been removed from the ticket.';
+    CALL tt.event_interface_addevent_new(v_event_id, v_ticket_id, 100010, NULL, '', v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        NULL;
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err('tt.ticketInterface.remove_docs_page: Unexpected error: ' || SQLERRM);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- add_related_ticket (S-TICKET-042). v_counter != 2 (bad id(s) OR equal ids) logs and
+-- RETURNs early -- a normal early exit, not an exception path. Has its own EXCEPTION
+-- WHEN OTHERS.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_add_related_ticket(
+    p_ticket_id numeric, p_related_ticket_id numeric, p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'add_related_ticket(): ';
+    v_details_private varchar;
+    v_counter numeric;
+    v_event_id numeric;
+BEGIN
+    -- both tickets have to exist. S-TICKET-042 (site #62): COUNT aggregate, no STRICT
+    -- concern.
+    SELECT COUNT(*) INTO v_counter FROM tt.ticket t
+    WHERE t.id IN (p_ticket_id, p_related_ticket_id);
+
+    IF (v_counter != 2) THEN
+        CALL osag.osag_plog_err(c_prefix || 'One of the tickets involved does not exist or they are equal. Aborted!');
+        RETURN;
+    END IF;
+
+    INSERT INTO tt.ticket2related_ticket (ticket_id, related_ticket_id)
+    VALUES (p_ticket_id, p_related_ticket_id);
+
+    v_details_private := 'Related ticket ' || p_related_ticket_id || ' has been added to the ticket.';
+    CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100016, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
+        RETURN;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- remove_related_ticket (S-TICKET-043). Mirror of add_related_ticket -- zero matches is
+-- a normal silent no-op.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_remove_related_ticket(
+    p_ticket_id numeric, p_related_ticket_id numeric, p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'remove_related_ticket(): ';
+    v_counter numeric;
+    v_details_private varchar;
+    v_event_id numeric;
+BEGIN
+    -- S-TICKET-043 (site #63): COUNT aggregate, no STRICT concern.
+    SELECT COUNT(*) INTO v_counter FROM tt.ticket2related_ticket rt
+    WHERE rt.ticket_id = p_ticket_id AND rt.related_ticket_id = p_related_ticket_id;
+
+    IF (v_counter > 0) THEN
+        DELETE FROM tt.ticket2related_ticket
+        WHERE ticket_id = p_ticket_id AND related_ticket_id = p_related_ticket_id;
+
+        v_details_private := 'Removed ticket ' || p_related_ticket_id || ' from the list of related tickets.';
+        CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100017, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
+        RETURN;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- add_related_file (S-TICKET-044). The t.company_id = r.company_id join predicate is a
+-- DELIBERATE same-company authorization guard (Oracle's own inline comment) -- a
+-- cross-company mismatch is EXPECTED to raise NO_DATA_FOUND here, not incidental.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_add_related_file(
+    p_ticket_id numeric, p_related_file_id numeric, p_contact_id numeric, p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'add_related_file(): ';
+    v_file_display_name varchar;
+    v_details_private varchar;
+    v_event_id numeric;
+BEGIN
+    -- S-TICKET-044 (site #64): STRICT + 2-arm handler.
+    SELECT f.display_name INTO STRICT v_file_display_name FROM mc.mc_file f, mc.mc_file_release r, tt.ticket t
+    WHERE t.id = p_ticket_id AND f.id = p_related_file_id AND r.mc_file_id = f.id
+      AND t.company_id = r.company_id;
+
+    INSERT INTO tt.ticket2mc_file (ticket_id, mc_file_id)
+    VALUES (p_ticket_id, p_related_file_id);
+
+    v_details_private := 'Related file "' || v_file_display_name || '" (' || p_related_file_id || ') has been added to the ticket.';
+    CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100018, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        CALL osag.osag_plog_err(c_prefix || 'MC File or ticket does not exits or they belong to different companies.');
+        RETURN;
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
+        RETURN;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- remove_related_file (S-TICKET-045). No same-company guard here (unlike
+-- add_related_file) -- a deliberate asymmetry between the two mirror routines, not
+-- harmonized. No NO_DATA_FOUND arm -- a bad p_related_file_id falls to WHEN OTHERS.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_remove_related_file(
+    p_ticket_id numeric, p_related_file_id numeric, p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'remove_related_file(): ';
+    v_counter numeric;
+    v_details_private varchar;
+    v_event_id numeric;
+    v_file_display_name varchar;
+BEGIN
+    -- S-TICKET-045 (site #65): COUNT aggregate, no STRICT concern.
+    SELECT COUNT(*) INTO v_counter FROM tt.ticket2mc_file t2f
+    WHERE t2f.ticket_id = p_ticket_id AND t2f.mc_file_id = p_related_file_id;
+
+    IF (v_counter > 0) THEN
+        -- S-TICKET-045 (site #66): STRICT, no local handler.
+        SELECT mcf.display_name INTO STRICT v_file_display_name FROM mc.mc_file mcf
+        WHERE mcf.id = p_related_file_id;
+
+        DELETE FROM tt.ticket2mc_file
+        WHERE ticket_id = p_ticket_id AND mc_file_id = p_related_file_id;
+
+        v_details_private := 'Removed file "' || v_file_display_name || '" (' || p_related_file_id || ') from the list of related files.';
+        CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100019, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
+        RETURN;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- classify_request (S-TICKET-047). A classification value outside {1,2,3} (including
+-- NULL) silently defaults to 2 ("standard") -- no error raised, contradicting the doc
+-- comment's implication that only 1/2/3 are valid. Reproduced faithfully.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_classify_request(
+    p_ticket_id numeric, p_classification numeric, p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    c_prefix CONSTANT text := 'classify_request(): ';
+    v_counter numeric;
+    v_details_private varchar;
+    v_classification numeric;
+    v_classification_text varchar;
+    v_event_id numeric;
+BEGIN
+    v_classification := p_classification;
+
+    IF (p_classification = 1) THEN
+        v_classification_text := 'very precise';
+    ELSIF (p_classification = 2) THEN
+        v_classification_text := 'standard';
+    ELSIF (p_classification = 3) THEN
+        v_classification_text := 'imprecise';
+    ELSE
+        -- default to "standard" in case an invalid option (or NULL) is given
+        v_classification := 2;
+        v_classification_text := 'standard';
+    END IF;
+
+    -- S-TICKET-047 (site #67): COUNT aggregate, no STRICT concern.
+    SELECT COUNT(*) INTO v_counter FROM tt.ticket_request_classification
+    WHERE ticket_id = p_ticket_id;
+
+    IF (v_counter > 0) THEN
+        UPDATE tt.ticket_request_classification SET classification = v_classification
+        WHERE ticket_id = p_ticket_id;
+    ELSE
+        INSERT INTO tt.ticket_request_classification (id, ticket_id, classification)
+        VALUES (nextval('tt.ticketreqclassification_seq'), p_ticket_id, v_classification);
+    END IF;
+
+    v_details_private := 'Classified initial request: ' || v_classification_text;
+    CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100021, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
+        RETURN;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- clear_todo_list (S-TICKET-048). Deletes ALL todo_item rows unconditionally; the
+-- SELECT INTO site is reached only if p_add_history_event = 1 (the default). No
+-- EXCEPTION block of its own.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_clear_todo_list(
+    p_ticket_id numeric, p_contact_id numeric, p_add_history_event numeric DEFAULT 1,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_event_id numeric;
+    v_event_type_id numeric;
+    v_host_id numeric;
+    v_company_id numeric;
+    v_private_details varchar;
+BEGIN
+    DELETE FROM tt.todo_item WHERE ticket_id = p_ticket_id;
+
+    IF (p_add_history_event = 1) THEN
+        -- Add a "todo list cleared" history event (ID 100013)
+        v_event_type_id := 100013;
+
+        -- S-TICKET-048 (site #68): STRICT, unhandled -- clear_todo_list has no
+        -- EXCEPTION block of its own. If p_add_history_event = 0, this SELECT INTO
+        -- never executes at all -- a bad p_ticket_id in that mode still succeeds in
+        -- deleting zero todo items and resetting the step counters.
+        SELECT t.host_id, t.company_id
+        INTO STRICT v_host_id, v_company_id
+        FROM tt.ticket t
+        WHERE id = p_ticket_id;
+
+        v_private_details := 'Todo list cleared';
+        CALL tt.event_interface_add_history_event(v_event_id,
+            p_ticket_id,
+            v_event_type_id,
+            v_host_id,
+            v_company_id,
+            NULL,
+            v_private_details,
+            FALSE,
+            statement_timestamp(),
+            p_contact_id,
+            p_zitadel_contact_id);
+    END IF;
+
+    -- set step count of ticket to 0
+    UPDATE tt.ticket
+    SET steps_total = 0, steps_completed = 0
+    WHERE id = p_ticket_id;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- add_todo_item (S-TICKET-049). Per its own doc comment, deliberately does NOT write a
+-- history event itself -- callers batch multiple calls under one shared history event.
+-- No EXCEPTION block.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_add_todo_item(
+    OUT p_todo_item_id numeric,
+    p_ticket_id numeric,
+    p_seq_no numeric,
+    p_details varchar,
+    p_todo_item_status_id numeric,
+    p_contact_id numeric,
+    p_todo_item_is_public numeric DEFAULT 0,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+BEGIN
+    -- S-TICKET-049 (site #69): sequence pull, no STRICT concern.
+    SELECT nextval('tt.todoitem_seq') INTO STRICT p_todo_item_id;
+
+    INSERT INTO tt.todo_item(id, ticket_id, seq_no, details, todo_item_status_id, is_public)
+    VALUES (p_todo_item_id, p_ticket_id, p_seq_no, p_details, p_todo_item_status_id, p_todo_item_is_public);
+
+    -- increase step count of ticket for public todo items
+    IF (p_todo_item_is_public = 1) THEN
+        UPDATE tt.ticket
+        SET steps_total = steps_total + 1
+        WHERE id = p_ticket_id;
+
+        -- if a public todo item is done or skipped increase steps_completed
+        IF (p_todo_item_status_id IN (2, 4)) THEN
+            UPDATE tt.ticket
+            SET steps_completed = steps_completed + 1
+            WHERE id = p_ticket_id;
+        END IF;
+
+        UPDATE tt.ticket
+        SET todo_relevant_events_count = 0
+        WHERE id = p_ticket_id;
+    END IF;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- update_todo_item_status (S-TICKET-050). No EXCEPTION block anywhere -- all three sites
+-- propagate fully unhandled.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_update_todo_item_status(
+    p_ticket_id numeric,
+    p_seq_no numeric,
+    p_todo_item_status_id numeric,
+    p_contact_id numeric,
+    p_zitadel_contact_id numeric DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_event_id numeric;
+    v_event_type_id numeric;
+    v_host_id numeric;
+    v_company_id numeric;
+    v_private_details varchar;
+    v_public_details varchar;
+    v_status_name varchar;
+    v_old_status_name varchar;
+    v_old_status_id numeric;
+    v_details varchar;
+    v_is_public numeric;
+    v_is_public_bool boolean;
+BEGIN
+    -- S-TICKET-050 (site #70): STRICT, unhandled. The LEFT JOIN means zero rows here
+    -- specifically means "no todo item row at all for this (ticket_id, seq_no) pair".
+    SELECT tis.name, ti.details, ti.is_public, tis.id
+    INTO STRICT v_old_status_name, v_details, v_is_public, v_old_status_id
+    FROM tt.todo_item ti LEFT JOIN tt.todo_item_status tis ON (ti.todo_item_status_id = tis.id)
+    WHERE ti.ticket_id = p_ticket_id AND ti.seq_no = p_seq_no;
+
+    UPDATE tt.todo_item
+    SET todo_item_status_id = p_todo_item_status_id
+    WHERE ticket_id = p_ticket_id AND seq_no = p_seq_no;
+
+    -- Add a "todo item updated" history event (ID 100015)
+    v_event_type_id := 100015;
+
+    -- S-TICKET-050 (site #71): STRICT, unhandled.
+    SELECT t.host_id, t.company_id
+    INTO STRICT v_host_id, v_company_id
+    FROM tt.ticket t
+    WHERE id = p_ticket_id;
+
+    -- S-TICKET-050 (site #72): STRICT, unhandled.
+    SELECT tis.name
+    INTO STRICT v_status_name
+    FROM tt.todo_item_status tis
+    WHERE tis.id = p_todo_item_status_id;
+
+    IF (v_is_public = 1) THEN
+        v_public_details := 'New status of todo item (was: ' || v_old_status_name || '):' || chr(13)
+            || v_status_name || ' ' || v_details;
+        v_private_details := NULL;
+        v_is_public_bool := TRUE;
+
+        -- adjust steps_completed
+        IF (v_old_status_id IN (1, 3) AND p_todo_item_status_id IN (2, 4)) THEN
+            -- if a public todo item changed from (todo or active) to (done or skipped)
+            -- increase steps_completed
+            UPDATE tt.ticket
+            SET steps_completed = steps_completed + 1
+            WHERE id = p_ticket_id;
+        ELSIF (v_old_status_id IN (2, 4) AND p_todo_item_status_id IN (1, 3)) THEN
+            -- if a public todo item changed from (done or skipped) to (todo or active)
+            -- decrease steps_completed
+            UPDATE tt.ticket
+            SET steps_completed = steps_completed - 1
+            WHERE id = p_ticket_id;
+        END IF;
+
+        UPDATE tt.ticket
+        SET todo_relevant_events_count = 0
+        WHERE id = p_ticket_id;
+    ELSE
+        v_public_details := NULL;
+        v_private_details := 'New status of todo item ' || (p_seq_no + 1) || ' (was: ' || v_old_status_name || '):' || chr(13)
+            || v_status_name || ' ' || v_details;
+        v_is_public_bool := FALSE;
+    END IF;
+
+    CALL tt.event_interface_add_history_event(v_event_id,
+        p_ticket_id,
+        v_event_type_id,
+        v_host_id,
+        v_company_id,
+        v_public_details,
+        v_private_details,
+        v_is_public_bool,
+        statement_timestamp(),
+        p_contact_id,
+        p_zitadel_contact_id);
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- updateTicketFlow (S-TICKET-051, S-TICKET-056). Called by every routine that changes
+-- status/type/worker (see S-TICKET-056). No EXCEPTION block of its own -- site #77
+-- propagates fully unhandled, unlike site #76's local NO_DATA_FOUND handler.
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_updateticketflow(
+    p_ticket_id numeric, p_prev_status_id numeric DEFAULT NULL, p_prev_status_change_date timestamp DEFAULT NULL)
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+    v_status_id numeric;
+    v_mcc_flag numeric;
+    v_ticket_type_id numeric;
+    v_flow_id numeric;
+    v_last_status_change_date timestamp;
+    v_flow_in_date timestamp;
+    v_status_time numeric;
+BEGIN
+    -- check if we have a flow entry in the queue for the ticket
+    BEGIN
+        -- S-TICKET-051 (site #76): STRICT + local NO_DATA_FOUND handler -- zero rows (no
+        -- open flow entry) is the EXPECTED common case for a ticket not currently in the
+        -- MCC queue, not an error.
+        SELECT tf.id, tf.flow_in_date INTO STRICT v_flow_id, v_flow_in_date FROM tt.ticket_flow tf WHERE ticket_id = p_ticket_id AND flow_out_date IS NULL;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_flow_id := NULL;
+    END;
+
+    -- check if the ticket should be in the MCC queue -- get required data.
+    -- S-TICKET-051 (site #77): STRICT, unhandled -- updateTicketFlow has no
+    -- procedure-level EXCEPTION block.
+    SELECT t.handled_by_mcc, t.type_id, t.status_id, t.last_status_change_date
+    INTO STRICT v_mcc_flag, v_ticket_type_id, v_status_id, v_last_status_change_date
+    FROM tt.ticket t WHERE t.id = p_ticket_id;
+
+    -- if the ticket is MCC responsibility and the status is in progress, the ticket
+    -- should be in the queue
+    IF (v_flow_id IS NULL
+        AND (v_status_id IN (1, 2, 3, 4))
+        AND (v_ticket_type_id NOT IN (4, 5))
+        AND (v_mcc_flag = 1)) THEN
+
+        -- put ticket in
+        INSERT INTO tt.ticket_flow (id, ticket_id, flow_in_date, open_time) VALUES (nextval('tt.ticketflow_seq'), p_ticket_id, statement_timestamp(), 0);
+
+    ELSIF (v_flow_id IS NOT NULL
+        AND
+           (v_status_id NOT IN (1, 2, 3, 4)
+               OR v_ticket_type_id IN (4, 5)
+               OR v_mcc_flag = 0)
+        ) THEN
+
+        -- take ticket out
+        UPDATE tt.ticket_flow SET flow_out_date = statement_timestamp() WHERE id = v_flow_id;
+
+        -- update flow relevant open time if the status is still open
+        IF v_status_id = 2 THEN
+            v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, v_last_status_change_date)));
+            UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
+            -- update flow relevant open time if status change was reason for queue exit
+        ELSIF (p_prev_status_id = 2) THEN
+            v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date)));
+            UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
+        END IF;
+
+        -- only open time change iff ticket was open before, but is no longer
+    ELSIF (v_flow_id IS NOT NULL AND p_prev_status_id = 2 AND v_status_id != 2) THEN
+        v_status_time := extract(epoch FROM (statement_timestamp()::timestamp - GREATEST(v_flow_in_date, p_prev_status_change_date)));
+        UPDATE tt.ticket_flow SET open_time = open_time + v_status_time WHERE id = v_flow_id;
+    END IF;
+END;
+$fn$;
+
+-- ------------------------------------------------------------------------------------
+-- deleteTicket (S-TICKET-052). The precise cascade enumeration, in the exact statement
+-- order Oracle executes them (31 statements total). No SELECT INTO anywhere. No
+-- EXCEPTION block at all -- a constraint violation partway through propagates fully
+-- unhandled, leaving whatever statements already ran committed-pending in the CALLER's
+-- transaction (no COMMIT anywhere in this package).
+--
+-- fw.change is referenced by the very last-but-one DELETE below -- see the schema-fix
+-- note in this file's header (migration/test/schema-fixes/24_p12_fixes.sql adds the
+-- table, missing from ddl/migrated/ entirely despite existing in the Oracle export).
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE tt.ticket_interface_deleteticket(p_ticket_id numeric)
+LANGUAGE plpgsql
+AS $fn$
+BEGIN
+    UPDATE prx.prx_policy_item SET ticket_id = NULL WHERE ticket_id = p_ticket_id;
+    UPDATE tt.ticket SET merged_into_ticket_id = NULL WHERE merged_into_ticket_id = p_ticket_id;
+    UPDATE tt.ticket SET last_public_event_id = NULL WHERE ticket.id = p_ticket_id;
+    UPDATE tt.ticket SET customer_ticket_rating_id = NULL WHERE ticket.id IN (SELECT id FROM tt.ticket_rating WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id));
+    UPDATE tt.ticket SET engineer_ticket_rating_id = NULL WHERE ticket.id IN (SELECT id FROM tt.ticket_rating WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id));
+    UPDATE tt.ticket SET customer_ticket_rating_id = NULL WHERE customer_ticket_rating_id IN (SELECT id FROM tt.ticket_rating WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id));
+    UPDATE tt.ticket SET engineer_ticket_rating_id = NULL WHERE engineer_ticket_rating_id IN (SELECT id FROM tt.ticket_rating WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id));
+    UPDATE mcaudit.record SET ticket_id = NULL WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket_docs_page WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket_flow WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket2related_ticket WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket2related_ticket WHERE related_ticket_id = p_ticket_id;
+    DELETE FROM tt.attachment WHERE ticket_id = p_ticket_id;
+    UPDATE mc.isp_link_history SET event_id = NULL WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id);
+    DELETE FROM tt.ticket_time_statistic WHERE ticket_id = p_ticket_id;
+    UPDATE mss.installation_project_item SET ticket_id = NULL WHERE ticket_id = p_ticket_id;
+    DELETE FROM guma2.suppressed_signature WHERE ticket_id = p_ticket_id;
+    UPDATE mc.isp_link_maintenance_history SET ticket_id = NULL WHERE ticket_id = p_ticket_id;
+    UPDATE mc.host_maintenance_history SET ticket_id = NULL WHERE ticket_id = p_ticket_id;
+    DELETE FROM nids.ticket2rule WHERE ticket_id = p_ticket_id;
+    DELETE FROM fw.rule2ticket WHERE ticket_id = p_ticket_id;
+    DELETE FROM fw.source_nat_rule2ticket WHERE ticket_id = p_ticket_id;
+    DELETE FROM fw.destination_nat_rule2ticket WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket2mc_file WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket_rating WHERE event_id IN (SELECT id FROM tt.event WHERE ticket_id = p_ticket_id);
+    DELETE FROM tt.ticket_rating WHERE id IN (SELECT t.customer_ticket_rating_id FROM tt.ticket t WHERE t.id = p_ticket_id);
+    DELETE FROM tt.ticket_rating WHERE id IN (SELECT t.engineer_ticket_rating_id FROM tt.ticket t WHERE t.id = p_ticket_id);
+    DELETE FROM tt.event WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.maintenance_window WHERE service_window_id IN (SELECT sw.id FROM tt.service_window sw WHERE ticket_id = p_ticket_id);
+    DELETE FROM tt.cust_maintenance_window WHERE service_window_id IN (SELECT sw.id FROM tt.service_window sw WHERE ticket_id = p_ticket_id);
+    DELETE FROM tt.host2service_window WHERE service_window_id IN (SELECT sw.id FROM tt.service_window sw WHERE ticket_id = p_ticket_id);
+    DELETE FROM mss.deleted_host2service_window WHERE service_window_id IN (SELECT sw.id FROM tt.service_window sw WHERE ticket_id = p_ticket_id);
+    DELETE FROM tt.service_window WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.event_notification WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.todo_item WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket_request_classification WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.change_request WHERE ticket_id = p_ticket_id;
+    DELETE FROM fw.change WHERE ticket_id = p_ticket_id;
+    DELETE FROM tt.ticket WHERE id = p_ticket_id;
 END;
 $fn$;
