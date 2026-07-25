@@ -268,12 +268,18 @@ BEGIN
         coalesce(to_char(p_status_valid_until_date, 'DD.MM.YYYY HH24:MI'), '') || ' ' || v_tz);
     v_message_template := replace(v_message_template, '$#COMPANY_ID#$', coalesce(p_company_id::text, ''));
 
-    -- Oracle's SUBSTR(x, 1, INSTR(x, CHR(10)) - 1) returns NULL when x is NULL and '' when
-    -- CHR(10) is absent (INSTR -> 0, so SUBSTR(x,1,-1) -> ''). substr(x, 1, strpos(x,
-    -- chr(10)) - 1) has the identical shape in PostgreSQL (strpos -> 0, substr with a
-    -- negative length -> ''), so this ports 1:1; coalesce guards the NULL case for ||.
+    -- Oracle (line 1202): SUBSTR(p_details_public, 1, INSTR(p_details_public, CHR(10)) - 1).
+    -- When CHR(10) is absent INSTR returns 0, so the length argument is -1 -- and Oracle's
+    -- SUBSTR returns NULL for any length <= 0. PostgreSQL's substr does NOT: a negative
+    -- length RAISES `22011 negative substring length not allowed`. (An earlier revision of
+    -- this comment asserted the two behaved identically; that was wrong, and the resulting
+    -- exception was invisible because event_notify's outer WHEN OTHERS swallows it --
+    -- silently disabling SMS notification for every event whose details carry no newline.)
+    -- greatest(..., 0) clamps the length so the absent-newline case yields '' rather than
+    -- raising, which after the coalesce below is exactly Oracle's observable result.
     v_message_template := replace(v_message_template, '$#PUBLIC_DETAILS_FIRST_LINE#$',
-        coalesce(substr(p_details_public, 1, strpos(coalesce(p_details_public, ''), chr(10)) - 1), ''));
+        coalesce(substr(p_details_public, 1,
+                        greatest(strpos(coalesce(p_details_public, ''), chr(10)) - 1, 0)), ''));
 
     IF (p_event_type_id = 50008) THEN
         v_message_template := substr(replace(v_message_template, '$#QUESTION#$', coalesce(p_details_public, '')), 1, 29000);
