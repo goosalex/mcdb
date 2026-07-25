@@ -65,6 +65,25 @@ db_exists() {
 if ! db_exists; then
   echo "run-tests.sh: database '${DB}' does not exist, bootstrapping..."
   bash "${SCRIPT_DIR}/bootstrap.sh" --db "${DB}"
+else
+  # STALENESS GUARD. The target DB is reused across runs, but it is a snapshot of
+  # mcdb_tmpl taken whenever it was first created. Every later schema-fix goes into
+  # mcdb_tmpl via build-template.sh and NEVER reaches an already-existing target DB.
+  # A stale target silently reports FEWER passes than the code actually earns -- during
+  # plan 02-12/02-13 verification an mcdb_test from ten days earlier under-reported
+  # tt.ticket_interface by 6 assertions and made two correct agent results look wrong.
+  # Compare on-disk creation time and re-bootstrap when the template is newer.
+  DB_MTIME=$(sudo -u postgres psql -tAc \
+    "SELECT extract(epoch FROM (pg_stat_file('base/'||oid||'/PG_VERSION')).modification)::bigint
+     FROM pg_database WHERE datname = '${DB}'" 2>/dev/null || echo "")
+  TMPL_MTIME=$(sudo -u postgres psql -tAc \
+    "SELECT extract(epoch FROM (pg_stat_file('base/'||oid||'/PG_VERSION')).modification)::bigint
+     FROM pg_database WHERE datname = 'mcdb_tmpl'" 2>/dev/null || echo "")
+  if [[ -n "$DB_MTIME" && -n "$TMPL_MTIME" && "$TMPL_MTIME" -gt "$DB_MTIME" ]]; then
+    echo "run-tests.sh: '${DB}' is OLDER than mcdb_tmpl (stale schema-fixes) -- re-bootstrapping..."
+    sudo -u postgres psql -X -q -c "DROP DATABASE IF EXISTS ${DB};"
+    bash "${SCRIPT_DIR}/bootstrap.sh" --db "${DB}"
+  fi
 fi
 
 # --- 2. Optionally install translated objects -------------------------------
