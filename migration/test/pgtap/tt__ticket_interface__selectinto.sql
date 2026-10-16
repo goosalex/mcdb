@@ -277,8 +277,10 @@ SELECT lives_ok(
 -------------------------------------------------------------------------------
 -- Site #66 (S-TICKET-045): remove_related_file's conditional mc.mc_file
 -- lookup, reached when an orphaned ticket2mc_file relation references a
--- mc_file row that no longer exists -- the whole-routine WHEN OTHERS (no
--- dedicated NO_DATA_FOUND arm, unlike add_related_file) swallows it.
+-- mc_file row that no longer exists. Oracle's whole-routine WHEN OTHERS
+-- swallowed it; since the Q11 (d) correction (S-TICKET-060) the mirrored
+-- NO_DATA_FOUND arm swallows it -- either way nothing propagates
+-- (TEST-AMENDMENTS.md A-015: label only, assertion unchanged).
 -------------------------------------------------------------------------------
 
 INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907026, 1, 2, 907001);
@@ -286,7 +288,7 @@ INSERT INTO tt.ticket2mc_file (ticket_id, mc_file_id) VALUES (907026, 907099987)
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_remove_related_file(907026, 907099987, 907002)$$,
-    'S-TICKET-045: remove_related_file succeeds (swallowed by its whole-routine WHEN OTHERS, no dedicated NO_DATA_FOUND arm) at site #66 when the ticket2mc_file relation exists but the mc_file row it references is orphaned'
+    'S-TICKET-045: remove_related_file succeeds (swallowed -- Oracle via WHEN OTHERS, the corrected translation via its mirrored NO_DATA_FOUND arm; nothing propagates) at site #66 when the ticket2mc_file relation exists but the mc_file row it references is orphaned'
 );
 
 -------------------------------------------------------------------------------

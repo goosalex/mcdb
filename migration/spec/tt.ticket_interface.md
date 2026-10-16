@@ -187,7 +187,10 @@ scope is reduced by this front-matter bookkeeping detail.
   `change_status`** — `p_label_id` is accepted as a parameter but never read anywhere in the
   20-line body. This is a genuine doc/body disagreement (per the plan's own instruction that
   the body, not the doc comment, is authoritative) — recorded in Assumptions, not silently
-  "fixed" by inventing a `change_label` call that Oracle does not make. No `SELECT INTO`, no
+  "fixed" by inventing a `change_label` call that Oracle does not make. **Re-examined on
+  branch `phoenix/migrate_tt_only` (Q11 (c)) and deliberately LEFT AS THE BODY DOES** —
+  the evidence (S-TICKET-021, amended) shows the omitted call would be a no-op: the sole
+  caller passes the ticket's own current label. No `SELECT INTO`, no
   `EXCEPTION` block of its own (S-TICKET-017).
 
 ### change_partner_reference (PUBLIC)
@@ -446,12 +449,15 @@ scope is reduced by this front-matter bookkeeping detail.
 - **PostgreSQL name:** `tt.ticket_interface_remove_related_file` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_ticket_interface.sql:537`
 - **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:2035-2069`
-- Counts the existing relation row; only if `> 0`, resolves the file's display name (a
-  SEPARATE, un-guarded lookup — no same-company check here unlike `add_related_file`),
-  deletes the relation, and records a history event. **`EXCEPTION WHEN OTHERS THEN
-  plog.err(...); RETURN`** (S-TICKET-049) — no `NO_DATA_FOUND` arm; a bad
-  `p_related_file_id` inside the `IF v_counter > 0` branch would hit `WHEN OTHERS`
-  instead.
+- Counts the existing relation row; only if `> 0`, resolves the file's display name (in
+  Oracle a SEPARATE, un-guarded lookup — no same-company check, unlike
+  `add_related_file`), deletes the relation, and records a history event. Oracle's
+  handler is **`EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN`** only — no
+  `NO_DATA_FOUND` arm. **CORRECTED on branch `phoenix/migrate_tt_only`** (status report
+  2026-10-13, Q11 (d)): the translation's display-name lookup carries the SAME
+  same-company guard `add_related_file` applies (S-TICKET-044), and a mirrored
+  `NO_DATA_FOUND` arm logs the mismatch; a caller can no longer detach a file relation
+  across companies. See S-TICKET-045 (amended) and S-TICKET-060 (new).
 
 ### classify_request (PUBLIC)
 
@@ -551,9 +557,15 @@ plan's SUMMARY.
   S-TICKET-053 for **a genuine, previously-undocumented bug**: it declares `cust_id
   NUMBER;` and inserts it as the event's `company_id` — but NEVER assigns `cust_id`
   anywhere in its 40-line body. Every audit event this routine writes has `company_id =
-  NULL`, regardless of the ticket's real company. Documented faithfully as a real Oracle
-  behavior (not silently "fixed"), per the plan's own instruction and the precedent set by
-  `TT.EVENT_INTERFACE.moveevent`'s acknowledged bug (S-EVENT-033 in the sibling spec).
+  NULL`, regardless of the ticket's real company. Originally documented faithfully as a
+  real Oracle behavior (not silently "fixed"). **CORRECTED on branch
+  `phoenix/migrate_tt_only`** (status report 2026-10-13, Q11 (b); project-owner
+  instruction "Don't mimic broken behaviour of oracle routines, but annotate/explain what
+  changed with the correction"): the translation resolves `cust_id` from the ticket row
+  exactly as the sibling audit-event writers do (`change_subject` line 873,
+  `change_worker` line 715, `change_service_host` line 779: `SELECT company_id INTO
+  cust_id FROM ticket WHERE id = p_ticket_id`) — see S-TICKET-053 (amended) and
+  S-TICKET-059 (new).
 - **`handleDeferredTransitions`** (`ddl/src/pkgb/tt_ticket_interface.sql:1859-1919`) —
   called only from `change_status_event_id_out` when the ticket transitions into or out of
   deferred (status 60); manages the escalation-status side effects of that transition. Has
@@ -878,6 +890,27 @@ plan's SUMMARY.
   here rather than inventing a `change_label` call Oracle does not make. No `SELECT INTO`
   at this routine's own level; no `EXCEPTION` block of its own — its call to
   `change_status` inherits that routine's full strictness profile (S-TICKET-007 onward).
+  **Decision (branch `phoenix/migrate_tt_only`, status report 2026-10-13 Q11 (c)):
+  behaviour KEPT — this is stale documentation, not a lost feature.** Evidence, all
+  static: (1) the ONLY caller in the corpus is `TT.UTIL.check_ticket_status`
+  (`ddl/src/pkgb/tt_util.sql:62-64`), whose cursor selects `t.label_id as label_id`
+  from the ticket being expired (`ddl/src/pkgb/tt_util.sql:50`) and passes it as
+  `p_label_id` — the doc comment itself names the parameter "current label id"
+  (`ddl/src/pkg/tt_ticket_interface.sql:201`); a `change_label(p_ticket_id, p_label_id)`
+  call (`ddl/src/pkgb/tt_ticket_interface.sql:930-938`, `UPDATE tt.ticket SET label_id =
+  p_label_id`) with the ticket's own current label would therefore write the value
+  already stored — a no-op; (2) the 4-argument `change_label` overload (lines 944-994),
+  which would additionally write a "Ticket label ..." audit event, cannot be meant
+  either: `expire_status` has no contact to pass and the generated text for an unchanged
+  label ("changed to X (was: X)") would be nonsense; (3) nothing in `ddl/src/` reads
+  `tt.ticket.label_id` in connection with status expiry or `status_valid_until_date`
+  (`tt_util.sql:50` is the only reader outside `change_label` itself), and
+  `masterdata/TT/label.csv` holds four routing labels (Dispatch, Routine, Process, SOC)
+  with no "expired"/"hot" label a status expiry could plausibly apply; (4) the revision
+  history of the body shows no removed `change_label` call (the routine is unchanged
+  since the base import). The locked assertions (`tt__ticket_interface__lifecycle.sql`,
+  S-TICKET-021: `label_id` untouched after `expire_status(..., p_label_id => 1)`) remain
+  the pinned behaviour. Unlike Q11 (a)/(b)/(d) this item is NOT a `DEVIATION`.
 - **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:999-1017`
 
 ### S-TICKET-022
@@ -1250,12 +1283,20 @@ plan's SUMMARY.
   (inventory line 2051), reached only if `v_counter > 0`: `SELECT mcf.display_name INTO
   v_file_display_name FROM mc.mc_file mcf WHERE mcf.id = p_related_file_id` — `mc_file`'s
   PK, `TOO_MANY_ROWS` impossible; zero rows would be structurally surprising here (the
-  relation just confirmed to exist implies the file id is real) but is NOT re-verified
-  against a same-company guard the way `add_related_file` (S-TICKET-044) is — a
-  deliberate asymmetry between the two mirror routines, not an oversight this spec
-  papers over. **Has only `WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2064-2069) —
-  no `NO_DATA_FOUND` arm; a bad `p_related_file_id` (orphaned `ticket2mc_file` row) would
-  be caught by `WHEN OTHERS` rather than a dedicated `NO_DATA_FOUND` arm.
+  relation just confirmed to exist implies the file id is real) but in Oracle is NOT
+  re-verified against a same-company guard the way `add_related_file` (S-TICKET-044) is.
+  Oracle **has only `WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2064-2069) — no
+  `NO_DATA_FOUND` arm; a bad `p_related_file_id` (orphaned `ticket2mc_file` row) is
+  caught by `WHEN OTHERS`. **Amended (correction, branch `phoenix/migrate_tt_only`):**
+  site #66 in the translation is the guarded form described by S-TICKET-060 — it also
+  requires a `mc.mc_file_release` of that file to the ticket's company — and the handler
+  gains a dedicated `NO_DATA_FOUND` arm mirroring `add_related_file`'s (log the specific
+  "does not exist or they belong to different companies" message, `RETURN`). Observable
+  consequences for the pre-existing assertions: the orphaned-file case still succeeds
+  without raising (now via the `NO_DATA_FOUND` arm instead of `WHEN OTHERS`); a
+  same-company relation is still deleted — provided the fixture actually releases the
+  file to the ticket's company, which is what "same-company" means. Site #65 (the
+  `COUNT`) and the `v_counter = 0` silent no-op are unchanged.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2044-2069`
 
 ### S-TICKET-046
@@ -1418,10 +1459,13 @@ plan's SUMMARY.
   ticket's actual company — unlike every OTHER `change_*` routine in this package that
   writes its own audit event directly (e.g. `change_worker`, `change_subject`,
   `change_service_host`), which all correctly resolve and set a real `company_id`.
-  Documented faithfully as a genuine Oracle behavior (a bug, not a feature) — per the
-  plan's own instruction that the body is authoritative, and the precedent set by
-  `TT.EVENT_INTERFACE.moveevent`'s self-acknowledged bug
-  (`migration/spec/tt.event_interface.md` S-EVENT-033). SELECT INTO site #57 (inventory
+  Originally documented faithfully as a genuine Oracle behavior (a bug, not a feature).
+  **Amended (correction, branch `phoenix/migrate_tt_only`):** the translation does NOT
+  reproduce the NULL — it assigns `cust_id` from the ticket row before the `INSERT`,
+  the way every sibling writer in this package does (see S-TICKET-059 for the corrected
+  behaviour, including the one new failure mode this adds). The rest of this clause —
+  the public/private hide rule, the `CurrVal` pull, the unconditional notify call, the
+  absence of any `EXCEPTION` block — is unchanged. SELECT INTO site #57 (inventory
   line 1697), unconditional: `SELECT event_sequence.CurrVal INTO event_id FROM dual` —
   sequence pull (same `NextVal`-then-`CurrVal` pattern as S-TICKET-031), no `STRICT`
   concern. **No `EXCEPTION` block of its own** — any failure (including the `INSERT`
@@ -1526,6 +1570,56 @@ plan's SUMMARY.
   S-TICKET-046's conclusion that neither of THIS package's own two `FUNCTION`s reaches a
   `COMMIT`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:234, 497, 520, 522, 1700`
+
+### S-TICKET-059
+
+- **routines:** change_customer_reference, change_partner_reference, change_emergency, change_always_visible, change_notification, change_summary
+- **claim:** **CORRECTION of the `add_status_change_event` `cust_id` bug (S-TICKET-053;
+  branch `phoenix/migrate_tt_only`).** Oracle declares `cust_id NUMBER;`
+  (`ddl/src/pkgb/tt_ticket_interface.sql:1670`) and inserts it as `tt.event.company_id`
+  (line 1688) without ever assigning it, so every audit event written through this
+  private routine — i.e. by each of the six public routines listed above — carries
+  `company_id = NULL`. Every OTHER audit-event writer in the same package resolves the
+  company from the ticket first: `change_worker` (line 715), `change_service_host` (line
+  779), `change_subject` (line 873), each `SELECT company_id INTO cust_id FROM ticket
+  WHERE id = p_ticket_id`, and `change_label` (line 955) likewise — the NULL is an
+  omission, not a design. The corrected behaviour: before the `INSERT`,
+  `add_status_change_event` executes `SELECT company_id INTO cust_id FROM tt.ticket WHERE
+  id = p_ticket_id` with the same strictness profile as the sibling sites (`STRICT`,
+  unhandled — this private routine has no `EXCEPTION` block and neither do its six
+  callers), so (i) the audit event's `company_id` equals the ticket's `company_id` at the
+  time of the change, and (ii) a nonexistent `p_ticket_id` now surfaces as
+  `NO_DATA_FOUND` from the company lookup (Oracle would have failed the same call on
+  the `tt.event -> tt.ticket` foreign key instead — `ORA-02291` — so a nonexistent
+  ticket was never a success path; only the error identity changes). Audit text,
+  public/private hiding, the sequence pull and the notify call are unchanged.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`, `ddl/src/pkgb/tt_ticket_interface.sql:715`, `ddl/src/pkgb/tt_ticket_interface.sql:779`, `ddl/src/pkgb/tt_ticket_interface.sql:873`
+
+### S-TICKET-060
+
+- **routines:** remove_related_file
+- **claim:** **CORRECTION — the same-company guard made symmetric (branch
+  `phoenix/migrate_tt_only`, Q11 (d)).** `add_related_file` refuses to ATTACH a file to
+  a ticket of a different company: its lookup joins `mc.mc_file_release r` with
+  `t.company_id = r.company_id` and its own inline comment (`ddl/src/pkgb/
+  tt_ticket_interface.sql:2004-2006`, "make sure that ticket and mc file belong to the
+  same company otherwise the NO_DATA_FOUND should be triggered") declares that
+  predicate an authorization check (S-TICKET-044). `remove_related_file` (lines
+  2046-2061) applies no such check, so any caller able to name a `(ticket, file)` pair
+  could DETACH a relation belonging to another company — the authorization intent of the
+  attach side is defeated by the detach side. The corrected behaviour: inside the
+  `v_counter > 0` branch, the display-name lookup succeeds only if `mc.mc_file` row
+  `p_related_file_id` exists AND a `mc.mc_file_release` row for that file exists whose
+  `company_id` equals the ticket's `company_id` (expressed as an `EXISTS` sub-select
+  rather than `add_related_file`'s plain join, so a file released more than once to the
+  same company cannot produce `TOO_MANY_ROWS` here — `mc.mc_file_release` has no unique
+  key on `(mc_file_id, company_id)`); on zero rows the routine logs
+  `c_prefix || 'MC File or ticket does not exist or they belong to different companies.'`
+  via `plog.err` and returns WITHOUT deleting the relation and WITHOUT writing the
+  100019 history event. A same-company relation is deleted and its history event written
+  exactly as before. Nothing is raised to the caller in either case (the swallow-all
+  shape of the original handler is preserved).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2003-2006`, `ddl/src/pkgb/tt_ticket_interface.sql:2046-2069`
 
 ## Checklist
 
@@ -1740,20 +1834,25 @@ rest of the package, independent of whether a COMMIT-reachability hazard exists)
 - **The doc/body disagreement in `expire_status`** (S-TICKET-021): the package spec's
   comment claims it "calls change_label() and change_status()"; the body only calls
   `change_status`. This spec records the body's actual behavior as authoritative (per
-  this plan's own instruction) and flags the discrepancy rather than guessing which one
-  is "more correct" — no live Oracle exists to test which behavior production code
-  actually depends on.
+  this plan's own instruction). **Resolved on branch `phoenix/migrate_tt_only` (Q11
+  (c)): stale documentation, behaviour kept** — the only caller passes the ticket's own
+  current label, so the documented `change_label` call would be a no-op (evidence listed
+  in S-TICKET-021). What remains unknowable statically is whether an Oracle-side client
+  outside `ddl/src/` ever calls `expire_status` directly with a DIFFERENT label; none is
+  known, and the parameter's own doc ("current label id") argues against it.
 - **The `add_status_change_event` `cust_id`-never-assigned bug** (S-TICKET-053): every
   audit event written through this private routine has `company_id = NULL`. Whether this
   is a LATENT bug nobody has noticed (because `company_id` on these specific audit
   events is never read by any UI/report), or a bug that IS visible somewhere downstream,
-  cannot be determined from static source alone — no live Oracle or application code was
-  available to this phase to check. Recorded as a faithful behavior to preserve in
-  translation (a translation that "fixes" this by adding a real `SELECT company_id INTO
-  cust_id ...` would silently change behavior relative to the Oracle original, which is
-  exactly what this phase's methodology forbids) — if Phase 4/5 wants to actually fix it,
-  that is a deliberate, documented deviation decision for that phase to make explicitly,
-  not something this spec should quietly paper over.
+  cannot be determined from static source alone. Originally recorded as a faithful
+  behavior to preserve, with the fix deferred to an explicit, documented deviation
+  decision. **That decision was taken on branch `phoenix/migrate_tt_only`** (status
+  report 2026-10-13, Q11 (b)): corrected — S-TICKET-059 states the behaviour, the
+  translation carries a `DEVIATION(ORACLE-BUG)` annotation and
+  `migration/pgsql/tt/ticket_interface.FINDINGS.md` ("Deviations from Oracle") records
+  it. Still open: any downstream consumer that filtered these events on `company_id IS
+  NULL` (unlikely, but not statically excludable) would see them disappear from that
+  filter.
 - **Three structural-uniqueness assumptions this spec relies on but did not independently
   re-verify against every relevant constraint in `ddl/generated/schema.oracle.sql` for
   this plan** (each is used to justify a "no STRICT concern beyond zero-row" verdict in
@@ -1775,9 +1874,15 @@ rest of the package, independent of whether a COMMIT-reachability hazard exists)
   joins through `mc.mc_file_release` to enforce `t.company_id = r.company_id`;
   `remove_related_file`'s mirror lookup does not. Whether this asymmetry is intentional
   (removal doesn't need the same authorization check because the relation's existence was
-  already checked) or an oversight cannot be determined from static source alone — no
-  live Oracle exists to probe actual authorization intent. Recorded faithfully as
-  written, not silently harmonized.
+  already checked) or an oversight cannot be determined from static source alone.
+  Originally recorded faithfully as written. **Harmonized on branch
+  `phoenix/migrate_tt_only`** (status report 2026-10-13, Q11 (d)): a caller must not be
+  able to detach a relation across companies — S-TICKET-060 states the guard, the
+  translation carries a `DEVIATION(ORACLE-BUG)` annotation and
+  `migration/pgsql/tt/ticket_interface.FINDINGS.md` records it. Still open: a relation
+  whose file has NO `mc.mc_file_release` row at all (release withdrawn after attachment)
+  can no longer be detached through this routine; Oracle allowed that. If that is a
+  real operational case it needs its own decision.
 - **The private-routine naming convention** (`__` double-underscore prefix, see "Private
   routines" above) is REUSED from `migration/spec/tt.osag_notify.md`/
   `migration/spec/tt.event_interface.md`, not reinvented — but, per those specs' own
