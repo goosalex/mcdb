@@ -63,11 +63,22 @@ re-derives.
 - **PostgreSQL name:** `tt.event_interface_moveevent` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_event_interface.sql:74`
 - **Defined:** `ddl/src/pkgb/tt_event_interface.sql:868-889`
-- Moves events between tickets. **The routine's own header comment
+- Moves ONE event between tickets. **The routine's own header comment
   (`ddl/src/pkgb/tt_event_interface.sql:866`) says: "FIXME / BROKEN the p_event_id is not
   actually used! This moves ALL events of a ticket. Looks like this code is never run."**
-  — an Oracle-acknowledged bug this spec documents faithfully (S-EVENT-033), not silently
-  "fixes."
+  — the Oracle body's `UPDATE tt.event e SET ticket_id = p_newticket_id WHERE ticket_id =
+  p_oldticket_id` (line 880) filters on the OLD ticket only, never on `p_event_id`.
+  **CORRECTED on branch `phoenix/migrate_tt_only`** (project-owner instruction: "Don't
+  mimic broken behaviour of oracle routines, but annotate/explain what changed with the
+  correction"): the PostgreSQL translation restricts the `UPDATE` to `id = p_event_id AND
+  ticket_id = p_oldticket_id`, honouring the package spec's own contract
+  (`ddl/src/pkg/tt_event_interface.sql:67-73`: "moves an event from one ticket to
+  another. If the event does not belong to the old ticket or the event is already attached
+  to the new ticket then nothing happens. However if the event does not exist, or the new
+  ticket does not exist a warning is written to the log"). S-EVENT-033 keeps the
+  swallow/log semantics of the nonexistent-new-ticket path unchanged; S-EVENT-046 and
+  S-EVENT-047 state the corrected move semantics. Before this amendment the spec
+  documented the bug faithfully and the translation reproduced it as-is.
 
 ### ticket_type_for_event_type (PUBLIC, FUNCTION)
 
@@ -565,8 +576,15 @@ spec — flagged again in this plan's SUMMARY.
   `SELECT` itself, but lexically inside the same block), and
   `WHEN OTHERS THEN plog.err(...)` (lines 887-888) — all three arms log and swallow;
   nothing this routine raises is ever observable to ITS caller. **The routine's own header
-  comment flags it as broken** (see `## Routines`, `moveevent`) — this spec records the
-  Oracle behavior, bug included, as-is.
+  comment flags it as broken** (see `## Routines`, `moveevent`). **Amended (correction,
+  branch `phoenix/migrate_tt_only`):** this clause's handler semantics are UNCHANGED by the
+  correction — a nonexistent `p_newticket_id` is still swallowed by the local
+  `NO_DATA_FOUND` arm and logged as `'...new ticket does not exist'` via `plog.warning`;
+  the three-parameter non-NULL gate (line 878) is unchanged; nothing is ever raised to the
+  caller. What the correction changes is only the row set of the subsequent `UPDATE`
+  (line 880) — see S-EVENT-046/S-EVENT-047. The `DUP_VAL_ON_INDEX` arm remains
+  structurally unreachable (`tt.event` has no unique key involving `ticket_id`) and is
+  kept for shape parity.
 - **source:** `ddl/src/pkgb/tt_event_interface.sql:866-889`
 
 ### S-EVENT-034
@@ -742,6 +760,42 @@ spec — flagged again in this plan's SUMMARY.
   ordered such that the last-loaded one's `CREATE` happens before anything actually calls
   into the cycle), not panic at an apparent forward reference.
 - **source:** `ddl/src/pkgb/tt_event_interface.sql:199, 222, 288, 326, 419, 496, 620, 621, 676, 707, 720, 737`
+
+### S-EVENT-046
+
+- **routines:** moveevent
+- **claim:** **CORRECTION of an acknowledged Oracle bug (branch `phoenix/migrate_tt_only`).**
+  Oracle's `UPDATE tt.event e SET ticket_id = p_newticket_id WHERE ticket_id =
+  p_oldticket_id` (`ddl/src/pkgb/tt_event_interface.sql:880`) never references
+  `p_event_id`, so a single call re-parents EVERY event of `p_oldticket_id` — the
+  routine's own header comment (line 866: "FIXME / BROKEN the p_event_id is not actually
+  used! This moves ALL events of a ticket") and the package spec's contract
+  (`ddl/src/pkg/tt_event_interface.sql:67-73`, "moves an event from one ticket to
+  another") both say this is wrong. The corrected behaviour: when all three parameters are
+  non-NULL and `p_newticket_id` exists (S-EVENT-033's existence check still runs first),
+  the `UPDATE` is restricted to `id = p_event_id AND ticket_id = p_oldticket_id` — exactly
+  the one event named by `p_event_id` moves to `p_newticket_id`; every other event of
+  `p_oldticket_id` keeps its `ticket_id`. No other statement of the routine changes.
+- **source:** `ddl/src/pkgb/tt_event_interface.sql:866-880`, `ddl/src/pkg/tt_event_interface.sql:67-74`
+
+### S-EVENT-047
+
+- **routines:** moveevent
+- **claim:** **CORRECTION, companion to S-EVENT-046 — the "nothing happens" and "event does
+  not exist" branches the package spec promises.** Per `ddl/src/pkg/tt_event_interface.sql:
+  68-71`: "If the event does not belong to the old ticket or the event is already attached
+  to the new ticket then nothing happens. However if the event does not exist ... a
+  warning is written to the log." The Oracle body (`ddl/src/pkgb/tt_event_interface.sql:
+  878-880`) implements neither branch (it cannot — it never looks at `p_event_id`). The
+  corrected behaviour: (i) if the event identified by `p_event_id` exists but its
+  `ticket_id` is not `p_oldticket_id` (including the case where it is already
+  `p_newticket_id`), the `UPDATE` matches zero rows, nothing is modified and nothing is
+  logged; (ii) if no `tt.event` row with `id = p_event_id` exists, nothing is modified
+  and `plog.warning(c_prefix||v_errmsg||'event does not exist')` is logged, using the
+  same `v_errmsg` prefix (line 877) as the existing `'new ticket does not exist'` warning
+  (line 884). Neither branch raises to the caller (the 3-arm swallow of S-EVENT-033 is
+  unchanged).
+- **source:** `ddl/src/pkg/tt_event_interface.sql:67-74`, `ddl/src/pkgb/tt_event_interface.sql:877-884`
 
 ## Checklist
 
@@ -933,10 +987,16 @@ Unresolved`). `pg_kind` remains PROVISIONAL for all 8 of this package's own rout
   likely hit `ROWNUM` again), not package-specific.
 - **`moveevent`'s acknowledged bug** (`ddl/src/pkgb/tt_event_interface.sql:866`,
   "FIXME / BROKEN the p_event_id is not actually used! ... Looks like this code is never
-  run.") is recorded here as Oracle's ACTUAL current behavior. Whether Phase 4's
-  translation should faithfully reproduce the bug or silently fix it is explicitly NOT
-  this spec's call — it is a decision for whoever plans `moveevent`'s translation, flagged
-  here so it is not missed or "fixed" by accident during a routine port.
+  run.") was originally recorded here as Oracle's ACTUAL current behavior, with the
+  fix-or-reproduce decision explicitly deferred. **Decided on branch
+  `phoenix/migrate_tt_only`** (status report 2026-10-13, Q11 (a); project-owner
+  instruction "Don't mimic broken behaviour of oracle routines, but annotate/explain what
+  changed with the correction"): the translation is CORRECTED — S-EVENT-046/S-EVENT-047
+  state the corrected semantics, S-EVENT-033 keeps the unchanged swallow/log path, and
+  `migration/pgsql/tt/event_interface.FINDINGS.md` ("Deviations from Oracle") records the
+  `DEVIATION(ORACLE-BUG)`. Still open: whether any Oracle-side caller ever relied on the
+  move-everything behaviour cannot be determined statically (the body comment says the
+  code "is never run"; no caller of `moveevent` exists in `ddl/src/`).
 - **`TT.TICKET_INTERFACE`'s own internal behavior (its 38 routines' `SELECT INTO`
   strictness, exception handling, package state, and `pg_kind`) is entirely OUT OF SCOPE
   for this spec** — its own spec is a separate, not-yet-written plan in this phase. Only
