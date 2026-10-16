@@ -86,19 +86,35 @@ if [[ "$GATE_FAIL" -ne 0 ]]; then
   exit 1
 fi
 
-# --- 2. Template (rebuild if asked, or if mcdb_tmpl is absent) -------------------------
+# --- 2. Template (rebuild if asked, if mcdb_tmpl is absent, or if it is STALE) ---------
+#
+# Staleness is a HARD GATE, not a warning (METHOD-REVIEW.md recommendation, 2026-10-16):
+# the template's inputs (bootstrap/, schema-fixes/, fixtures/, build-template.sh, and
+# ddl/migrated/) are content-hashed; the hash of the inputs mcdb_tmpl was built from is
+# stored as the template database's COMMENT. A mismatch rebuilds automatically. A stale
+# template silently dropped 5 assertions during plan 02-12's verification.
+
+template_inputs_hash() {
+  ( cd "${REPO_ROOT}" && \
+    find migration/test/bootstrap migration/test/schema-fixes migration/test/fixtures \
+         migration/test/build-template.sh migration/test/bootstrap.sh ddl/migrated \
+         -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum ) | sha256sum | cut -c1-16
+}
 
 echo ""
+WANT_HASH="$(template_inputs_hash)"
 TMPL_EXISTS="$(sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -tAc "SELECT 1 FROM pg_database WHERE datname = 'mcdb_tmpl'" 2>/dev/null || true)"
-if [[ "$REBUILD_TEMPLATE" -eq 1 || "$TMPL_EXISTS" != "1" ]]; then
-  echo "--- Building mcdb_tmpl (--rebuild-template=${REBUILD_TEMPLATE}, exists=${TMPL_EXISTS:-0}) ---"
+HAVE_HASH="$(sudo -u postgres psql -X -q -tAc "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname = 'mcdb_tmpl'" 2>/dev/null | sed -n 's/^inputs-sha256:\([0-9a-f]*\).*/\1/p' || true)"
+if [[ "$REBUILD_TEMPLATE" -eq 1 || "$TMPL_EXISTS" != "1" || "$HAVE_HASH" != "$WANT_HASH" ]]; then
+  if [[ "$TMPL_EXISTS" == "1" && "$REBUILD_TEMPLATE" -ne 1 && "$HAVE_HASH" != "$WANT_HASH" ]]; then
+    echo "--- mcdb_tmpl is STALE (built from inputs ${HAVE_HASH:-<unknown>}, current inputs ${WANT_HASH}) -- rebuilding ---"
+  else
+    echo "--- Building mcdb_tmpl (--rebuild-template=${REBUILD_TEMPLATE}, exists=${TMPL_EXISTS:-0}) ---"
+  fi
   bash "${SCRIPT_DIR}/build-template.sh"
+  sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -c "COMMENT ON DATABASE mcdb_tmpl IS 'inputs-sha256:${WANT_HASH} (set by run-all.sh; see template_inputs_hash)';"
 else
-  echo "--- mcdb_tmpl already exists, skipping build (pass --rebuild-template to force) ---"
-  echo "    WARNING: if migration/test/schema-fixes/ changed since the template was last"
-  echo "    built, it is now STALE -- re-run with --rebuild-template. build-template.sh"
-  echo "    is not invoked automatically; a stale template silently drops assertions"
-  echo "    (this cost 5 assertions during plan 02-12's own verification)."
+  echo "--- mcdb_tmpl is current (inputs ${WANT_HASH}), skipping build ---"
 fi
 
 # --- 3. Bootstrap the target database from the template --------------------------------
