@@ -379,7 +379,7 @@ translation defect).
 | **Assertions affected** | 2 changed (S-IP-015 golden case 4 left/right), 2 added (S-IP-020) |
 | **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/mss/osag_ip.sql` (104/106) |
 
-commit:670fc0aa2ca80b23cf5e8c01d8fa25e3f3f4c1c3 file:migration/test/pgtap/mss__osag_ip__spec.sql reason:Oracle golden case 4 input has seven groups; spec S-IP-015 amended first (05832a1) with Oracle-side evidence
+commit:670fc0a0b362edd8c42c8782b1b288ec99da187c file:migration/test/pgtap/mss__osag_ip__spec.sql reason:Oracle golden case 4 input has seven groups; spec S-IP-015 amended first (05832a1) with Oracle-side evidence
 
 ### The defect
 
