@@ -25,4 +25,10 @@ CALL tt.osag_notify_send_test_notification('+41000000000', 1, 900301, 'subj', 'h
 -- S-NOTIFY-022: add_notification_event has zero SELECT INTO sites and zero exception
 -- handling -- a NULL p_event_type_id (the column is NOT NULL on tt.event) raises a
 -- bare not_null_violation, uncaught, exactly as PostgreSQL's own INSERT would.
+-- A-010: the DETAIL line of this not-null violation prints the whole failing row,
+-- including a live sequence value and statement_timestamp() -- non-deterministic by
+-- construction. VERBOSITY terse drops DETAIL/CONTEXT for this one statement; the
+-- ERROR text and SQLSTATE (the substance this file pins) are unaffected.
+\set VERBOSITY terse
 CALL tt.osag_notify_add_notification_event(900301, NULL, 'x', NULL);
+\set VERBOSITY default
