@@ -366,3 +366,37 @@ comment recording why. No assertion, expected value, or SQLSTATE changed.
 `tt__ticket_interface__lifecycle.sql`: **30/39 → 38/39**. The one remaining failure is the
 `auth.permission` materialized-view gap (see PHASE2 findings — a harness/schema gap, not a
 translation defect).
+
+---
+
+## A-009 — `ticketevolution__calculator__spec.sql`: ORDER BY tie-break in the S-TICKEV-007 lone-merge `results_eq`
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | the TICKETEVOLUTION.CALCULATOR translation agent, in a commit that touches ONLY the test file (`1f5d10145d707c03eb0be80afbf4159385459fb8`), landed BEFORE the translation commit |
+| **File** | `migration/test/pgtap/ticketevolution__calculator__spec.sql` |
+| **Assertions affected** | 1 (test 62) |
+| **Surfaced by** | the first GREEN run of the translation: 61/62 pass, test 62 "have: (merged,...) want: (new,...)" — rows identical, order swapped |
+
+### The defect
+
+The assertion's query ended `ORDER BY date_to, ticket_status`. The two spec-derived rows for a
+lone `100004` event (S-TICKEV-007 / S-TICKEV-009) share `date_to`, so the tie-break decided the
+order — and `'merged' < 'new'` alphabetically, the reverse of the VALUES list. The assertion
+could never pass regardless of translation correctness.
+
+### The amendment
+
+`ORDER BY date_to, ticket_status_id` (1 for `new`, 110 for `merged`) — the order the VALUES list
+already had. No expected value, column, row count or cited clause changed.
+
+### Why this is not a weakening
+
+The same two rows with the same ten values are still required, in a deterministic order that now
+matches what the spec says is emitted first (the pseudo `'new'` row is inserted before the real
+row, S-TICKEV-009).
+
+### Effect
+
+`ticketevolution.calculator` pgTAP 61/62 → 62/62 with the unchanged translation.
