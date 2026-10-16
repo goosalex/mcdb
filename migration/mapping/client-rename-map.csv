@@ -1,0 +1,347 @@
+kind,oracle_name,pg_name,pg_kind,note
+routine,aserto_test.e2etest.assert_logs,aserto_test.e2etest_assert_logs,procedure,
+routine,aserto_test.e2etest.test_create,aserto_test.e2etest_test_create,procedure,
+routine,aserto_test.e2etest.test_delete,aserto_test.e2etest_test_delete,procedure,
+routine,auth.osag_auth.delete_login,auth.osag_auth_delete_login,procedure,
+synonym,osag_auth.delete_login,auth.osag_auth_delete_login,procedure,public synonym osag_auth for auth.osag_auth; PostgreSQL has no synonyms
+routine,auth.osag_auth.grant_role,auth.osag_auth_grant_role,procedure,
+synonym,osag_auth.grant_role,auth.osag_auth_grant_role,procedure,public synonym osag_auth for auth.osag_auth; PostgreSQL has no synonyms
+routine,auth.osag_auth.grant_user_role,auth.osag_auth_grant_user_role,procedure,
+synonym,osag_auth.grant_user_role,auth.osag_auth_grant_user_role,procedure,public synonym osag_auth for auth.osag_auth; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.add_alias,auth.osag_auth_passport_add_alias,procedure,
+synonym,osag_auth_passport.add_alias,auth.osag_auth_passport_add_alias,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.add_auth_secret,auth.osag_auth_passport_add_auth_secret,procedure,
+synonym,osag_auth_passport.add_auth_secret,auth.osag_auth_passport_add_auth_secret,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.add_login2groups,auth.osag_auth_passport_add_login2groups,procedure,
+synonym,osag_auth_passport.add_login2groups,auth.osag_auth_passport_add_login2groups,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.add_login2tunnelgroup,auth.osag_auth_passport_add_login2tunnelgroup,procedure,
+synonym,osag_auth_passport.add_login2tunnelgroup,auth.osag_auth_passport_add_login2tunnelgroup,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.add_softtoken,auth.osag_auth_passport_add_softtoken,procedure,
+synonym,osag_auth_passport.add_softtoken,auth.osag_auth_passport_add_softtoken,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.check_auth_email_unique,auth.osag_auth_passport_check_auth_email_unique,procedure,
+synonym,osag_auth_passport.check_auth_email_unique,auth.osag_auth_passport_check_auth_email_unique,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.check_auth_login_email_unique,auth.osag_auth_passport_check_auth_login_email_unique,function,
+synonym,osag_auth_passport.check_auth_login_email_unique,auth.osag_auth_passport_check_auth_login_email_unique,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.check_email_unique,auth.osag_auth_passport_check_email_unique,function,
+synonym,osag_auth_passport.check_email_unique,auth.osag_auth_passport_check_email_unique,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.check_login_unique,auth.osag_auth_passport_check_login_unique,function,
+synonym,osag_auth_passport.check_login_unique,auth.osag_auth_passport_check_login_unique,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.check_recent_password,auth.osag_auth_passport_check_recent_password,procedure,
+synonym,osag_auth_passport.check_recent_password,auth.osag_auth_passport_check_recent_password,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.count_available_authsys,auth.osag_auth_passport_count_available_authsys,function,
+synonym,osag_auth_passport.count_available_authsys,auth.osag_auth_passport_count_available_authsys,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.count_token_users,auth.osag_auth_passport_count_token_users,function,
+synonym,osag_auth_passport.count_token_users,auth.osag_auth_passport_count_token_users,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_alias,auth.osag_auth_passport_delete_alias,procedure,
+synonym,osag_auth_passport.delete_alias,auth.osag_auth_passport_delete_alias,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_aliases,auth.osag_auth_passport_delete_aliases,procedure,
+synonym,osag_auth_passport.delete_aliases,auth.osag_auth_passport_delete_aliases,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_contact,auth.osag_auth_passport_delete_contact,procedure,
+synonym,osag_auth_passport.delete_contact,auth.osag_auth_passport_delete_contact,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_login,auth.osag_auth_passport_delete_login,procedure,
+synonym,osag_auth_passport.delete_login,auth.osag_auth_passport_delete_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_login2groups,auth.osag_auth_passport_delete_login2groups,procedure,
+synonym,osag_auth_passport.delete_login2groups,auth.osag_auth_passport_delete_login2groups,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_login2tunnelgroup,auth.osag_auth_passport_delete_login2tunnelgroup,procedure,
+synonym,osag_auth_passport.delete_login2tunnelgroup,auth.osag_auth_passport_delete_login2tunnelgroup,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.delete_login_sync,auth.osag_auth_passport_delete_login_sync,procedure,
+synonym,osag_auth_passport.delete_login_sync,auth.osag_auth_passport_delete_login_sync,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.encrypt_password,auth.osag_auth_passport_encrypt_password,function,
+synonym,osag_auth_passport.encrypt_password,auth.osag_auth_passport_encrypt_password,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.grant_role,auth.osag_auth_passport_grant_role,procedure,
+synonym,osag_auth_passport.grant_role,auth.osag_auth_passport_grant_role,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.grant_user_role,auth.osag_auth_passport_grant_user_role,procedure,
+synonym,osag_auth_passport.grant_user_role,auth.osag_auth_passport_grant_user_role,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.hash_password,auth.osag_auth_passport_hash_password,function,
+synonym,osag_auth_passport.hash_password,auth.osag_auth_passport_hash_password,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.insert_login,auth.osag_auth_passport_insert_login,procedure,
+synonym,osag_auth_passport.insert_login,auth.osag_auth_passport_insert_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.insert_login_sync,auth.osag_auth_passport_insert_login_sync,procedure,
+synonym,osag_auth_passport.insert_login_sync,auth.osag_auth_passport_insert_login_sync,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.insert_login_sync2,auth.osag_auth_passport_insert_login_sync2,procedure,
+synonym,osag_auth_passport.insert_login_sync2,auth.osag_auth_passport_insert_login_sync2,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.is_dirty,auth.osag_auth_passport_is_dirty,function,
+synonym,osag_auth_passport.is_dirty,auth.osag_auth_passport_is_dirty,function,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.lock_login,auth.osag_auth_passport_lock_login,procedure,
+synonym,osag_auth_passport.lock_login,auth.osag_auth_passport_lock_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.reset_dpblob,auth.osag_auth_passport_reset_dpblob,procedure,
+synonym,osag_auth_passport.reset_dpblob,auth.osag_auth_passport_reset_dpblob,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.reset_token,auth.osag_auth_passport_reset_token,procedure,
+synonym,osag_auth_passport.reset_token,auth.osag_auth_passport_reset_token,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.reset_totp,auth.osag_auth_passport_reset_totp,procedure,
+synonym,osag_auth_passport.reset_totp,auth.osag_auth_passport_reset_totp,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.set_authsys_dirty,auth.osag_auth_passport_set_authsys_dirty,procedure,
+synonym,osag_auth_passport.set_authsys_dirty,auth.osag_auth_passport_set_authsys_dirty,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.set_password,auth.osag_auth_passport_set_password,procedure,
+synonym,osag_auth_passport.set_password,auth.osag_auth_passport_set_password,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.sync_domain,auth.osag_auth_passport_sync_domain,procedure,
+synonym,osag_auth_passport.sync_domain,auth.osag_auth_passport_sync_domain,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.sync_domain_scheduler,auth.osag_auth_passport_sync_domain_scheduler,procedure,
+synonym,osag_auth_passport.sync_domain_scheduler,auth.osag_auth_passport_sync_domain_scheduler,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.unlock_dptoken,auth.osag_auth_passport_unlock_dptoken,procedure,
+synonym,osag_auth_passport.unlock_dptoken,auth.osag_auth_passport_unlock_dptoken,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.unlock_login,auth.osag_auth_passport_unlock_login,procedure,
+synonym,osag_auth_passport.unlock_login,auth.osag_auth_passport_unlock_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_authsys,auth.osag_auth_passport_update_authsys,procedure,
+synonym,osag_auth_passport.update_authsys,auth.osag_auth_passport_update_authsys,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_authsys_for_login,auth.osag_auth_passport_update_authsys_for_login,procedure,
+synonym,osag_auth_passport.update_authsys_for_login,auth.osag_auth_passport_update_authsys_for_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_login,auth.osag_auth_passport_update_login,procedure,
+synonym,osag_auth_passport.update_login,auth.osag_auth_passport_update_login,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_login_details,auth.osag_auth_passport_update_login_details,procedure,
+synonym,osag_auth_passport.update_login_details,auth.osag_auth_passport_update_login_details,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_login_details2,auth.osag_auth_passport_update_login_details2,procedure,
+synonym,osag_auth_passport.update_login_details2,auth.osag_auth_passport_update_login_details2,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_login_sync,auth.osag_auth_passport_update_login_sync,procedure,
+synonym,osag_auth_passport.update_login_sync,auth.osag_auth_passport_update_login_sync,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_login_sync2,auth.osag_auth_passport_update_login_sync2,procedure,
+synonym,osag_auth_passport.update_login_sync2,auth.osag_auth_passport_update_login_sync2,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_token_details,auth.osag_auth_passport_update_token_details,procedure,
+synonym,osag_auth_passport.update_token_details,auth.osag_auth_passport_update_token_details,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_passport.update_token_details2,auth.osag_auth_passport_update_token_details2,procedure,
+synonym,osag_auth_passport.update_token_details2,auth.osag_auth_passport_update_token_details2,procedure,public synonym osag_auth_passport for auth.osag_auth_passport; PostgreSQL has no synonyms
+routine,auth.osag_auth_state.get_jump_ssh_call,auth.osag_auth_state_get_jump_ssh_call,function,
+routine,auth.osag_implication.auth_update,auth.osag_implication_auth_update,procedure,
+synonym,osag_implication.auth_update,auth.osag_implication_auth_update,procedure,public synonym osag_implication for auth.osag_implication; PostgreSQL has no synonyms
+routine,esp.osag_duty.get_next_swiss_business_day,esp.osag_duty_get_next_swiss_business_day,function,
+routine,esp.osag_duty.is_legal_holiday,esp.osag_duty_is_legal_holiday,function,
+routine,fw.delete_auto_ip_groups_test.run_all,fw.delete_auto_ip_groups_test_run_all,procedure,
+routine,fw.delete_auto_ip_groups_test.test_delete_group_and_member,fw.delete_auto_ip_groups_test_test_delete_group_and_member,procedure,
+routine,fw.delete_auto_ip_groups_test.test_member_ip_group_fk_violation,fw.delete_auto_ip_groups_test_test_member_ip_group_fk_violation,procedure,
+routine,fw.delete_auto_ip_groups_test.test_non_automatic_group_unchanged,fw.delete_auto_ip_groups_test_test_non_automatic_group_unchanged,procedure,
+routine,fw.delete_auto_ip_groups_test.test_null_args,fw.delete_auto_ip_groups_test_test_null_args,procedure,
+routine,fw.delete_auto_ip_groups_test.test_unrelated_groups_unchanged,fw.delete_auto_ip_groups_test_test_unrelated_groups_unchanged,procedure,
+routine,fw.osag_fw.config_lock_cleanup,fw.osag_fw_config_lock_cleanup,procedure,
+routine,fyi.osag_fyi.check_old_entries,fyi.osag_fyi_check_old_entries,procedure,
+routine,getnodes.osag_getnodes.get_ams_by_company_id,getnodes.osag_getnodes_get_ams_by_company_id,function,
+routine,getnodes.osag_getnodes.get_tams_by_company_id,getnodes.osag_getnodes_get_tams_by_company_id,function,
+routine,guma2.osag_guma.add_hardware_lifecycle_item,guma2.osag_guma_add_hardware_lifecycle_item,procedure,
+routine,guma2.osag_guma.check_replaced_hw_for_host,guma2.osag_guma_check_replaced_hw_for_host,procedure,
+routine,guma2.osag_guma.clean_suppressed_signature,guma2.osag_guma_clean_suppressed_signature,procedure,
+routine,guma2.osag_guma.free_pattern_pos,guma2.osag_guma_free_pattern_pos,procedure,
+routine,guma2.osag_guma.log_version,guma2.osag_guma_log_version,procedure,
+routine,guma2.osag_guma.pack_pattern_pos,guma2.osag_guma_pack_pattern_pos,procedure,
+routine,guma2.osag_guma.prune_syslog_message,guma2.osag_guma_prune_syslog_message,procedure,
+routine,guma2.osag_guma.replace_hardware,guma2.osag_guma_replace_hardware,procedure,
+routine,guma2.osag_implication.auth_update,guma2.osag_implication_auth_update,procedure,
+routine,guma2.secondary_isp.secondaryisp_alert,guma2.secondary_isp_secondaryisp_alert,procedure,
+routine,guma2.secondary_isp.secondaryisp_ok,guma2.secondary_isp_secondaryisp_ok,procedure,
+routine,mail.dmarc_cleanup.cleanup_reports_aged_days,mail.dmarc_cleanup_cleanup_reports_aged_days,procedure,
+routine,mc.connectivity_coordinator.sync_interrupt_prod,mc.connectivity_coordinator_sync_interrupt_prod,procedure,
+routine,mc.connectivity_coordinator.sync_isp_link_status,mc.connectivity_coordinator_sync_isp_link_status,procedure,
+routine,mc.connectivity_coordinator.update_isp_link_status,mc.connectivity_coordinator_update_isp_link_status,procedure,
+routine,mc.connectivity_coordinator.update_isp_link_status_w_date,mc.connectivity_coordinator_update_isp_link_status_w_date,procedure,
+routine,mc.monitoring.check_mode_changed,mc.monitoring_check_mode_changed,procedure,
+routine,mc.monitoring.collate_conn_status,mc.monitoring_collate_conn_status,procedure,
+routine,mc.monitoring.get_mode_from_state,mc.monitoring_get_mode_from_state,function,
+routine,mc.monitoring.get_sang_status_from_state,mc.monitoring_get_sang_status_from_state,function,
+routine,mc.monitoring.update_host_status,mc.monitoring_update_host_status,procedure,
+routine,mc.monitoring.update_host_status_with_ip,mc.monitoring_update_host_status_with_ip,procedure,
+routine,mc.monitoring_ticket_processes.new_event,mc.monitoring_ticket_processes_new_event,procedure,
+routine,mc.osag_isp_monitoring.update_capacity_measurements,mc.osag_isp_monitoring_update_capacity_measurements,procedure,
+routine,mc.osag_isp_monitoring.update_isp_link_status,mc.osag_isp_monitoring_update_isp_link_status,procedure,
+routine,mc.osag_isp_monitoring.update_isp_link_status2,mc.osag_isp_monitoring_update_isp_link_status2,procedure,
+routine,mc.osag_maintsync.update_host_maint_status,mc.osag_maintsync_update_host_maint_status,procedure,
+routine,mc.osag_maintsync.update_isp_link_maint_status,mc.osag_maintsync_update_isp_link_maint_status,procedure,
+routine,mc.osag_maintsync.update_single_host,mc.osag_maintsync_update_single_host,procedure,
+routine,mc.osag_maintsync.update_single_isp_link,mc.osag_maintsync_update_single_isp_link,procedure,
+routine,mcaudit.osag_audit.add_record,mcaudit.osag_audit_add_record,procedure,
+synonym,osag_audit.add_record,mcaudit.osag_audit_add_record,procedure,public synonym osag_audit for mcaudit.osag_audit; PostgreSQL has no synonyms
+routine,mcaudit.osag_audit.add_record2,mcaudit.osag_audit_add_record2,procedure,
+synonym,osag_audit.add_record2,mcaudit.osag_audit_add_record2,procedure,public synonym osag_audit for mcaudit.osag_audit; PostgreSQL has no synonyms
+routine,mcaudit.osag_audit.add_record_raw,mcaudit.osag_audit_add_record_raw,procedure,
+synonym,osag_audit.add_record_raw,mcaudit.osag_audit_add_record_raw,procedure,public synonym osag_audit for mcaudit.osag_audit; PostgreSQL has no synonyms
+routine,mcaudit.osag_audit.add_record_raw2,mcaudit.osag_audit_add_record_raw2,procedure,
+synonym,osag_audit.add_record_raw2,mcaudit.osag_audit_add_record_raw2,procedure,public synonym osag_audit for mcaudit.osag_audit; PostgreSQL has no synonyms
+routine,mcdb_checks.consistency.execute_checks_group,mcdb_checks.consistency_execute_checks_group,procedure,
+routine,mcdb_monitor.noop_consumer.clean_queue,mcdb_monitor.noop_consumer_clean_queue,procedure,
+routine,mcdb_monitor.noop_consumer.localdebug_callback,mcdb_monitor.noop_consumer_localdebug_callback,procedure,
+routine,mcdb_monitor.noop_consumer.noop_callback,mcdb_monitor.noop_consumer_noop_callback,procedure,
+routine,mss.osag_dbprop.get_number_by_host,mss.osag_dbprop_get_number_by_host,function,
+synonym,osag_dbprop.get_number_by_host,mss.osag_dbprop_get_number_by_host,function,public synonym osag_dbprop for mss.osag_dbprop; PostgreSQL has no synonyms
+routine,mss.osag_dbprop.get_string_by_host,mss.osag_dbprop_get_string_by_host,function,
+synonym,osag_dbprop.get_string_by_host,mss.osag_dbprop_get_string_by_host,function,public synonym osag_dbprop for mss.osag_dbprop; PostgreSQL has no synonyms
+routine,mss.osag_dbprop.get_string_by_host_key_id,mss.osag_dbprop_get_string_by_host_key_id,function,
+synonym,osag_dbprop.get_string_by_host_key_id,mss.osag_dbprop_get_string_by_host_key_id,function,public synonym osag_dbprop for mss.osag_dbprop; PostgreSQL has no synonyms
+routine,mss.osag_ip.getbcast,mss.osag_ip_getbcast,function,
+synonym,osag_ip.getbcast,mss.osag_ip_getbcast,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.getnet,mss.osag_ip_getnet,function,
+synonym,osag_ip.getnet,mss.osag_ip_getnet,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.ip2num,mss.osag_ip_ip2num,function,
+synonym,osag_ip.ip2num,mss.osag_ip_ip2num,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.ipv6left,mss.osag_ip_ipv6left,function,
+synonym,osag_ip.ipv6left,mss.osag_ip_ipv6left,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.ipv6right,mss.osag_ip_ipv6right,function,
+synonym,osag_ip.ipv6right,mss.osag_ip_ipv6right,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.num2ip,mss.osag_ip_num2ip,function,
+synonym,osag_ip.num2ip,mss.osag_ip_num2ip,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip.num2ipv6,mss.osag_ip_num2ipv6,function,
+synonym,osag_ip.num2ipv6,mss.osag_ip_num2ipv6,function,public synonym osag_ip for mss.osag_ip; PostgreSQL has no synonyms
+routine,mss.osag_ip_test.test_ipv62nums,mss.osag_ip_test_test_ipv62nums,procedure,
+routine,mss.osag_ip_test.test_num2ipv6,mss.osag_ip_test_test_num2ipv6,procedure,
+routine,mss.osag_software_release.update_release_installations,mss.osag_software_release_update_release_installations,procedure,
+routine,nids.osag_nids.submit_msg,nids.osag_nids_submit_msg,procedure,
+synonym,osag_nids.submit_msg,nids.osag_nids_submit_msg,procedure,public synonym osag_nids for nids.osag_nids; PostgreSQL has no synonyms
+routine,nids.osag_nids.submit_msg_new,nids.osag_nids_submit_msg_new,procedure,
+synonym,osag_nids.submit_msg_new,nids.osag_nids_submit_msg_new,procedure,public synonym osag_nids for nids.osag_nids; PostgreSQL has no synonyms
+routine,osag.osag_aserto.publishasertoaction,osag.osag_aserto_publishasertoaction,procedure,
+synonym,aserto.publishasertoaction,osag.osag_aserto_publishasertoaction,procedure,public synonym aserto for osag.osag_aserto; PostgreSQL has no synonyms
+routine,osag.osag_aserto.publishasertoupdate,osag.osag_aserto_publishasertoupdate,procedure,
+synonym,aserto.publishasertoupdate,osag.osag_aserto_publishasertoupdate,procedure,public synonym aserto for osag.osag_aserto; PostgreSQL has no synonyms
+routine,osag.osag_digest.md5,osag.osag_digest_md5,function,
+synonym,osag_digest.md5,osag.osag_digest_md5,function,public synonym osag_digest for osag.osag_digest; PostgreSQL has no synonyms
+routine,osag.osag_digest.sha256,osag.osag_digest_sha256,function,
+synonym,osag_digest.sha256,osag.osag_digest_sha256,function,public synonym osag_digest for osag.osag_digest; PostgreSQL has no synonyms
+routine,osag.osag_ext.runoscmd,osag.osag_ext_runoscmd,procedure,
+synonym,osag_ext.runoscmd,osag.osag_ext_runoscmd,procedure,public synonym osag_ext for osag.osag_ext; PostgreSQL has no synonyms
+routine,osag.osag_ext.runoscmdgetresult,osag.osag_ext_runoscmdgetresult,procedure,
+synonym,osag_ext.runoscmdgetresult,osag.osag_ext_runoscmdgetresult,procedure,public synonym osag_ext for osag.osag_ext; PostgreSQL has no synonyms
+routine,osag.osag_msg.send_mail,osag.osag_msg_send_mail,procedure,
+synonym,osag_msg.send_mail,osag.osag_msg_send_mail,procedure,public synonym osag_msg for osag.osag_msg; PostgreSQL has no synonyms
+routine,osag.osag_msg.send_sms,osag.osag_msg_send_sms,procedure,
+synonym,osag_msg.send_sms,osag.osag_msg_send_sms,procedure,public synonym osag_msg for osag.osag_msg; PostgreSQL has no synonyms
+routine,osag.osag_plog.alert,osag.osag_plog_alert,procedure,
+synonym,plog.alert,osag.osag_plog_alert,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.auditusage,osag.osag_plog_auditusage,procedure,
+synonym,plog.auditusage,osag.osag_plog_auditusage,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.crit,osag.osag_plog_crit,procedure,
+synonym,plog.crit,osag.osag_plog_crit,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.debug,osag.osag_plog_debug,procedure,
+synonym,plog.debug,osag.osag_plog_debug,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.emerg,osag.osag_plog_emerg,procedure,
+synonym,plog.emerg,osag.osag_plog_emerg,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.err,osag.osag_plog_err,procedure,
+synonym,plog.err,osag.osag_plog_err,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.info,osag.osag_plog_info,procedure,
+synonym,plog.info,osag.osag_plog_info,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.levelasnum,osag.osag_plog_levelasnum,function,
+synonym,plog.levelasnum,osag.osag_plog_levelasnum,function,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.levelasstring,osag.osag_plog_levelasstring,function,
+synonym,plog.levelasstring,osag.osag_plog_levelasstring,function,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.log,osag.osag_plog_log,procedure,
+synonym,plog.log,osag.osag_plog_log,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.lograw,osag.osag_plog_lograw,procedure,
+synonym,plog.lograw,osag.osag_plog_lograw,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.notice,osag.osag_plog_notice,procedure,
+synonym,plog.notice,osag.osag_plog_notice,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osag.osag_plog.warning,osag.osag_plog_warning,procedure,
+synonym,plog.warning,osag.osag_plog_warning,procedure,public synonym plog for osag.osag_plog; PostgreSQL has no synonyms
+routine,osixinfo.osag_hardware.add_hardware_lifecycle_item,osixinfo.osag_hardware_add_hardware_lifecycle_item,procedure,
+routine,osixinfo.osag_hardware.check_replaced_hw_for_host,osixinfo.osag_hardware_check_replaced_hw_for_host,procedure,
+routine,osixinfo.osag_hardware.replace_hardware,osixinfo.osag_hardware_replace_hardware,procedure,
+routine,report.osag_channel.count_hosts,report.osag_channel_count_hosts,procedure,
+routine,report.osag_channel.run_queries,report.osag_channel_run_queries,procedure,
+routine,sys.osag_table_redefinition.abort_redef_clob_to_varchar2,sys.osag_table_redefinition_abort_redef_clob_to_varchar2,procedure,
+routine,sys.osag_table_redefinition.cleanup_interim,sys.osag_table_redefinition_cleanup_interim,procedure,
+routine,sys.osag_table_redefinition.finalize_redef_clob_to_varchar2,sys.osag_table_redefinition_finalize_redef_clob_to_varchar2,procedure,
+routine,sys.osag_table_redefinition.prepare_redef_clob_to_varchar2,sys.osag_table_redefinition_prepare_redef_clob_to_varchar2,procedure,
+routine,sys.osag_table_redefinition.refresh_redef,sys.osag_table_redefinition_refresh_redef,procedure,
+routine,ticketevolution.calculator.materialize_incremental,ticketevolution.calculator_materialize_incremental,procedure,
+routine,ticketevolution.calculator.materialize_tickev,ticketevolution.calculator_materialize_tickev,procedure,
+routine,tt.escalation_interface.clear_customer_escalation,tt.escalation_interface_clear_customer_escalation,procedure,
+routine,tt.escalation_interface.escalate_customer,tt.escalation_interface_escalate_customer,procedure,
+routine,tt.escalation_interface.escalate_isp_outage_to_os,tt.escalation_interface_escalate_isp_outage_to_os,procedure,
+routine,tt.escalation_interface.escalate_os,tt.escalation_interface_escalate_os,procedure,
+routine,tt.escalation_interface.nop,tt.escalation_interface_nop,procedure,
+routine,tt.event_interface.add_history_event,tt.event_interface_add_history_event,procedure,
+routine,tt.event_interface.addevent_new,tt.event_interface_addevent_new,procedure,
+routine,tt.event_interface.demote_event,tt.event_interface_demote_event,procedure,
+routine,tt.event_interface.exec_event_type_actions,tt.event_interface_exec_event_type_actions,procedure,
+routine,tt.event_interface.moveevent,tt.event_interface_moveevent,procedure,
+routine,tt.event_interface.newevent_new,tt.event_interface_newevent_new,procedure,
+routine,tt.event_interface.promote_event,tt.event_interface_promote_event,procedure,
+routine,tt.event_interface.ticket_type_for_event_type,tt.event_interface_ticket_type_for_event_type,function,
+routine,tt.osag_notify.add_notification_event,tt.osag_notify_add_notification_event,procedure,
+routine,tt.osag_notify.delete_notifications_for_login,tt.osag_notify_delete_notifications_for_login,procedure,
+routine,tt.osag_notify.delete_ticket_notifications,tt.osag_notify_delete_ticket_notifications,procedure,
+routine,tt.osag_notify.event_notify,tt.osag_notify_event_notify,procedure,
+routine,tt.osag_notify.is_notify_suppressor_active,tt.osag_notify_is_notify_suppressor_active,function,
+routine,tt.osag_notify.send_test_notification,tt.osag_notify_send_test_notification,procedure,
+routine,tt.ticket_interface.add_docs_page,tt.ticket_interface_add_docs_page,procedure,
+routine,tt.ticket_interface.add_related_file,tt.ticket_interface_add_related_file,procedure,
+routine,tt.ticket_interface.add_related_ticket,tt.ticket_interface_add_related_ticket,procedure,
+routine,tt.ticket_interface.add_todo_item,tt.ticket_interface_add_todo_item,procedure,
+routine,tt.ticket_interface.change_always_visible,tt.ticket_interface_change_always_visible,procedure,
+routine,tt.ticket_interface.change_company,tt.ticket_interface_change_company,procedure,
+routine,tt.ticket_interface.change_customer_reference,tt.ticket_interface_change_customer_reference,procedure,
+routine,tt.ticket_interface.change_deferral_date,tt.ticket_interface_change_deferral_date,procedure,
+routine,tt.ticket_interface.change_emergency,tt.ticket_interface_change_emergency,procedure,
+routine,tt.ticket_interface.change_label,tt.ticket_interface_change_label,procedure,
+routine,tt.ticket_interface.change_notification,tt.ticket_interface_change_notification,procedure,
+routine,tt.ticket_interface.change_owner,tt.ticket_interface_change_owner,procedure,
+routine,tt.ticket_interface.change_partner_reference,tt.ticket_interface_change_partner_reference,procedure,
+routine,tt.ticket_interface.change_service_component,tt.ticket_interface_change_service_component,procedure,
+routine,tt.ticket_interface.change_service_host,tt.ticket_interface_change_service_host,procedure,
+routine,tt.ticket_interface.change_status,tt.ticket_interface_change_status,procedure,
+routine,tt.ticket_interface.change_status_event_id_out,tt.ticket_interface_change_status_event_id_out,procedure,
+routine,tt.ticket_interface.change_subject,tt.ticket_interface_change_subject,procedure,
+routine,tt.ticket_interface.change_summary,tt.ticket_interface_change_summary,procedure,
+routine,tt.ticket_interface.change_type,tt.ticket_interface_change_type,procedure,
+routine,tt.ticket_interface.change_worker,tt.ticket_interface_change_worker,procedure,
+routine,tt.ticket_interface.classify_request,tt.ticket_interface_classify_request,procedure,
+routine,tt.ticket_interface.clear_todo_list,tt.ticket_interface_clear_todo_list,procedure,
+routine,tt.ticket_interface.deleteticket,tt.ticket_interface_deleteticket,procedure,
+routine,tt.ticket_interface.expire_status,tt.ticket_interface_expire_status,procedure,
+routine,tt.ticket_interface.get_next_recent_ticket,tt.ticket_interface_get_next_recent_ticket,function,
+routine,tt.ticket_interface.merge_tickets,tt.ticket_interface_merge_tickets,procedure,
+routine,tt.ticket_interface.newticket_new,tt.ticket_interface_newticket_new,procedure,
+routine,tt.ticket_interface.rate_ticket,tt.ticket_interface_rate_ticket,procedure,
+routine,tt.ticket_interface.remove_docs_page,tt.ticket_interface_remove_docs_page,procedure,
+routine,tt.ticket_interface.remove_related_file,tt.ticket_interface_remove_related_file,procedure,
+routine,tt.ticket_interface.remove_related_ticket,tt.ticket_interface_remove_related_ticket,procedure,
+routine,tt.ticket_interface.replace_id_placeholders,tt.ticket_interface_replace_id_placeholders,function,
+routine,tt.ticket_interface.trigger_escalation,tt.ticket_interface_trigger_escalation,procedure,
+routine,tt.ticket_interface.update_todo_item_status,tt.ticket_interface_update_todo_item_status,procedure,
+routine,tt.ticket_interface.update_ux_timeout_for_ticket,tt.ticket_interface_update_ux_timeout_for_ticket,procedure,
+routine,tt.ticket_interface.updateticketflow,tt.ticket_interface_updateticketflow,procedure,
+routine,tt.util.check_dnids_tickets_to_resolve,tt.util_check_dnids_tickets_to_resolve,procedure,
+routine,tt.util.check_resolved_tickets,tt.util_check_resolved_tickets,procedure,
+routine,tt.util.check_ticket_status,tt.util_check_ticket_status,procedure,
+routine,tt.util.close_old_dev_tickets,tt.util_close_old_dev_tickets,procedure,
+routine,tt.util.update_status_valid_until,tt.util_update_status_valid_until,procedure,
+routine,vpn.osag_vpn.get_illegal_tunnel_info,vpn.osag_vpn_get_illegal_tunnel_info,function,
+routine,vpn.osag_vpn.get_tunnelcost_by_id,vpn.osag_vpn_get_tunnelcost_by_id,function,
+routine,vpn.osag_vpn.get_tunnelcost_partition,vpn.osag_vpn_get_tunnelcost_partition,function,
+routine,vpn.osag_vpn.update_peer_status,vpn.osag_vpn_update_peer_status,procedure,
+dynamic_prefix,aserto_test.e2etest.,aserto_test.e2etest_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,auth.osag_auth.,auth.osag_auth_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,auth.osag_auth_passport.,auth.osag_auth_passport_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,auth.osag_auth_state.,auth.osag_auth_state_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,auth.osag_implication.,auth.osag_implication_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,esp.osag_duty.,esp.osag_duty_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,fw.delete_auto_ip_groups_test.,fw.delete_auto_ip_groups_test_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,fw.osag_fw.,fw.osag_fw_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,fyi.osag_fyi.,fyi.osag_fyi_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,getnodes.osag_getnodes.,getnodes.osag_getnodes_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,guma2.osag_guma.,guma2.osag_guma_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,guma2.osag_implication.,guma2.osag_implication_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,guma2.secondary_isp.,guma2.secondary_isp_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mail.dmarc_cleanup.,mail.dmarc_cleanup_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mc.connectivity_coordinator.,mc.connectivity_coordinator_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mc.monitoring.,mc.monitoring_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mc.monitoring_ticket_processes.,mc.monitoring_ticket_processes_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mc.osag_isp_monitoring.,mc.osag_isp_monitoring_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mc.osag_maintsync.,mc.osag_maintsync_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mcaudit.osag_audit.,mcaudit.osag_audit_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mcdb_checks.consistency.,mcdb_checks.consistency_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mcdb_monitor.noop_consumer.,mcdb_monitor.noop_consumer_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mss.osag_dbprop.,mss.osag_dbprop_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mss.osag_ip.,mss.osag_ip_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mss.osag_ip_test.,mss.osag_ip_test_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,mss.osag_software_release.,mss.osag_software_release_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,nids.osag_nids.,nids.osag_nids_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osag.osag_aserto.,osag.osag_aserto_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osag.osag_digest.,osag.osag_digest_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osag.osag_ext.,osag.osag_ext_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osag.osag_msg.,osag.osag_msg_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osag.osag_plog.,osag.osag_plog_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,osixinfo.osag_hardware.,osixinfo.osag_hardware_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,report.osag_channel.,report.osag_channel_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,sys.osag_table_redefinition.,sys.osag_table_redefinition_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,ticketevolution.calculator.,ticketevolution.calculator_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,tt.escalation_interface.,tt.escalation_interface_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,tt.event_interface.,tt.event_interface_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,tt.osag_notify.,tt.osag_notify_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,tt.ticket_interface.,tt.ticket_interface_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,tt.util.,tt.util_,,prefix of a dynamically built name; verify the run-time suffix
+dynamic_prefix,vpn.osag_vpn.,vpn.osag_vpn_,,prefix of a dynamically built name; verify the run-time suffix

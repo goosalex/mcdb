@@ -51,7 +51,11 @@ fi
 # about. Found and exempted in plan 02-09 while gating the first real translations.
 EXEMPT_TRANS_FILES=("migration/pgsql/osag/osag_plog.sql")
 
-mapfile -t trans_files < <(find "$TRANS_DIR" -mindepth 2 -maxdepth 2 -type f -name '*.sql' | sort)
+# migration/pgsql/_support/ holds PostgreSQL-only migration support objects (the pgmig
+# schema: the stored-name rewriter and its generated mapping data). They have no Oracle
+# original, hence nothing to be spec-first about -- exempted by directory, not by file,
+# so the exemption cannot be extended one file at a time without this comment changing.
+mapfile -t trans_files < <(find "$TRANS_DIR" -mindepth 2 -maxdepth 2 -type f -name '*.sql' -not -path "$TRANS_DIR/_support/*" | sort)
 
 filtered_trans_files=()
 for tf in "${trans_files[@]}"; do
