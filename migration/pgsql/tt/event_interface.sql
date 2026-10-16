@@ -173,10 +173,25 @@ END;
 $fn$;
 
 -- ------------------------------------------------------------------------------------
--- moveevent (S-EVENT-033): the routine's own Oracle header comment flags it as broken --
--- "FIXME / BROKEN the p_event_id is not actually used! This moves ALL events of a
--- ticket. Looks like this code is never run." -- reproduced faithfully, bug included,
--- not silently fixed.
+-- moveevent (S-EVENT-033, S-EVENT-046, S-EVENT-047).
+--
+-- DEVIATION(ORACLE-BUG): Oracle's body (ddl/src/pkgb/tt_event_interface.sql:880) runs
+--   UPDATE tt.event e SET ticket_id = p_newticket_id WHERE ticket_id = p_oldticket_id;
+-- which never references p_event_id, so ONE call re-parents EVERY event of the old
+-- ticket. Oracle's own header comment (line 866) says so: "FIXME / BROKEN the
+-- p_event_id is not actually used! This moves ALL events of a ticket. Looks like this
+-- code is never run." The package spec (ddl/src/pkg/tt_event_interface.sql:67-73)
+-- promises the opposite: move ONE event; nothing happens if it is not on the old
+-- ticket; warn if the event or the new ticket does not exist. Per the branch owner's
+-- instruction ("Don't mimic broken behaviour of oracle routines, but annotate/explain
+-- what changed with the correction") this translation implements the documented
+-- contract: the UPDATE is restricted to id = p_event_id AND ticket_id = p_oldticket_id
+-- (S-EVENT-046); a wrong old ticket is a silent no-op and a nonexistent event logs
+-- 'event does not exist' with the same v_errmsg prefix (S-EVENT-047). Everything else --
+-- the three-parameter non-NULL gate, the STRICT new-ticket existence check and its
+-- 3-arm swallow-and-log handler (S-EVENT-033) -- is unchanged. See
+-- event_interface.FINDINGS.md, "Deviations from Oracle".
+--
 -- SELECT INTO site #26: STRICT + its own 3-arm handler (NO_DATA_FOUND / DUP_VAL_ON_INDEX
 -- -> unique_violation / OTHERS), all three swallow (log, never re-raise).
 -- ------------------------------------------------------------------------------------
@@ -188,12 +203,25 @@ DECLARE
     c_prefix CONSTANT text := 'tt.event_interface.moveevent(): ';
     v_dummy numeric;
     v_errmsg varchar;
+    v_moved bigint;
 BEGIN
     v_errmsg := 'cannot move event '||p_event_id||' from ticket '||p_oldticket_id||' to ticket '||p_newticket_id||': ';
     IF (p_event_id IS NOT NULL AND p_newticket_id IS NOT NULL AND p_oldticket_id IS NOT NULL) THEN
         -- S-EVENT-033 (site #26): STRICT + all three handler arms.
         SELECT id INTO STRICT v_dummy FROM tt.ticket WHERE id = p_newticket_id; -- check whether this ticket really exists...
-        UPDATE tt.event e SET ticket_id = p_newticket_id WHERE ticket_id = p_oldticket_id;
+        -- DEVIATION(ORACLE-BUG) S-EVENT-046: Oracle has no "id = p_event_id" predicate here.
+        UPDATE tt.event e SET ticket_id = p_newticket_id
+        WHERE e.id = p_event_id AND e.ticket_id = p_oldticket_id;
+        GET DIAGNOSTICS v_moved = ROW_COUNT;
+        IF v_moved = 0 THEN
+            -- S-EVENT-047: not on the old ticket (or already on the new one) -> silent
+            -- no-op; event missing altogether -> warning (package-spec contract,
+            -- ddl/src/pkg/tt_event_interface.sql:70-71).
+            SELECT count(*) INTO v_dummy FROM tt.event WHERE id = p_event_id;
+            IF v_dummy = 0 THEN
+                CALL osag.osag_plog_warning(c_prefix||v_errmsg||'event does not exist');
+            END IF;
+        END IF;
     END IF;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
