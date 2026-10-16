@@ -280,7 +280,7 @@ SELECT lives_ok(
 -- mc_file row that no longer exists. Oracle's whole-routine WHEN OTHERS
 -- swallowed it; since the Q11 (d) correction (S-TICKET-060) the mirrored
 -- NO_DATA_FOUND arm swallows it -- either way nothing propagates
--- (TEST-AMENDMENTS.md A-015: label only, assertion unchanged).
+-- (TEST-AMENDMENTS.md A-018: label only, assertion unchanged).
 -------------------------------------------------------------------------------
 
 INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907026, 1, 2, 907001);
