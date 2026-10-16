@@ -231,12 +231,15 @@ REVOKE ALL ON PROCEDURE tt.util__despam_ticket(numeric, numeric) FROM PUBLIC;
 -- final decision; this is Phase 2's deliberate, documented placeholder, matching
 -- migration/spec/tt.util.md's own "Assumptions / Unresolved" section verbatim.
 --
--- V$INSTANCE (S-UTIL-011) has no PostgreSQL equivalent -- current_setting(...) against
--- a custom GUC is this plan's placeholder dev-instance gate, reusing the EXACT GUC name
--- (mcdb.force_dev_instance) the already-locked regress test
--- (migration/test/regress/sql/tt__util__txn.sql) sets, so that fixture's own
--- test-only convention is honored rather than re-invented. Not a claim about what
--- XCUT-04/05 will decide.
+-- V$INSTANCE (S-UTIL-011) has no PostgreSQL equivalent. DECISION (Q7, 2026-10-16,
+-- phoenix/migrate_tt_only): an instance identifies its role through the GUC
+-- `mcdb.instance_role` ('dev' | 'test' | 'prod'), set per database with
+-- `ALTER DATABASE <db> SET mcdb.instance_role = 'dev'` (survives restarts, is visible to
+-- every session, needs no table and no naming convention). Oracle's `HOST_NAME LIKE
+-- '%-dev-%'` test becomes `current_setting('mcdb.instance_role', true) = 'dev'`. The
+-- older test-only GUC `mcdb.force_dev_instance = 'true'` (set by
+-- migration/test/regress/sql/tt__util__txn.sql) is still honoured so the locked regress
+-- fixture keeps working; it is a session-level override, not the production mechanism.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.util_close_old_dev_tickets()
 LANGUAGE plpgsql
@@ -246,7 +249,9 @@ DECLARE
     r RECORD;
 BEGIN
     SELECT count(*) INTO STRICT v_is_dev
-    FROM (SELECT 1 WHERE current_setting('mcdb.force_dev_instance', true) = 'true') dev_check;
+    FROM (SELECT 1
+          WHERE current_setting('mcdb.instance_role', true) = 'dev'
+             OR current_setting('mcdb.force_dev_instance', true) = 'true') dev_check;
 
     IF v_is_dev = 0 THEN
         -- not a dev instance, nothing to do
