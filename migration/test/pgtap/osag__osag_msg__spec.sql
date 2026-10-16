@@ -137,8 +137,8 @@ SELECT throws_ok(
 -- ---------------------------------------------------------------------------------
 -- S-MSG-008: send_mail re-raises; nothing is queued on failure
 -- ---------------------------------------------------------------------------------
-SELECT is((SELECT count(*)::int FROM v_mine), 5,
-    'S-MSG-008: baseline before the failure cases -- five rows queued so far');
+SELECT is((SELECT count(*)::int FROM v_mine), 6,
+    'S-MSG-008: baseline before the failure cases -- six rows queued so far');
 SELECT throws_ok(
     $$CALL osag.osag_msg_send_mail('a@x.ch', NULL, NULL, NULL, 's', 'b')$$,
     '23502', NULL,
@@ -151,7 +151,7 @@ SELECT throws_ok(
     $$CALL osag.osag_msg_send_mail(NULL, 'b@x.ch', NULL, 'd@x.ch', 's', 'b')$$,
     '23502', NULL,
     'S-MSG-008: no envelope sender at all (p_mail_from and p_reply_to both NULL) raises not_null_violation');
-SELECT is((SELECT count(*)::int FROM v_mine), 5,
+SELECT is((SELECT count(*)::int FROM v_mine), 6,
     'S-MSG-008: none of the failed send_mail calls queued a row');
 
 -- ---------------------------------------------------------------------------------
@@ -185,12 +185,12 @@ SELECT ok(EXISTS (
 -- ---------------------------------------------------------------------------------
 -- S-MSG-011 / S-MSG-012: send_sms swallows; NULL / blank number is a logged failure
 -- ---------------------------------------------------------------------------------
-SELECT is((SELECT count(*)::int FROM v_mine), 6,
-    'S-MSG-011: baseline before the swallow cases -- six rows queued so far');
+SELECT is((SELECT count(*)::int FROM v_mine), 7,
+    'S-MSG-011: baseline before the swallow cases -- seven rows queued so far');
 SELECT lives_ok(
     $$CALL osag.osag_msg_send_sms(NULL, 'x')$$,
     'S-MSG-011: send_sms(NULL, ...) does NOT raise -- the failure is swallowed');
-SELECT is((SELECT count(*)::int FROM v_mine), 6,
+SELECT is((SELECT count(*)::int FROM v_mine), 7,
     'S-MSG-012: send_sms(NULL, ...) queued nothing');
 SELECT ok(EXISTS (
         SELECT 1 FROM osag.plog_stub_log
@@ -200,7 +200,7 @@ SELECT ok(EXISTS (
 SELECT lives_ok(
     $$CALL osag.osag_msg_send_sms('   ', 'x')$$,
     'S-MSG-012: an all-spaces number does not raise either');
-SELECT is((SELECT count(*)::int FROM v_mine), 6,
+SELECT is((SELECT count(*)::int FROM v_mine), 7,
     'S-MSG-012: an all-spaces number queued nothing');
 
 -- ---------------------------------------------------------------------------------
@@ -230,7 +230,8 @@ SELECT ok(NOT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'osag' AND p.proname LIKE 'osag_msg%' AND p.prosrc ~* '\m(commit|rollback)\M'),
     'S-MSG-014: no osag_msg routine contains COMMIT or ROLLBACK');
-SELECT is((SELECT count(*)::int FROM v_mine WHERE xmin = txid_current()::text::xid), 6,
+SELECT is((SELECT count(*)::int FROM osag.msg_outbox o, t_mark m
+            WHERE o.id > m.id0 AND o.xmin = pg_current_xact_id()::xid), 7,
     'S-MSG-014: every queued row was written by THIS (uncommitted) transaction -- rows ride in the caller''s transaction, no autonomous commit');
 
 SELECT * FROM finish();
