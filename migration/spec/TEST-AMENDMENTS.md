@@ -366,3 +366,65 @@ comment recording why. No assertion, expected value, or SQLSTATE changed.
 `tt__ticket_interface__lifecycle.sql`: **30/39 → 38/39**. The one remaining failure is the
 `auth.permission` materialized-view gap (see PHASE2 findings — a harness/schema gap, not a
 translation defect).
+
+---
+
+## A-009 — `tt__ticket_interface__selectinto.sql`: 5 ticket fixtures (last_status_change_date, misplaced orphan, status 4)
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | orchestrator, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
+| **Assertions affected** | 4 (tests 3, 10, 15, 20) |
+| **Surfaced by** | status report 2026-10-13, section 1 (Q1); answered yes on this branch |
+
+### The defects
+
+- Tickets 907011, 907012, 907025, 907030 inserted without `last_status_change_date`
+  (same class as A-008): `change_status_event_id_out` reaches the private
+  `updateTicketTimeStats` BEFORE sites #14/#15/#61/#73, and its
+  `open_time = open_time + TRUNC((sysdate - p_last_status_change_date)*86400)` turns NULL
+  into a NOT NULL violation (`23502`), so the asserted `P0002` was never reached.
+  `newticket_new` always sets the column (`ticket_interface.sql:417`); the fixtures
+  described a row the application never produces.
+- Ticket 907018: the fixture's own comment says the orphan value belongs in
+  `company_id` (site #39 is the OLD-company lookup), but `VALUES` put it in `status_id`.
+- Ticket 907030: started at `status_id = 4`, which is not in the tracked-transition set
+  `{2,11,12,60,61,101}` (`ddl/src/pkgb/tt_ticket_interface.sql`, updateTicketTimeStats),
+  so no `ticket_time_statistic` row could ever be written; every sibling fixture uses 2.
+
+### The amendment
+
+Added `last_status_change_date = now() - interval '1 hour'` to the four rows, moved
+907018's orphan to `company_id` (status 2), changed 907030's status 4 → 2. No assertion,
+expected value or SQLSTATE changed. Effect: 16/20 → 20/20 (tt.ticket_interface 129/129).
+
+`commit:1582555640b78a2a552c2bc3666490f54b16f13e file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-009 fixture defects, test-only commit`
+
+---
+
+## A-010 — `tt__osag_notify__errors.sql`: mask the non-deterministic DETAIL line
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | orchestrator, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/regress/sql/tt__osag_notify__errors.sql` |
+| **Assertions affected** | the golden `expected/tt__osag_notify__errors.out` (1 of 2 statements) |
+| **Surfaced by** | status report 2026-10-13 (Q2: "the osag_notify one additionally needs the non-deterministic DETAIL line masked") |
+
+### The defect
+
+The not-null-violation `DETAIL: Failing row contains (...)` prints the live
+`nextval('tt.event_sequence')` and `statement_timestamp()` values; the golden pinned a
+hand-written placeholder that could never match.
+
+### The amendment
+
+`\set VERBOSITY terse` / `\set VERBOSITY default` around that one `CALL`. psql's terse
+verbosity drops DETAIL and CONTEXT for that statement only; the `ERROR:` text and
+SQLSTATE — the substance this file pins — are unchanged. Golden regenerated in the
+follow-up test-only commit `84c0c4b`.
+
+`commit:1582555640b78a2a552c2bc3666490f54b16f13e file:migration/test/regress/sql/tt__osag_notify__errors.sql reason:A-010 mask non-deterministic DETAIL, test-only commit`
