@@ -551,9 +551,15 @@ plan's SUMMARY.
   S-TICKET-053 for **a genuine, previously-undocumented bug**: it declares `cust_id
   NUMBER;` and inserts it as the event's `company_id` — but NEVER assigns `cust_id`
   anywhere in its 40-line body. Every audit event this routine writes has `company_id =
-  NULL`, regardless of the ticket's real company. Documented faithfully as a real Oracle
-  behavior (not silently "fixed"), per the plan's own instruction and the precedent set by
-  `TT.EVENT_INTERFACE.moveevent`'s acknowledged bug (S-EVENT-033 in the sibling spec).
+  NULL`, regardless of the ticket's real company. Originally documented faithfully as a
+  real Oracle behavior (not silently "fixed"). **CORRECTED on branch
+  `phoenix/migrate_tt_only`** (status report 2026-10-13, Q11 (b); project-owner
+  instruction "Don't mimic broken behaviour of oracle routines, but annotate/explain what
+  changed with the correction"): the translation resolves `cust_id` from the ticket row
+  exactly as the sibling audit-event writers do (`change_subject` line 873,
+  `change_worker` line 715, `change_service_host` line 779: `SELECT company_id INTO
+  cust_id FROM ticket WHERE id = p_ticket_id`) — see S-TICKET-053 (amended) and
+  S-TICKET-059 (new).
 - **`handleDeferredTransitions`** (`ddl/src/pkgb/tt_ticket_interface.sql:1859-1919`) —
   called only from `change_status_event_id_out` when the ticket transitions into or out of
   deferred (status 60); manages the escalation-status side effects of that transition. Has
@@ -1418,10 +1424,13 @@ plan's SUMMARY.
   ticket's actual company — unlike every OTHER `change_*` routine in this package that
   writes its own audit event directly (e.g. `change_worker`, `change_subject`,
   `change_service_host`), which all correctly resolve and set a real `company_id`.
-  Documented faithfully as a genuine Oracle behavior (a bug, not a feature) — per the
-  plan's own instruction that the body is authoritative, and the precedent set by
-  `TT.EVENT_INTERFACE.moveevent`'s self-acknowledged bug
-  (`migration/spec/tt.event_interface.md` S-EVENT-033). SELECT INTO site #57 (inventory
+  Originally documented faithfully as a genuine Oracle behavior (a bug, not a feature).
+  **Amended (correction, branch `phoenix/migrate_tt_only`):** the translation does NOT
+  reproduce the NULL — it assigns `cust_id` from the ticket row before the `INSERT`,
+  the way every sibling writer in this package does (see S-TICKET-059 for the corrected
+  behaviour, including the one new failure mode this adds). The rest of this clause —
+  the public/private hide rule, the `CurrVal` pull, the unconditional notify call, the
+  absence of any `EXCEPTION` block — is unchanged. SELECT INTO site #57 (inventory
   line 1697), unconditional: `SELECT event_sequence.CurrVal INTO event_id FROM dual` —
   sequence pull (same `NextVal`-then-`CurrVal` pattern as S-TICKET-031), no `STRICT`
   concern. **No `EXCEPTION` block of its own** — any failure (including the `INSERT`
@@ -1526,6 +1535,30 @@ plan's SUMMARY.
   S-TICKET-046's conclusion that neither of THIS package's own two `FUNCTION`s reaches a
   `COMMIT`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:234, 497, 520, 522, 1700`
+
+### S-TICKET-059
+
+- **routines:** change_customer_reference, change_partner_reference, change_emergency, change_always_visible, change_notification, change_summary
+- **claim:** **CORRECTION of the `add_status_change_event` `cust_id` bug (S-TICKET-053;
+  branch `phoenix/migrate_tt_only`).** Oracle declares `cust_id NUMBER;`
+  (`ddl/src/pkgb/tt_ticket_interface.sql:1670`) and inserts it as `tt.event.company_id`
+  (line 1688) without ever assigning it, so every audit event written through this
+  private routine — i.e. by each of the six public routines listed above — carries
+  `company_id = NULL`. Every OTHER audit-event writer in the same package resolves the
+  company from the ticket first: `change_worker` (line 715), `change_service_host` (line
+  779), `change_subject` (line 873), each `SELECT company_id INTO cust_id FROM ticket
+  WHERE id = p_ticket_id`, and `change_label` (line 955) likewise — the NULL is an
+  omission, not a design. The corrected behaviour: before the `INSERT`,
+  `add_status_change_event` executes `SELECT company_id INTO cust_id FROM tt.ticket WHERE
+  id = p_ticket_id` with the same strictness profile as the sibling sites (`STRICT`,
+  unhandled — this private routine has no `EXCEPTION` block and neither do its six
+  callers), so (i) the audit event's `company_id` equals the ticket's `company_id` at the
+  time of the change, and (ii) a nonexistent `p_ticket_id` now surfaces as
+  `NO_DATA_FOUND` from the company lookup (Oracle would have failed the same call on
+  the `tt.event -> tt.ticket` foreign key instead — `ORA-02291` — so a nonexistent
+  ticket was never a success path; only the error identity changes). Audit text,
+  public/private hiding, the sequence pull and the notify call are unchanged.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`, `ddl/src/pkgb/tt_ticket_interface.sql:715`, `ddl/src/pkgb/tt_ticket_interface.sql:779`, `ddl/src/pkgb/tt_ticket_interface.sql:873`
 
 ## Checklist
 
@@ -1747,13 +1780,15 @@ rest of the package, independent of whether a COMMIT-reachability hazard exists)
   audit event written through this private routine has `company_id = NULL`. Whether this
   is a LATENT bug nobody has noticed (because `company_id` on these specific audit
   events is never read by any UI/report), or a bug that IS visible somewhere downstream,
-  cannot be determined from static source alone — no live Oracle or application code was
-  available to this phase to check. Recorded as a faithful behavior to preserve in
-  translation (a translation that "fixes" this by adding a real `SELECT company_id INTO
-  cust_id ...` would silently change behavior relative to the Oracle original, which is
-  exactly what this phase's methodology forbids) — if Phase 4/5 wants to actually fix it,
-  that is a deliberate, documented deviation decision for that phase to make explicitly,
-  not something this spec should quietly paper over.
+  cannot be determined from static source alone. Originally recorded as a faithful
+  behavior to preserve, with the fix deferred to an explicit, documented deviation
+  decision. **That decision was taken on branch `phoenix/migrate_tt_only`** (status
+  report 2026-10-13, Q11 (b)): corrected — S-TICKET-059 states the behaviour, the
+  translation carries a `DEVIATION(ORACLE-BUG)` annotation and
+  `migration/pgsql/tt/ticket_interface.FINDINGS.md` ("Deviations from Oracle") records
+  it. Still open: any downstream consumer that filtered these events on `company_id IS
+  NULL` (unlikely, but not statically excludable) would see them disappear from that
+  filter.
 - **Three structural-uniqueness assumptions this spec relies on but did not independently
   re-verify against every relevant constraint in `ddl/generated/schema.oracle.sql` for
   this plan** (each is used to justify a "no STRICT concern beyond zero-row" verdict in
