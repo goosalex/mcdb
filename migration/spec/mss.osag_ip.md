@@ -249,11 +249,21 @@ only through the public routines that call them (S-IP-016, S-IP-022).
 - **claim:** The nine golden cases from Oracle's own unit-test package
   `MSS.OSAG_IP_TEST.test_ipv62nums` hold exactly, as `(input → left, right)`:
   `'::' → 0, 0`; `'::1' → 0, 1`; `'1::' → 281474976710656, 0`;
-  `'0:0:0:0:0:0:0001' → 0, 1`; `'::1:2:3:4:5:6:7' → 4295098371, 1125921382072327`;
+  `'0:0:0:0:0:0:0:0001' → 0, 1` (see note); `'::1:2:3:4:5:6:7' → 4295098371, 1125921382072327`;
   `'1:2:3:4:5:6:7::' → 281483566841860, 1407400653815808`;
   `'1:2::6:7' → 281483566645248, 393223`; `'1:0::7' → 281474976710656, 7`;
   `'1::0:7' → 281474976710656, 7`.
-- **source:** `ddl/src/pkgb/mss_osag_ip_test.sql:78-112`, `ddl/src/pkgb/mss_osag_ip.sql:199-213, 224-241`
+  **Note on golden case 4 (defective in the Oracle test package):** the literal input at
+  `ddl/src/pkgb/mss_osag_ip_test.sql:90` is `'0:0:0:0:0:0:0001'` — only SEVEN groups (six
+  colons) and no `::`. Oracle's `ipv6right` on it (body lines 226-239) reaches
+  `INSTR(v_ip, ':', v_beg) = 0` on the fourth iteration, `SUBSTR` with a negative length is
+  `NULL`, and the result is `NULL` — not the `1` the test case expects. The Oracle test
+  nevertheless "passes": its check `IF actual_left != expected_left OR actual_right !=
+  expected_right` (`mss_osag_ip_test.sql:121`) is not true when `actual_right` is `NULL`,
+  so the `raise_application_error` is never reached. The evident intent is the eight-group
+  form `'0:0:0:0:0:0:0:0001'` (a leading-zero group, S-IP-017), which this clause adopts.
+  The literal seven-group typo is malformed input and falls under S-IP-020 (`NULL`, `NULL`).
+- **source:** `ddl/src/pkgb/mss_osag_ip_test.sql:78-112, 121`, `ddl/src/pkgb/mss_osag_ip.sql:199-213, 224-241`
 
 ### S-IP-016
 
