@@ -17,7 +17,7 @@
 
 BEGIN;
 
-SELECT plan(106);
+SELECT plan(108);
 
 -- ---------------------------------------------------------------------------------
 -- S-IP-001: getbcast
@@ -176,10 +176,13 @@ SELECT is(mss.osag_ip_ipv6left('1::'), 281474976710656::numeric,
     'S-IP-015: golden case 3 left: ipv6left(''1::'') = 281474976710656');
 SELECT is(mss.osag_ip_ipv6right('1::'), 0::numeric,
     'S-IP-015: golden case 3 right: ipv6right(''1::'') = 0');
-SELECT is(mss.osag_ip_ipv6left('0:0:0:0:0:0:0001'), 0::numeric,
-    'S-IP-015: golden case 4 left: ipv6left(''0:0:0:0:0:0:0001'') = 0');
-SELECT is(mss.osag_ip_ipv6right('0:0:0:0:0:0:0001'), 1::numeric,
-    'S-IP-015: golden case 4 right: ipv6right(''0:0:0:0:0:0:0001'') = 1');
+-- Golden case 4 as written in the Oracle test package ('0:0:0:0:0:0:0001', line 90) has
+-- only seven groups; the spec records why Oracle's test passes vacuously on it and adopts
+-- the evident eight-group intent. The literal typo is asserted under S-IP-020 below.
+SELECT is(mss.osag_ip_ipv6left('0:0:0:0:0:0:0:0001'), 0::numeric,
+    'S-IP-015: golden case 4 (eight-group intent) left: ipv6left(''0:0:0:0:0:0:0:0001'') = 0');
+SELECT is(mss.osag_ip_ipv6right('0:0:0:0:0:0:0:0001'), 1::numeric,
+    'S-IP-015: golden case 4 (eight-group intent) right: ipv6right(''0:0:0:0:0:0:0:0001'') = 1');
 SELECT is(mss.osag_ip_ipv6left('::1:2:3:4:5:6:7'), 4295098371::numeric,
     'S-IP-015: golden case 5 left: ipv6left(''::1:2:3:4:5:6:7'') = 4295098371');
 SELECT is(mss.osag_ip_ipv6right('::1:2:3:4:5:6:7'), 1125921382072327::numeric,
@@ -256,6 +259,10 @@ SELECT is(mss.osag_ip_ipv6left('g::'), NULL::numeric,
     'S-IP-020: ipv6left(''g::'') is NULL (non-hex group)');
 SELECT is(mss.osag_ip_ipv6right('::12345'), NULL::numeric,
     'S-IP-020: ipv6right(''::12345'') is NULL (five-digit group)');
+SELECT is(mss.osag_ip_ipv6left('0:0:0:0:0:0:0001'), NULL::numeric,
+    'S-IP-020: the seven-group typo of Oracle golden case 4 is malformed: ipv6left is NULL (Oracle returned a partial 0)');
+SELECT is(mss.osag_ip_ipv6right('0:0:0:0:0:0:0001'), NULL::numeric,
+    'S-IP-020: the seven-group typo of Oracle golden case 4 is malformed: ipv6right is NULL (as in Oracle)');
 
 -- ---------------------------------------------------------------------------------
 -- S-IP-021: the eight golden num2ipv6 cases from MSS.OSAG_IP_TEST
