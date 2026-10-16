@@ -17,7 +17,7 @@
 
 BEGIN;
 
-SELECT plan(104);
+SELECT plan(106);
 
 -- ---------------------------------------------------------------------------------
 -- S-IP-001: getbcast
@@ -294,6 +294,14 @@ SELECT is(
         mss.osag_ip_ipv6right('2001:0DB8:0000:0000:0000:ff00:0042:8329')),
     '2001:db8::ff00:42:8329'::varchar,
     'S-IP-022: num2ipv6(ipv6left(s), ipv6right(s)) is the canonical form of s');
+SELECT is(
+    mss.osag_ip_num2ipv6(mss.osag_ip_ipv6left('0:0:1:1:1:1:1:1'), mss.osag_ip_ipv6right('0:0:1:1:1:1:1:1')),
+    '0:0:1:1:1:1:1:1'::varchar,
+    'S-IP-022: Oracle quirk preserved -- a LEADING run of exactly two zero groups is not collapsed');
+SELECT is(
+    mss.osag_ip_num2ipv6(mss.osag_ip_ipv6left('1:1:1:1:1:1:0:0'), mss.osag_ip_ipv6right('1:1:1:1:1:1:0:0')),
+    '1:1:1:1:1:1::'::varchar,
+    'S-IP-022: a TRAILING run of two zero groups is collapsed normally');
 
 -- ---------------------------------------------------------------------------------
 -- S-IP-023 (CORRECTED): num2ipv6 with NULL / out-of-range halves returns NULL
