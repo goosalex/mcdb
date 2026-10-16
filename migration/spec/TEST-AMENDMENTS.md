@@ -428,3 +428,123 @@ SQLSTATE — the substance this file pins — are unchanged. Golden regenerated 
 follow-up test-only commit `84c0c4b`.
 
 `commit:1582555640b78a2a552c2bc3666490f54b16f13e file:migration/test/regress/sql/tt__osag_notify__errors.sql reason:A-010 mask non-deterministic DETAIL, test-only commit`
+
+---
+
+## A-012 — `tt__event_interface__corrections.sql`: NEW file for the corrected `moveevent` (Q11 (a))
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | Q11 corrections agent, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__event_interface__corrections.sql` (new, 10 assertions) |
+| **Assertions affected** | 0 existing; 10 added |
+| **Surfaced by** | status report 2026-10-13, Q11 (a): `moveevent` ignores `p_event_id` (Oracle header comment "FIXME / BROKEN") |
+
+### Why a new file, not an edit
+
+The project owner's instruction for this branch is not to mimic broken Oracle behaviour but
+to annotate the correction. The locked `tt__event_interface__spec.sql` pins S-EVENT-033's
+swallow/log path for a nonexistent new ticket, which the correction keeps — so that file
+is untouched. The corrected semantics got their own clauses (S-EVENT-046/047, spec commit
+`35a92fd`, written BEFORE this file) and their own file.
+
+### RED evidence (against the pre-correction translation, `mcdb_test_q11`)
+
+```
+Failed test 3:  S-EVENT-046 ... left the OLD ticket's other event (910612) on 910601   have: 910602 want: 910601
+Failed test 6:  S-EVENT-047 ... did NOT move event 910612 ... not attached to 910603    have: 910602 want: 910601
+Failed test 9:  S-EVENT-047 ... nonexistent p_event_id modified nothing                 have: 910602 want: 910601
+Failed test 10: S-EVENT-047 ... logged "...event does not exist"
+Failed 4/10 subtests
+```
+
+Tests 6 and 9 fail as a consequence of test 3 (the bug had already re-parented 910612);
+tests 3 and 10 are the two independent defects. GREEN 10/10 after `8ba4dce`.
+
+`commit:0499bc80d45f09248a41c755be1b3c42b759dcc1 file:migration/test/pgtap/tt__event_interface__corrections.sql reason:A-012 new corrections suite for S-EVENT-046/047, test-only commit`
+
+---
+
+## A-013 — `tt__ticket_interface__corrections.sql`: NEW file for Q11 (b) and (d)
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | Q11 corrections agent, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__corrections.sql` (new, 15 assertions) |
+| **Assertions affected** | 0 existing; 15 added (7 for S-TICKET-060, 8 for S-TICKET-059) |
+| **Surfaced by** | status report 2026-10-13, Q11 (b) `add_status_change_event` never assigns `cust_id`; Q11 (d) `remove_related_file` lacks `add_related_file`'s same-company guard |
+
+Spec first: S-TICKET-053 amended + S-TICKET-059 new (`26a7ef5`), S-TICKET-045 amended +
+S-TICKET-060 new (`f3b1e24`). Q11 (c) was decided "behaviour kept" (`86aec61`) and needs
+no test change — the locked S-TICKET-021 assertions remain its tests.
+
+### RED evidence (against the pre-correction translation, `mcdb_test_q11`)
+
+```
+Failed test 2:  S-TICKET-060 ... did NOT delete the cross-company relation          have: 0    want: 1
+Failed test 3:  S-TICKET-060 ... logged the mirrored "...different companies" message
+Failed test 4:  S-TICKET-060 ... no 100019 history event for the refused detach      have: 1    want: 0
+Failed test 7:  S-TICKET-060 ... exactly ONE 100019 history event                     have: 2    want: 1
+Failed test 9:  S-TICKET-059 ... customer-reference audit event carries company_id   have: NULL want: 910001
+Failed test 11: S-TICKET-059 ... partner-reference audit event carries company_id    have: NULL want: 910001
+Failed test 13: S-TICKET-059 ... emergency audit event carries company_id            have: NULL want: 910001
+Failed test 14: S-TICKET-059 ... raises NO_DATA_FOUND (P0002) for a nonexistent ticket   caught: no exception
+Failed test 15: S-TICKET-059 ... no audit event written for the nonexistent ticket   have: 1    want: 0
+Failed 9/15 subtests
+```
+
+GREEN 15/15 after `e51dcfb` (b) + `5210514` (d).
+
+`commit:b8c18dd98ba76705c5075f93e9c05cd12171d3b4 file:migration/test/pgtap/tt__ticket_interface__corrections.sql reason:A-013 new corrections suite for S-TICKET-059/060, test-only commit`
+
+---
+
+## A-014 — `tt__ticket_interface__changes.sql`: "same-company" fixture 906028 had no release row (+ one label)
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | Q11 corrections agent, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 0 changed; 1 fixture row added; 1 description text updated (S-TICKET-045 `lives_ok`) |
+| **Surfaced by** | Q11 (d) — the corrected `remove_related_file` requires the same-company release the fixture's own comment always claimed |
+
+### The defect
+
+The fixture comment reads "A second, same-company file/relation for remove_related_file's
+own fixture", but file 906028 was never released to any company — there was no
+`mc.mc_file_release` row at all. Under Oracle's un-guarded lookup that was invisible.
+S-TICKET-060 (spec commit `f3b1e24`, written first) makes "same-company" mean what the
+comment says: a release of the file to the ticket's company.
+
+### The amendment
+
+Added `INSERT INTO mc.mc_file_release (id, company_id, mc_file_id) VALUES (906031, 906001, 906028)`
+so the fixture constructs the scenario it describes, and reworded the S-TICKET-045
+`lives_ok` description (which asserted, in words only, "no same-company guard at all").
+The asserted conditions — the call succeeds, the relation row is deleted — are unchanged.
+Verified: the file still passes 70/70 against the PRE-correction translation (the extra
+release row is behaviour-neutral under Oracle's lookup) and 70/70 after.
+
+`commit:b8c18dd98ba76705c5075f93e9c05cd12171d3b4 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-014 same-company fixture 906028 gains its mc_file_release row + S-TICKET-045 label, test-only commit`
+
+---
+
+## A-015 — `tt__ticket_interface__selectinto.sql`: S-TICKET-045 site #66 label only
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | Q11 corrections agent, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
+| **Assertions affected** | 0 changed; 1 description text + its comment block updated |
+
+The site #66 `lives_ok` description stated "swallowed by its whole-routine WHEN OTHERS, no
+dedicated NO_DATA_FOUND arm". After Q11 (d) the orphaned-file case is swallowed by the
+mirrored `NO_DATA_FOUND` arm instead; the assertion (`lives_ok`, nothing propagates) is
+identical and passes before and after. Label corrected so it does not contradict the
+amended S-TICKET-045.
+
+`commit:b8c18dd98ba76705c5075f93e9c05cd12171d3b4 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-015 S-TICKET-045 site #66 label only, test-only commit`
