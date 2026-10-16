@@ -503,7 +503,7 @@ SELECT lives_ok(
 SELECT results_eq(
     $$SELECT ticket_status::text, ticket_status_id::text, date_from::text, date_to::text
       FROM ticketevolution.tickev WHERE ticket_id = 909005 AND deleted = 0
-      ORDER BY date_to, ticket_status$$,
+      ORDER BY date_to, ticket_status_id$$,
     $$VALUES ('new'::text, '1'::text, '2024-03-01 10:00:00'::text, '2024-03-01 10:00:00'::text),
              ('merged', '110', '2024-03-01 10:00:00', '2024-03-01 10:00:00')$$,
     'S-TICKEV-007: a lone 100004 event yields a pseudo ''new'' row and exactly one ''merged'' row (ticket_status_id 110), both at the event''s db_date'
