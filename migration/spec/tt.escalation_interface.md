@@ -203,8 +203,13 @@ the corrected behaviour. Every other clause is Oracle-faithful.
   reachable defect paths are "event missing" and "ticket row missing" — the latter only
   under deferred FK checking.) The correction keeps S-ESC-005's "host not found → treat
   as no host → escalate anyway" semantics untouched: only sites (a)-(c) trigger the
-  early return, site (d) keeps Oracle's `v_host_id := NULL` handling.
-- **source:** `ddl/src/pkgb/tt_escalation_interface.sql:27-29, 45-48, 55, 60, 65-73`, `ddl/src/pkgb/tt_event_interface.sql:825-827`
+  early return, site (d) keeps Oracle's `v_host_id := NULL` handling. The error text
+  follows the package's own `escalate_isp_outage_to_os` wording (line 175):
+  `'tt.escalation_interface.escalate_os(): event with id ' || p_event_id || ' or its
+  ticket not found. This is needed for escalation. Aborting escalation.'`. The
+  `plog.debug('escalate_to_os called for event id ' || p_event_id)` on line 23 still
+  fires first (it precedes the lookup block).
+- **source:** `ddl/src/pkgb/tt_escalation_interface.sql:23, 27-29, 45-48, 55, 60, 65-73, 175`, `ddl/src/pkgb/tt_event_interface.sql:825-827`
 
 ### S-ESC-009
 
@@ -285,8 +290,12 @@ the corrected behaviour. Every other clause is Oracle-faithful.
   rows, so `SQL%ROWCOUNT = 0` and line 130 skips `addevent_new`. Net Oracle effect: a
   completely SILENT no-op — no log, no error, nothing — for a request to escalate an
   event that does not exist. The correction changes no data-side effect (there were
-  none) but makes the failure observable (`plog.err`) instead of silent.
-- **source:** `ddl/src/pkgb/tt_escalation_interface.sql:98-100, 114-117, 121, 126-130`
+  none) but makes the failure observable (`plog.err`) instead of silent. Error text,
+  same wording as S-ESC-008 / line 175: `'tt.escalation_interface.escalate_customer():
+  event with id ' || p_event_id || ' or its ticket not found. This is needed for
+  escalation. Aborting escalation.'`. `escalate_customer` has no `plog.debug` lines
+  at all (lines 94-139), so this is its only log output on that path.
+- **source:** `ddl/src/pkgb/tt_escalation_interface.sql:94, 98-100, 114-117, 121, 126-130, 175`
 
 ### S-ESC-015
 
