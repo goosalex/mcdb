@@ -370,10 +370,6 @@ translation defect).
 ---
 
 ## A-009 — `tt__ticket_interface__selectinto.sql`: 5 ticket fixtures (last_status_change_date, misplaced orphan, status 4)
-
-| | |
-|---|---|
-| **Date** | 2026-10-16 |
 | **Amended by** | orchestrator, branch `phoenix/migrate_tt_only` (touches NO translation file) |
 | **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
 | **Assertions affected** | 4 (tests 3, 10, 15, 20) |
@@ -428,3 +424,100 @@ SQLSTATE — the substance this file pins — are unchanged. Golden regenerated 
 follow-up test-only commit `84c0c4b`.
 
 `commit:1582555640b78a2a552c2bc3666490f54b16f13e file:migration/test/regress/sql/tt__osag_notify__errors.sql reason:A-010 mask non-deterministic DETAIL, test-only commit`
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+
+---
+
+## A-015 — `mss__osag_ip__spec.sql`: Oracle golden case 4 of `test_ipv62nums` is a seven-group typo
+| **Amended by** | the OSAG_IP translation agent, in a commit that touches NO translation file (test commit `670fc0a`, after spec commit `05832a1`) |
+| **File** | `migration/test/pgtap/mss__osag_ip__spec.sql` |
+| **Assertions affected** | 2 changed (S-IP-015 golden case 4 left/right), 2 added (S-IP-020) |
+| **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/mss/osag_ip.sql` (104/106) |
+
+commit:670fc0a0b362edd8c42c8782b1b288ec99da187c file:migration/test/pgtap/mss__osag_ip__spec.sql reason:Oracle golden case 4 input has seven groups; spec S-IP-015 amended first (05832a1) with Oracle-side evidence
+
+### The defect
+
+The RED suite copied `'0:0:0:0:0:0:0001' → (0, 1)` verbatim from
+`ddl/src/pkgb/mss_osag_ip_test.sql:90-92`. That input has six colons — seven groups, no
+`::`. Traced through Oracle's `ipv6right` (`ddl/src/pkgb/mss_osag_ip.sql:226-239`): the
+fourth iteration finds no further colon, `SUBSTR` with a negative length is `NULL`, and
+the function returns `NULL`, not `1`. The Oracle test package never notices because its
+check `IF actual_left != expected_left OR actual_right != expected_right`
+(`mss_osag_ip_test.sql:121`) is not true when `actual_right` is `NULL` — the golden
+expectation was unattainable in Oracle itself and passed vacuously.
+
+### The amendment
+
+- S-IP-015 case 4 now asserts the evident eight-group intent `'0:0:0:0:0:0:0:0001' → (0, 1)`
+  (a leading-zero group, the thing the case was clearly written to exercise).
+- The literal seven-group string is asserted under S-IP-020 (malformed → `NULL`, `NULL`),
+  where the spec already placed every "fewer than eight groups" input.
+
+### Why this is not a weakening
+
+No expected value was changed to match the translation's output: the translation returned
+`NULL, NULL` for the typo, and the amended suite now asserts exactly that *under the clause
+that already demanded it* (S-IP-020, written before the translation), while keeping the
+original `(0, 1)` expectation alive on the input the Oracle author evidently meant. The
+evidence is entirely in the Oracle sources cited above. Still falsifiable: a translation
+that returned a partial `0` for `ipv6left` of the typo (Oracle's actual behaviour) fails
+the new S-IP-020 assertion.
+
+### Lesson for the corpus
+
+Oracle's `OSAG_IP_TEST` style (`IF actual != expected THEN raise`) cannot detect a `NULL`
+result at all. Golden cases lifted from Oracle unit-test packages must be re-derived by
+hand against the Oracle body, not trusted because "the Oracle test passes".
+
+---
+
+## A-016 — `osag__osag_msg__spec.sql`: row-count bookkeeping literals off by one; `xmin` through a view
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | the OSAG_MSG translation agent, in a commit that touches NO translation file (`b471f1173139938c1942d21c02fe06cfa9583441`) |
+| **File** | `migration/test/pgtap/osag__osag_msg__spec.sql` |
+| **Assertions affected** | 6 (S-MSG-008 ×2, S-MSG-011 ×1, S-MSG-012 ×2, S-MSG-014 ×1) |
+| **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/osag/osag_msg.sql` (57/63) |
+
+commit:b471f1173139938c1942d21c02fe06cfa9583441 file:migration/test/pgtap/osag__osag_msg__spec.sql reason:bookkeeping literals (rows queued so far) miscounted by one and xmin is not visible through a temp view; no asserted behaviour changed
+commit:d982a159bb998b87f04010107a86b04bb9e4e3dc file:migration/test/pgtap/osag__osag_msg__spec.sql reason:S-MSG-014 xmin check must accept subtransaction xids (the INSERT runs inside an EXCEPTION-bearing block); no asserted behaviour changed
+
+### The defect
+
+The file tracks "rows queued so far" between groups. Six `send_mail` calls succeed before
+the S-MSG-008 baseline and seven rows exist before the S-MSG-011 baseline; the literals
+said five and six. Both the *before* and the *after* literal of each pair were wrong by the
+same one, so the actual run showed `6 -> 6` and `7 -> 7`: the failing `send_mail` calls
+and the swallowed `send_sms` calls queued nothing, exactly as asserted — only the
+author's arithmetic was off (same class as A-005). Separately, the S-MSG-014 assertion
+read `xmin` through the temp view `v_mine`; PostgreSQL does not expose system columns
+through views (`column "xmin" does not exist`), and `txid_current()::text::xid` is the
+wrong cast for an epoch-qualified id.
+
+### The amendment
+
+Literals 5/5/6/6/6 -> 6/6/7/7/7; the S-MSG-014 query reads `osag.msg_outbox` directly and
+compares `xmin = pg_current_xact_id()::xid` (verified live: a row inserted in the current
+transaction matches). No SQLSTATE, column expectation or clause changed.
+
+### Second pass (commit `d982a159bb998b87f04010107a86b04bb9e4e3dc`)
+
+The corrected S-MSG-014 query still failed (`have: 0, want: 7`): the outbox INSERT runs
+inside `osag.osag_msg__enqueue`'s block, which has an `EXCEPTION` clause and is therefore
+a **subtransaction** — the rows carry a subxid, not the top-level `pg_current_xact_id()`.
+The assertion now reads "written by this transaction or one of its subtransactions":
+`xmin::bigint >= (pg_current_xact_id()::xid)::bigint`.
+
+### Why this is not a weakening
+
+Every amended assertion still asserts the same thing (no row queued on failure; every
+queued row written by the current transaction). A translation that queued a row on a
+`NULL` recipient would still fail S-MSG-008/012; one that COMMITted autonomously would
+fail the `lives_ok` calls outright (`CALL` cannot COMMIT inside the harness's open
+transaction) and the S-MSG-014 `prosrc` check.
