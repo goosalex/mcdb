@@ -187,7 +187,10 @@ scope is reduced by this front-matter bookkeeping detail.
   `change_status`** — `p_label_id` is accepted as a parameter but never read anywhere in the
   20-line body. This is a genuine doc/body disagreement (per the plan's own instruction that
   the body, not the doc comment, is authoritative) — recorded in Assumptions, not silently
-  "fixed" by inventing a `change_label` call that Oracle does not make. No `SELECT INTO`, no
+  "fixed" by inventing a `change_label` call that Oracle does not make. **Re-examined on
+  branch `phoenix/migrate_tt_only` (Q11 (c)) and deliberately LEFT AS THE BODY DOES** —
+  the evidence (S-TICKET-021, amended) shows the omitted call would be a no-op: the sole
+  caller passes the ticket's own current label. No `SELECT INTO`, no
   `EXCEPTION` block of its own (S-TICKET-017).
 
 ### change_partner_reference (PUBLIC)
@@ -884,6 +887,27 @@ plan's SUMMARY.
   here rather than inventing a `change_label` call Oracle does not make. No `SELECT INTO`
   at this routine's own level; no `EXCEPTION` block of its own — its call to
   `change_status` inherits that routine's full strictness profile (S-TICKET-007 onward).
+  **Decision (branch `phoenix/migrate_tt_only`, status report 2026-10-13 Q11 (c)):
+  behaviour KEPT — this is stale documentation, not a lost feature.** Evidence, all
+  static: (1) the ONLY caller in the corpus is `TT.UTIL.check_ticket_status`
+  (`ddl/src/pkgb/tt_util.sql:62-64`), whose cursor selects `t.label_id as label_id`
+  from the ticket being expired (`ddl/src/pkgb/tt_util.sql:50`) and passes it as
+  `p_label_id` — the doc comment itself names the parameter "current label id"
+  (`ddl/src/pkg/tt_ticket_interface.sql:201`); a `change_label(p_ticket_id, p_label_id)`
+  call (`ddl/src/pkgb/tt_ticket_interface.sql:930-938`, `UPDATE tt.ticket SET label_id =
+  p_label_id`) with the ticket's own current label would therefore write the value
+  already stored — a no-op; (2) the 4-argument `change_label` overload (lines 944-994),
+  which would additionally write a "Ticket label ..." audit event, cannot be meant
+  either: `expire_status` has no contact to pass and the generated text for an unchanged
+  label ("changed to X (was: X)") would be nonsense; (3) nothing in `ddl/src/` reads
+  `tt.ticket.label_id` in connection with status expiry or `status_valid_until_date`
+  (`tt_util.sql:50` is the only reader outside `change_label` itself), and
+  `masterdata/TT/label.csv` holds four routing labels (Dispatch, Routine, Process, SOC)
+  with no "expired"/"hot" label a status expiry could plausibly apply; (4) the revision
+  history of the body shows no removed `change_label` call (the routine is unchanged
+  since the base import). The locked assertions (`tt__ticket_interface__lifecycle.sql`,
+  S-TICKET-021: `label_id` untouched after `expire_status(..., p_label_id => 1)`) remain
+  the pinned behaviour. Unlike Q11 (a)/(b)/(d) this item is NOT a `DEVIATION`.
 - **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:999-1017`
 
 ### S-TICKET-022
@@ -1773,9 +1797,12 @@ rest of the package, independent of whether a COMMIT-reachability hazard exists)
 - **The doc/body disagreement in `expire_status`** (S-TICKET-021): the package spec's
   comment claims it "calls change_label() and change_status()"; the body only calls
   `change_status`. This spec records the body's actual behavior as authoritative (per
-  this plan's own instruction) and flags the discrepancy rather than guessing which one
-  is "more correct" — no live Oracle exists to test which behavior production code
-  actually depends on.
+  this plan's own instruction). **Resolved on branch `phoenix/migrate_tt_only` (Q11
+  (c)): stale documentation, behaviour kept** — the only caller passes the ticket's own
+  current label, so the documented `change_label` call would be a no-op (evidence listed
+  in S-TICKET-021). What remains unknowable statically is whether an Oracle-side client
+  outside `ddl/src/` ever calls `expire_status` directly with a DIFFERENT label; none is
+  known, and the parameter's own doc ("current label id") argues against it.
 - **The `add_status_change_event` `cust_id`-never-assigned bug** (S-TICKET-053): every
   audit event written through this private routine has `company_id = NULL`. Whether this
   is a LATENT bug nobody has noticed (because `company_id` on these specific audit
