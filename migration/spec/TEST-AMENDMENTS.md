@@ -414,3 +414,42 @@ the new S-IP-020 assertion.
 Oracle's `OSAG_IP_TEST` style (`IF actual != expected THEN raise`) cannot detect a `NULL`
 result at all. Golden cases lifted from Oracle unit-test packages must be re-derived by
 hand against the Oracle body, not trusted because "the Oracle test passes".
+
+---
+
+## A-010 — `osag__osag_msg__spec.sql`: row-count bookkeeping literals off by one; `xmin` through a view
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | the OSAG_MSG translation agent, in a commit that touches NO translation file (`b471f1173139938c1942d21c02fe06cfa9583441`) |
+| **File** | `migration/test/pgtap/osag__osag_msg__spec.sql` |
+| **Assertions affected** | 6 (S-MSG-008 ×2, S-MSG-011 ×1, S-MSG-012 ×2, S-MSG-014 ×1) |
+| **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/osag/osag_msg.sql` (57/63) |
+
+commit:b471f1173139938c1942d21c02fe06cfa9583441 file:migration/test/pgtap/osag__osag_msg__spec.sql reason:bookkeeping literals (rows queued so far) miscounted by one and xmin is not visible through a temp view; no asserted behaviour changed
+
+### The defect
+
+The file tracks "rows queued so far" between groups. Six `send_mail` calls succeed before
+the S-MSG-008 baseline and seven rows exist before the S-MSG-011 baseline; the literals
+said five and six. Both the *before* and the *after* literal of each pair were wrong by the
+same one, so the actual run showed `6 -> 6` and `7 -> 7`: the failing `send_mail` calls
+and the swallowed `send_sms` calls queued nothing, exactly as asserted — only the
+author's arithmetic was off (same class as A-005). Separately, the S-MSG-014 assertion
+read `xmin` through the temp view `v_mine`; PostgreSQL does not expose system columns
+through views (`column "xmin" does not exist`), and `txid_current()::text::xid` is the
+wrong cast for an epoch-qualified id.
+
+### The amendment
+
+Literals 5/5/6/6/6 -> 6/6/7/7/7; the S-MSG-014 query reads `osag.msg_outbox` directly and
+compares `xmin = pg_current_xact_id()::xid` (verified live: a row inserted in the current
+transaction matches). No SQLSTATE, column expectation or clause changed.
+
+### Why this is not a weakening
+
+Every amended assertion still asserts the same thing (no row queued on failure; every
+queued row written by the current transaction). A translation that queued a row on a
+`NULL` recipient would still fail S-MSG-008/012; one that COMMITted autonomously would
+still fail S-MSG-014.
