@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: spec-method-test-harness-pilot
 status: executing
-stopped_at: Completed 02-07-PLAN.md (TT.TICKET_INTERFACE spec)
-last_updated: "2026-07-25T17:25:45.822Z"
-last_activity: 2026-07-25
-last_activity_desc: Phase 02 execution started
+stopped_at: Branch phoenix/migrate_tt_only -- TT closure fully translated (13/14 packages green), scoping report written
+last_updated: "2026-10-16T00:00:00.000Z"
+last_activity: 2026-10-16
+last_activity_desc: phoenix/migrate_tt_only: ESCALATION_INTERFACE, OSAG_IP, OSAG_MSG, CALCULATOR, TT triggers translated; Q1/Q2/Q4/Q7/Q9/Q10/Q11 decided; rename tooling + Oracle-side stubs delivered
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,10 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Current Position
 
-Phase: 02 (spec-method-test-harness-pilot) — EXECUTING
-Plan: 1 of 13
-Status: Executing Phase 02
-Last activity: 2026-07-25 — Phase 02 execution started
+Phase: 02 complete (all 13 plans executed; UAT pending). Branch `phoenix/migrate_tt_only`
+(2026-10-16) pulled the TT-only slice of Phases 3-5 forward: see
+`.planning/reports/tt-only-scope-2026-10-16.md` for decisions, the remaining questions
+(Q5, Q6, Q8, Q15 + bridge/replication/cascade questions) and the final run table
+(574/575 pgTAP, 8/8 regress, 13/14 packages; only S-AUTH-007 red, by decision).
+Last activity: 2026-10-16 — TT closure translated; Oracle-side stub/bridge drafts and
+client rename tooling delivered
 
 Progress: [░░░░░░░░░░] 0%
 

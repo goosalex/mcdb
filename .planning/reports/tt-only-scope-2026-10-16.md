@@ -151,11 +151,70 @@ in-database twin `pgmig.rewrite_oracle_names(text)` + `pgmig.apply_data_name_rew
 rewrites for clients (`SQLCODE = -20980` → `SQLSTATE = 'OS980'`) are in
 `sqlstate-map.md`.
 
-## 6. Commits on this branch and the second wave
+## 6. Result on this branch (final run of `migration/test/run-all.sh`, head `3b105ba`)
 
-(Filled in after the agent branches merge — see the git log of
-`phoenix/migrate_tt_only` from `1b14c64` onward.)
+Gates: spec_lint 12/12, trace_lint 27/27, provenance_lint 12/12 OK. Template hash gate
+current. Unit suites (analyze, mapping, spec, test/lib) OK.
 
-### Test-amendment ledger entries (TEST-AMENDMENTS.md A-009 / A-010)
+| Package | pgTAP | Regress | Result |
+|---|---|---|---|
+| _canary.canary | 2/2 | 1/1 | PASS |
+| _support.pgmig (name rewriter, PostgreSQL twin) | 10/10 | — | PASS |
+| auth.osag_auth | 9/10 | — | FAIL — S-AUTH-007, kept red on purpose (Q3; AUTH stays on Oracle) |
+| mss.osag_dbprop | 10/10 | 1/1 | PASS |
+| mss.osag_ip (new) | 108/108 | — | PASS |
+| osag.osag_msg (new, outbox) | 63/63 | — | PASS |
+| ticketevolution.calculator (new) | 62/62 | 1/1 | PASS |
+| tt.escalation_interface (new) | 74/74 | 1/1 | PASS |
+| tt.event_interface (+Q11 a) | 30/30 | 1/1 | PASS |
+| tt.osag_notify | 23/23 | 1/1 | PASS |
+| tt.ticket_interface (+Q11 b, d) | 144/144 | 1/1 | PASS |
+| tt.ticket_update_trg (new) | 17/17 | — | PASS |
+| tt.todo_item_update_trg (new) | 12/12 | — | PASS |
+| tt.util | 10/10 | 1/1 | PASS |
+| **Total** | **574/575** | **8/8** | 13/14 |
 
-Both amendments touch test files only; recorded in `migration/spec/TEST-AMENDMENTS.md`.
+Before this branch (status report 2026-10-13): 199/204 pgTAP, 2/6 regress, 2/7 packages.
+The TT closure is now fully translated and tested except the real plog implementation
+(Phase 3) — every TT package, both triggers, the TICKETEVOLUTION package, and the two
+leaf dependencies MSS.OSAG_IP and OSAG.OSAG_MSG.
+
+### Corrections of Oracle behaviour made on this branch (all annotated `DEVIATION(ORACLE-BUG)`)
+
+| Routine | Oracle behaviour | Corrected to | Spec clause |
+|---|---|---|---|
+| escalation_interface.escalate_os / escalate_customer | one shared NO_DATA_FOUND handler let a nonexistent event fall through to `UPDATE … WHERE id = NULL` and `addevent_new(NULL ticket)` (silently swallowed) | log via plog.err and RETURN with no side effects; "no host → escalate anyway" kept | S-ESC-008, S-ESC-014 |
+| osag_ip.ip2num | `'1.a.3.4'` raised ORA-06502; `'1.2.3.4.5'` returned 16909060.5 | NULL | S-IP-008, S-IP-009 |
+| osag_ip.num2ip / num2ipv6 / ipv6left/right | `num2ip(1.5)='0.0.0.1.5'`; malformed IPv6 raised or returned half a result; negatives/`NULL` gave `'####'`/`'::'` | NULL, never raise; IPv6 halves as numeric (2^64−1 > bigint) | S-IP-014, 020, 023 |
+| osag_msg.send_mail/send_sms | UTL_SMTP at call time; `send_sms(NULL)` mailed `'@mx-sms.open.ch'` | durable `osag.msg_outbox` row (delivery by an external shipper, only for committed work); empty number rejected and logged | S-MSG-012, 013 (PLATFORM) |
+| calculator.materialize_tickev | "60s margin" implemented as `date_from + 60` = 60 **days**; date_to chaining also stretched the pseudo `'new'` row | `interval '60 seconds'`; chaining restricted to the row of the last status | S-TICKEV-011, 009 |
+| event_interface.moveevent | ignored `p_event_id` (Oracle comment: "BROKEN, never run") — moved every event of the old ticket | moves exactly the event `p_event_id` from `p_oldticket_id`; existing swallow semantics kept | S-EVENT-046/047 |
+| ticket_interface.add_status_change_event (private) | never assigned `cust_id` → every status-change audit event had `company_id = NULL` | resolves `tt.ticket.company_id` like the sibling audit helpers | S-TICKET-059 |
+| ticket_interface.remove_related_file | no same-company guard (add_related_file has one) | symmetric guard; cross-company detach is logged and refused | S-TICKET-060 |
+| ticket_interface.expire_status | doc says it calls change_label; body does not | **kept** — the only caller passes the ticket's own current label (a no-op); stale documentation, evidence in S-TICKET-021 / FINDINGS | — |
+
+Not corrected, by evidence: escalate_customer's body (status 10 / event 60001) vs its
+comment (customer escalation 60101/20) — body authoritative, mismatch recorded
+(S-ESC-012). ipv6shorten never collapses a *leading* run of exactly two zero groups —
+preserved as a quirk, not a bug.
+
+### Commits
+
+57 commits from `1b14c64` to `3b105ba` on `phoenix/migrate_tt_only`: four agent branches
+(ESCALATION_INTERFACE; OSAG_IP + OSAG_MSG; CALCULATOR + triggers + trigger-aware
+tooling; Q11 corrections) merged with `--no-ff`, each following the spec → RED test →
+translation commit order that `provenance_lint.sh` enforces, plus the orchestrator's
+tooling/decision commits listed in section 2. Test-amendment ledger entries on this
+branch: A-009, A-010 (orchestrator), A-012–A-014, A-018 (Q11), A-015, A-016 (OSAG_IP/MSG),
+A-017 (CALCULATOR); A-011 is unused.
+
+### What is still open after this branch
+
+1. Q5 plog, Q6/Q8 confirmations, Q15, and the three NEW questions in section 2.
+2. The `tt-bridge` service and the Oracle-side files (`migration/oracle_side/`) have never
+   run against Oracle — they need the dev instance.
+3. `deleteTicket`/`merge_tickets` still carry their 14 cross-schema statements in the
+   PostgreSQL translation; they need the callback hook once the bridge exists.
+4. Reference-data replication Oracle → PostgreSQL for the 21 non-TT tables (section 1).
+5. Phase 5 items unchanged (ora2pg sequence gap, `\set ON_ERROR_STOP OFF`, FK file choice,
+   regenerate `ddl/migrated` from the current baseline).
