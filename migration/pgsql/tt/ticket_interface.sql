@@ -98,10 +98,25 @@
 -- change_customer_reference, change_partner_reference, change_emergency,
 -- change_always_visible, change_notification, change_summary.
 --
--- S-TICKET-053: a genuine, previously-undocumented Oracle bug. `cust_id` is declared but
--- NEVER ASSIGNED anywhere in the Oracle body -- every audit event this routine writes has
--- company_id = NULL regardless of the ticket's real company. Preserved faithfully (not
--- "fixed"), matching TT.EVENT_INTERFACE.moveevent's identical precedent (S-EVENT-033).
+-- S-TICKET-053 / S-TICKET-059.
+--
+-- DEVIATION(ORACLE-BUG): Oracle declares `cust_id NUMBER;`
+-- (ddl/src/pkgb/tt_ticket_interface.sql:1670) and inserts it as tt.event.company_id
+-- (line 1688) without ever assigning it, so every audit event written through this
+-- routine -- for change_customer_reference, change_partner_reference, change_emergency,
+-- change_always_visible, change_notification and change_summary -- had company_id =
+-- NULL regardless of the ticket's real company. Every other audit-event writer in this
+-- package resolves the company from the ticket first (change_worker line 715,
+-- change_service_host line 779, change_subject line 873: `SELECT company_id INTO cust_id
+-- FROM ticket WHERE id = p_ticket_id`), so the NULL is an omission, not a design. Per
+-- the branch owner's instruction ("Don't mimic broken behaviour of oracle routines, but
+-- annotate/explain what changed with the correction") this translation adds that same
+-- lookup, with the same strictness profile as the sibling sites (STRICT, unhandled --
+-- neither this routine nor its six callers has an EXCEPTION block). Consequence: a
+-- nonexistent p_ticket_id now raises NO_DATA_FOUND here instead of (in Oracle) failing
+-- the INSERT on the tt.event -> tt.ticket foreign key; it was never a success path.
+-- Everything else (hide rule, INSERT, CurrVal pull, notify call) is unchanged. See
+-- ticket_interface.FINDINGS.md, "Deviations from Oracle".
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.ticket_interface__add_status_change_event(
     OUT event_id numeric,
@@ -113,9 +128,21 @@ CREATE OR REPLACE PROCEDURE tt.ticket_interface__add_status_change_event(
 LANGUAGE plpgsql
 AS $fn$
 DECLARE
-    cust_id numeric;  -- S-TICKET-053: never assigned in Oracle source either -- stays NULL.
+    cust_id numeric;  -- S-TICKET-059: resolved from the ticket below (Oracle left it NULL).
     v_public_event numeric := 1;
 BEGIN
+    -- DEVIATION(ORACLE-BUG) S-TICKET-059: Oracle has no lookup here at all. STRICT,
+    -- unhandled, exactly like change_subject's site #29; externally reachable through all
+    -- six public callers, hence the "no data found" message-parity shim (XCUT-01
+    -- convention, same rationale as update_ux_timeout_for_ticket's site #18).
+    BEGIN
+        SELECT company_id INTO STRICT cust_id
+        FROM tt.ticket WHERE id = p_ticket_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE EXCEPTION 'no data found' USING ERRCODE = 'P0002';
+    END;
+
     -- check whether we have to hide the event: hide if p_public_change_text is NULL and
     -- p_private_change_text is not (Oracle's own inline comment flags this check as
     -- fragile "if you ever decide to make this procedure public" -- stays private here).

@@ -468,3 +468,23 @@ deferred to plan 02-13). **Zero of these 67 red assertions indicate a defect in 
 translated PL/pgSQL code itself** -- every one was traced to its root cause and
 independently verified against the Oracle source, the live schema, or the pgTAP engine's
 own documented dispatch behavior.
+
+## Deviations from Oracle
+
+Recorded per the branch owner's instruction for `phoenix/migrate_tt_only`: "Don't mimic
+broken behaviour of oracle routines, but annotate/explain what changed with the
+correction." Each deviation is marked `DEVIATION(ORACLE-BUG)` at the site in
+`ticket_interface.sql`. Status report 2026-10-13, Q11 (b)/(c)/(d); Q11 (a) is in
+`event_interface.FINDINGS.md`.
+
+### Q11 (b) -- `add_status_change_event` resolves `company_id` from the ticket
+
+| | |
+|---|---|
+| **Oracle** | `cust_id NUMBER;` declared (`ddl/src/pkgb/tt_ticket_interface.sql:1670`), inserted as `tt.event.company_id` (line 1688), never assigned. Every audit event written for `change_customer_reference`, `change_partner_reference`, `change_emergency`, `change_always_visible`, `change_notification`, `change_summary` had `company_id = NULL`. |
+| **Why wrong** | Every other audit-event writer in the package resolves the company first -- `change_worker` (715), `change_service_host` (779), `change_subject` (873), `change_label` (955). The private helper simply forgot the lookup it was modelled on. |
+| **Corrected** | `SELECT company_id INTO STRICT cust_id FROM tt.ticket WHERE id = p_ticket_id` before the `INSERT`, with the sibling sites' strictness profile (STRICT, unhandled) and the XCUT-01 `'no data found'` message-parity shim because the site is externally reachable through six public routines (S-TICKET-059). |
+| **Changed failure mode** | A nonexistent `p_ticket_id` now raises `P0002` from the lookup. In Oracle the same call would have failed on the `tt.event -> tt.ticket` FK (`ORA-02291`) after writing nothing durable; in the pgTAP harness (constraints deferred) the pre-correction translation silently wrote an event row with a dangling `ticket_id` -- the RED run shows exactly that (test 15: `have: 1`). Never a success path either way. |
+| **Spec** | S-TICKET-053 (amended), S-TICKET-059 (new), commit `26a7ef5`. |
+| **Tests** | `tt__ticket_interface__corrections.sql` tests 8-15, commit `b8c18dd`, ledger A-013. RED before the fix: 9, 11, 13, 14, 15. |
+| **Residual risk** | Any downstream consumer that selected these events by `company_id IS NULL` (not statically excludable, but implausible) would stop seeing them. |
