@@ -2224,9 +2224,23 @@ END;
 $fn$;
 
 -- ------------------------------------------------------------------------------------
--- remove_related_file (S-TICKET-045). No same-company guard here (unlike
--- add_related_file) -- a deliberate asymmetry between the two mirror routines, not
--- harmonized. No NO_DATA_FOUND arm -- a bad p_related_file_id falls to WHEN OTHERS.
+-- remove_related_file (S-TICKET-045, S-TICKET-060).
+--
+-- DEVIATION(ORACLE-BUG): Oracle's display-name lookup (ddl/src/pkgb/
+-- tt_ticket_interface.sql:2051-2052, `SELECT mcf.display_name ... WHERE mcf.id =
+-- p_related_file_id`) has no same-company check, so any caller able to name a
+-- (ticket, file) pair could DETACH a relation belonging to another company -- while
+-- add_related_file refuses to ATTACH across companies and calls that predicate an
+-- authorization check in its own comment (lines 2004-2006). Per the branch owner's
+-- instruction ("Don't mimic broken behaviour of oracle routines, but annotate/explain
+-- what changed with the correction") the lookup below additionally requires a
+-- mc.mc_file_release of the file to the ticket's company (an EXISTS sub-select rather
+-- than add_related_file's plain join, because mc.mc_file_release has no unique key on
+-- (mc_file_id, company_id) and a double release must not raise TOO_MANY_ROWS here), and
+-- the handler gains the mirrored NO_DATA_FOUND arm: log the specific message, RETURN,
+-- nothing deleted, no 100019 event, nothing raised. Site #65 (COUNT), the v_counter = 0
+-- no-op, the same-company delete + history event, and the WHEN OTHERS swallow are
+-- unchanged. See ticket_interface.FINDINGS.md, "Deviations from Oracle".
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.ticket_interface_remove_related_file(
     p_ticket_id numeric, p_related_file_id numeric, p_contact_id numeric,
@@ -2245,9 +2259,13 @@ BEGIN
     WHERE t2f.ticket_id = p_ticket_id AND t2f.mc_file_id = p_related_file_id;
 
     IF (v_counter > 0) THEN
-        -- S-TICKET-045 (site #66): STRICT, no local handler.
+        -- S-TICKET-045 (site #66): STRICT. DEVIATION(ORACLE-BUG) S-TICKET-060: the EXISTS
+        -- predicate is the same-company guard Oracle only applied in add_related_file.
         SELECT mcf.display_name INTO STRICT v_file_display_name FROM mc.mc_file mcf
-        WHERE mcf.id = p_related_file_id;
+        WHERE mcf.id = p_related_file_id
+          AND EXISTS (SELECT 1 FROM mc.mc_file_release r, tt.ticket t
+                      WHERE t.id = p_ticket_id AND r.mc_file_id = mcf.id
+                        AND r.company_id = t.company_id);
 
         DELETE FROM tt.ticket2mc_file
         WHERE ticket_id = p_ticket_id AND mc_file_id = p_related_file_id;
@@ -2256,6 +2274,11 @@ BEGIN
         CALL tt.event_interface_addevent_new(v_event_id, p_ticket_id, 100019, NULL, NULL, v_details_private, p_contact_id, FALSE, statement_timestamp(), FALSE, p_zitadel_contact_id);
     END IF;
 EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- DEVIATION(ORACLE-BUG) S-TICKET-060: mirrored from add_related_file's arm; Oracle's
+        -- remove_related_file had only WHEN OTHERS.
+        CALL osag.osag_plog_err(c_prefix || 'MC File or ticket does not exist or they belong to different companies.');
+        RETURN;
     WHEN OTHERS THEN
         CALL osag.osag_plog_err(c_prefix || 'Unexpected error: ' || SQLERRM);
         RETURN;
