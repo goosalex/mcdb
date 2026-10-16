@@ -366,3 +366,51 @@ comment recording why. No assertion, expected value, or SQLSTATE changed.
 `tt__ticket_interface__lifecycle.sql`: **30/39 → 38/39**. The one remaining failure is the
 `auth.permission` materialized-view gap (see PHASE2 findings — a harness/schema gap, not a
 translation defect).
+
+---
+
+## A-009 — `mss__osag_ip__spec.sql`: Oracle golden case 4 of `test_ipv62nums` is a seven-group typo
+
+| | |
+|---|---|
+| **Date** | 2026-10-16 |
+| **Amended by** | the OSAG_IP translation agent, in a commit that touches NO translation file (test commit `670fc0a`, after spec commit `05832a1`) |
+| **File** | `migration/test/pgtap/mss__osag_ip__spec.sql` |
+| **Assertions affected** | 2 changed (S-IP-015 golden case 4 left/right), 2 added (S-IP-020) |
+| **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/mss/osag_ip.sql` (104/106) |
+
+commit:670fc0aa2ca80b23cf5e8c01d8fa25e3f3f4c1c3 file:migration/test/pgtap/mss__osag_ip__spec.sql reason:Oracle golden case 4 input has seven groups; spec S-IP-015 amended first (05832a1) with Oracle-side evidence
+
+### The defect
+
+The RED suite copied `'0:0:0:0:0:0:0001' → (0, 1)` verbatim from
+`ddl/src/pkgb/mss_osag_ip_test.sql:90-92`. That input has six colons — seven groups, no
+`::`. Traced through Oracle's `ipv6right` (`ddl/src/pkgb/mss_osag_ip.sql:226-239`): the
+fourth iteration finds no further colon, `SUBSTR` with a negative length is `NULL`, and
+the function returns `NULL`, not `1`. The Oracle test package never notices because its
+check `IF actual_left != expected_left OR actual_right != expected_right`
+(`mss_osag_ip_test.sql:121`) is not true when `actual_right` is `NULL` — the golden
+expectation was unattainable in Oracle itself and passed vacuously.
+
+### The amendment
+
+- S-IP-015 case 4 now asserts the evident eight-group intent `'0:0:0:0:0:0:0:0001' → (0, 1)`
+  (a leading-zero group, the thing the case was clearly written to exercise).
+- The literal seven-group string is asserted under S-IP-020 (malformed → `NULL`, `NULL`),
+  where the spec already placed every "fewer than eight groups" input.
+
+### Why this is not a weakening
+
+No expected value was changed to match the translation's output: the translation returned
+`NULL, NULL` for the typo, and the amended suite now asserts exactly that *under the clause
+that already demanded it* (S-IP-020, written before the translation), while keeping the
+original `(0, 1)` expectation alive on the input the Oracle author evidently meant. The
+evidence is entirely in the Oracle sources cited above. Still falsifiable: a translation
+that returned a partial `0` for `ipv6left` of the typo (Oracle's actual behaviour) fails
+the new S-IP-020 assertion.
+
+### Lesson for the corpus
+
+Oracle's `OSAG_IP_TEST` style (`IF actual != expected THEN raise`) cannot detect a `NULL`
+result at all. Golden cases lifted from Oracle unit-test packages must be re-derived by
+hand against the Oracle body, not trusted because "the Oracle test passes".
