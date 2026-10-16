@@ -1,0 +1,8 @@
+[
+  {
+    "from": "TT.EVENT_INTERFACE",
+    "to": "TT.ESCALATION_INTERFACE",
+    "call_sites": [971],
+    "note": "exec_event_type_actions dispatches EXECUTE IMMEDIATE on a procedure name read from tt.event_action.procedure_name / mss dbprop keys 139,140,399; every configured value today is a TT.ESCALATION_INTERFACE routine (escalate_os, escalate_customer, escalate_isp_outage_to_os, nop). Traced by hand in migration/spec/DYNAMIC-SQL-TRACE.md; the translation enforces this allowlist. Closes the ESCALATION_INTERFACE <-> EVENT_INTERFACE cycle the lexer cannot see."
+  }
+]
