@@ -12,7 +12,7 @@ Migration of the MCDB Oracle 19c database to PostgreSQL 17+, centered on transla
 
 - **Tech stack**: PostgreSQL 17+, orafce extension explicitly allowed — reduces translation friction for Oracle built-ins
 - **Naming/Compatibility**: Schema stays identical to Oracle; object names get package-name prefix (`package_in_name` convention) — keeps client migration mechanical (regexp-driven)
-- **Verification**: Local Postgres 17.10 via sudo peer auth is the test target — no Oracle instance available for now
+- **Verification**: Local Postgres 17.10 via sudo peer auth is the test target — no Oracle instance available for now. Disposable database names MUST match `^mcdb_(test|tmpl|harness)[a-z0-9_]*$` (bootstrap.sh's T-02-01 allowlist refuses anything else); `mcdb_tmpl` is the template, never a test target.
 - **Concurrency cap: at most 3 subagents at once.** This box has 4 cores / 8 GB. Each agent costs ~400 MB peak, so RAM is not the limit — CPU is. Four-plus agents oversubscribe 4 cores (agents also each clone a 549-table Postgres template DB), which slows everything and lengthens the window in which a session interruption can destroy uncommitted agent work. When a GSD wave has more than 3 plans, dispatch them in batches of 3, merging each batch before starting the next.
 - **Methodology**: Spec-first — specs derived from Oracle source before translation; tests verify specs, not the translation's own assumptions
 
