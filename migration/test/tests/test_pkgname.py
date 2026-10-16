@@ -84,6 +84,9 @@ class TestValidateReal(unittest.TestCase):
     def test_canary_still_exempt(self):
         self.assertEqual(pkgname.validate([Path("_canary__canary__smoke.sql")], self.pairs), [])
 
+    def test_support_schema_exempt(self):
+        self.assertEqual(pkgname.validate([Path("_support__pgmig__name_rewrite.sql")], self.pairs), [])
+
 
 class TestLoadNameMapSynthetic(unittest.TestCase):
     """Row-shape rules driven by a synthetic CSV so each rule is provoked alone."""

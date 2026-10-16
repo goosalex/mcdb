@@ -34,6 +34,9 @@ from pathlib import Path
 # they exist to prove the harness itself, not to describe a translated
 # object.
 RESERVED_CANARY_SCHEMA = "_canary"
+# "_support": PostgreSQL-only migration support objects (migration/pgsql/_support/, the
+# pgmig schema). No Oracle original, hence no name-map row -- exempt like the canary.
+RESERVED_SCHEMAS = {RESERVED_CANARY_SCHEMA, "_support"}
 
 THIS_FILE = Path(__file__).resolve()
 TEST_DIR = THIS_FILE.parents[1]  # migration/test/
@@ -114,7 +117,7 @@ def validate(paths: list[Path], name_map: set[tuple[str, str]] | None = None) ->
         except PkgNameError as exc:
             errors.append(str(exc))
             continue
-        if pg_schema == RESERVED_CANARY_SCHEMA:
+        if pg_schema in RESERVED_SCHEMAS:
             continue
         if (pg_schema, oracle_package_lower) not in name_map:
             errors.append(

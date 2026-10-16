@@ -41,7 +41,8 @@ COMMENT ON TABLE pgmig.oracle_name_map IS
     'rewrite_names.py --emit-sql. Consumed by pgmig.rewrite_oracle_names().';
 
 -- Rewrites every Oracle three-part / synonym / dynamic-prefix name found in p_text.
--- Longest names first so a prefix never shadows a full name; case-insensitive; a
+-- Longest names first so a prefix never shadows a full name; case-insensitive; quoted
+-- identifiers ("TT"."PKG"."OBJ") collapse to the unquoted lower-case name; a
 -- backslash-escaped dot (regex stored in data) is accepted as a separator and the
 -- first separator keeps its escaping. Returns p_text unchanged when nothing matches
 -- (NULL in, NULL out).
@@ -70,15 +71,15 @@ BEGIN
         IF r.kind = 'dynamic_prefix' THEN
             -- 'schema.package.'  ->  'schema.package_'  (keep the first separator as written,
             -- require the cut to sit before a quote, '(', '||' or end of text)
-            v_pat := '(?<![A-Za-z0-9_"])' || v_parts[1] || '(\\?\.)' || v_parts[2]
-                     || '\\?\.(?=\s*([''"(]|\|\||$))';
+            v_pat := '(?<![A-Za-z0-9_"])"?' || v_parts[1] || '"?(\\?\.)"?' || v_parts[2]
+                     || '"?\\?\.(?=\s*([''"(]|\|\||$))';
             v_rep := split_part(r.pg_name, '.', 1) || '\1' || split_part(r.pg_name, '.', 2);
         ELSIF r.kind = 'synonym' THEN
-            v_pat := '(?<![A-Za-z0-9_".])' || v_parts[1] || '\s*\\?\.\s*' || v_parts[2] || '(?![A-Za-z0-9_"])';
+            v_pat := '(?<![A-Za-z0-9_".])"?' || v_parts[1] || '"?\s*\\?\.\s*"?' || v_parts[2] || '"?(?![A-Za-z0-9_"])';
             v_rep := r.pg_name;
         ELSE
-            v_pat := '(?<![A-Za-z0-9_"])' || v_parts[1] || '\s*(\\?\.)\s*' || v_parts[2]
-                     || '\s*\\?\.\s*' || v_parts[3] || '(?![A-Za-z0-9_"])';
+            v_pat := '(?<![A-Za-z0-9_"])"?' || v_parts[1] || '"?\s*(\\?\.)\s*"?' || v_parts[2]
+                     || '"?\s*\\?\.\s*"?' || v_parts[3] || '"?(?![A-Za-z0-9_"])';
             v_rep := split_part(r.pg_name, '.', 1) || '\1' || split_part(r.pg_name, '.', 2);
         END IF;
         v_text := regexp_replace(v_text, v_pat, v_rep, 'gi');
