@@ -93,6 +93,12 @@ oracle_package)` pair is not a real pair in `migration/mapping/name-map.csv`, wi
 one reserved exception: the literal schema `_canary`, used only for this harness's
 own self-tests (never a real Oracle package).
 
+Triggers have no package (their `oracle_package` column is empty); for `kind=trigger`
+rows the pair is `(pg_schema, lower(oracle_object))` instead, so a trigger's tests are
+named `<pg_schema>__<trigger_name_lower>__<topic>.sql` (e.g.
+`tt__ticket_update_trg__spec.sql`). The companion `trigger_function` row never forms an
+identity. Unit tests: `python3 -m unittest discover -s migration/test/tests -v`.
+
 ## Design decisions carried from the plan
 
 - **D-P1 — lives under `migration/test/`.** Not under `pg_migration/` (untrusted

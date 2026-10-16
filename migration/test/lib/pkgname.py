@@ -3,7 +3,8 @@
 
 Package-identity resolution for the dual test harness (D-P9).
 
-Test files are named `<pg_schema>__<oracle_package_lower>__<topic>.sql`.
+Test files are named `<pg_schema>__<oracle_package_lower>__<topic>.sql` (or, for a
+trigger, `<pg_schema>__<trigger_name_lower>__<topic>.sql`).
 This module is the single enforcement point for the rule that nobody may
 invent a package name outside `migration/mapping/name-map.csv` — the Phase 1
 SSOT. Python 3.12 stdlib only, matching Phase 1's D-B.
@@ -47,11 +48,18 @@ class PkgNameError(Exception):
 
 
 def load_name_map(csv_path: Path = NAME_MAP_CSV) -> set[tuple[str, str]]:
-    """Load the set of valid (pg_schema, oracle_package_lower) pairs.
+    """Load the set of valid (pg_schema, oracle_object_lower) pairs a test file
+    may be named after.
 
-    oracle_package may be empty (standalone procedures have no package) —
-    those rows are not package identities and are excluded here; the harness
-    only names files after packages.
+    Two row shapes contribute an identity:
+      - any row with a non-empty oracle_package -> (pg_schema, oracle_package)
+        -- the package identity every package test file uses;
+      - rows with kind == "trigger" -> (pg_schema, oracle_object) -- triggers
+        have an EMPTY oracle_package (they are standalone objects), so their
+        own name is the identity, e.g. tt__ticket_update_trg__spec.sql.
+    Other package-less rows (standalone procedures, trigger_function rows --
+    the latter are the trigger's implementation half, named after the same
+    trigger) contribute nothing; the harness does not name files after them.
     """
     if not csv_path.exists():
         raise PkgNameError(f"name-map.csv not found at {csv_path}")
@@ -63,6 +71,11 @@ def load_name_map(csv_path: Path = NAME_MAP_CSV) -> set[tuple[str, str]]:
             schema = (row.get("pg_schema") or "").strip().lower()
             if pkg and schema:
                 pairs.add((schema, pkg))
+                continue
+            if (row.get("kind") or "").strip() == "trigger":
+                obj = (row.get("oracle_object") or "").strip().lower()
+                if obj and schema:
+                    pairs.add((schema, obj))
     return pairs
 
 
