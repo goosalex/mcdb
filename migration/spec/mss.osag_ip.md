@@ -336,6 +336,14 @@ only through the public routines that call them (S-IP-016, S-IP-022).
   collapsed), `num2ipv6(281474976710657, 65537) = '1::1:0:0:1:1'` (first of two equal runs),
   `num2ipv6(281479271743489, 281479271743489) = '1:1:1:1:1:1:1:1'` (no zero group).
   `num2ipv6(ipv6left(s), ipv6right(s))` is the canonical form of any well-formed `s`.
+  **Oracle quirk, preserved as-is (valid, merely non-canonical output):** the scan only
+  starts at a colon (line 259), so the first group is never counted as part of a run; a
+  run of exactly two zero groups at the very start of the address is therefore measured
+  as one group and NOT collapsed — `num2ipv6(ipv6left('0:0:1:1:1:1:1:1'),
+  ipv6right('0:0:1:1:1:1:1:1')) = '0:0:1:1:1:1:1:1'` — while a leading run of three or
+  more is collapsed (the surviving leading `0` is stripped by the `'0::%'` rule at lines
+  288-290, as golden case 2, `'::1'`, shows). A trailing two-group run is collapsed
+  normally (`'1:1:1:1:1:1::'`).
 - **source:** `ddl/src/pkgb/mss_osag_ip.sql:257-290, 307, 314`
 
 ### S-IP-023
