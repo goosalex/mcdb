@@ -230,9 +230,13 @@ SELECT ok(NOT EXISTS (
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'osag' AND p.proname LIKE 'osag_msg%' AND p.prosrc ~* '\m(commit|rollback)\M'),
     'S-MSG-014: no osag_msg routine contains COMMIT or ROLLBACK');
+-- The INSERT happens inside a PL/pgSQL block with an EXCEPTION clause, i.e. a
+-- subtransaction, so a row's xmin is a subxid assigned AFTER this transaction's top-level
+-- xid -- "written by this transaction or one of its subtransactions" is xmin >= top xid.
 SELECT is((SELECT count(*)::int FROM osag.msg_outbox o, t_mark m
-            WHERE o.id > m.id0 AND o.xmin = pg_current_xact_id()::xid), 7,
-    'S-MSG-014: every queued row was written by THIS (uncommitted) transaction -- rows ride in the caller''s transaction, no autonomous commit');
+            WHERE o.id > m.id0
+              AND o.xmin::text::bigint >= (pg_current_xact_id()::xid)::text::bigint), 7,
+    'S-MSG-014: every queued row was written by THIS (uncommitted) transaction or its subtransactions -- rows ride in the caller''s transaction, no autonomous commit');
 
 SELECT * FROM finish();
 ROLLBACK;
