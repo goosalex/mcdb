@@ -449,12 +449,15 @@ scope is reduced by this front-matter bookkeeping detail.
 - **PostgreSQL name:** `tt.ticket_interface_remove_related_file` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_ticket_interface.sql:537`
 - **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:2035-2069`
-- Counts the existing relation row; only if `> 0`, resolves the file's display name (a
-  SEPARATE, un-guarded lookup — no same-company check here unlike `add_related_file`),
-  deletes the relation, and records a history event. **`EXCEPTION WHEN OTHERS THEN
-  plog.err(...); RETURN`** (S-TICKET-049) — no `NO_DATA_FOUND` arm; a bad
-  `p_related_file_id` inside the `IF v_counter > 0` branch would hit `WHEN OTHERS`
-  instead.
+- Counts the existing relation row; only if `> 0`, resolves the file's display name (in
+  Oracle a SEPARATE, un-guarded lookup — no same-company check, unlike
+  `add_related_file`), deletes the relation, and records a history event. Oracle's
+  handler is **`EXCEPTION WHEN OTHERS THEN plog.err(...); RETURN`** only — no
+  `NO_DATA_FOUND` arm. **CORRECTED on branch `phoenix/migrate_tt_only`** (status report
+  2026-10-13, Q11 (d)): the translation's display-name lookup carries the SAME
+  same-company guard `add_related_file` applies (S-TICKET-044), and a mirrored
+  `NO_DATA_FOUND` arm logs the mismatch; a caller can no longer detach a file relation
+  across companies. See S-TICKET-045 (amended) and S-TICKET-060 (new).
 
 ### classify_request (PUBLIC)
 
@@ -1280,12 +1283,20 @@ plan's SUMMARY.
   (inventory line 2051), reached only if `v_counter > 0`: `SELECT mcf.display_name INTO
   v_file_display_name FROM mc.mc_file mcf WHERE mcf.id = p_related_file_id` — `mc_file`'s
   PK, `TOO_MANY_ROWS` impossible; zero rows would be structurally surprising here (the
-  relation just confirmed to exist implies the file id is real) but is NOT re-verified
-  against a same-company guard the way `add_related_file` (S-TICKET-044) is — a
-  deliberate asymmetry between the two mirror routines, not an oversight this spec
-  papers over. **Has only `WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2064-2069) —
-  no `NO_DATA_FOUND` arm; a bad `p_related_file_id` (orphaned `ticket2mc_file` row) would
-  be caught by `WHEN OTHERS` rather than a dedicated `NO_DATA_FOUND` arm.
+  relation just confirmed to exist implies the file id is real) but in Oracle is NOT
+  re-verified against a same-company guard the way `add_related_file` (S-TICKET-044) is.
+  Oracle **has only `WHEN OTHERS THEN plog.err(...); RETURN`** (lines 2064-2069) — no
+  `NO_DATA_FOUND` arm; a bad `p_related_file_id` (orphaned `ticket2mc_file` row) is
+  caught by `WHEN OTHERS`. **Amended (correction, branch `phoenix/migrate_tt_only`):**
+  site #66 in the translation is the guarded form described by S-TICKET-060 — it also
+  requires a `mc.mc_file_release` of that file to the ticket's company — and the handler
+  gains a dedicated `NO_DATA_FOUND` arm mirroring `add_related_file`'s (log the specific
+  "does not exist or they belong to different companies" message, `RETURN`). Observable
+  consequences for the pre-existing assertions: the orphaned-file case still succeeds
+  without raising (now via the `NO_DATA_FOUND` arm instead of `WHEN OTHERS`); a
+  same-company relation is still deleted — provided the fixture actually releases the
+  file to the ticket's company, which is what "same-company" means. Site #65 (the
+  `COUNT`) and the `v_counter = 0` silent no-op are unchanged.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2044-2069`
 
 ### S-TICKET-046
@@ -1584,6 +1595,32 @@ plan's SUMMARY.
   public/private hiding, the sequence pull and the notify call are unchanged.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1663-1702`, `ddl/src/pkgb/tt_ticket_interface.sql:715`, `ddl/src/pkgb/tt_ticket_interface.sql:779`, `ddl/src/pkgb/tt_ticket_interface.sql:873`
 
+### S-TICKET-060
+
+- **routines:** remove_related_file
+- **claim:** **CORRECTION — the same-company guard made symmetric (branch
+  `phoenix/migrate_tt_only`, Q11 (d)).** `add_related_file` refuses to ATTACH a file to
+  a ticket of a different company: its lookup joins `mc.mc_file_release r` with
+  `t.company_id = r.company_id` and its own inline comment (`ddl/src/pkgb/
+  tt_ticket_interface.sql:2004-2006`, "make sure that ticket and mc file belong to the
+  same company otherwise the NO_DATA_FOUND should be triggered") declares that
+  predicate an authorization check (S-TICKET-044). `remove_related_file` (lines
+  2046-2061) applies no such check, so any caller able to name a `(ticket, file)` pair
+  could DETACH a relation belonging to another company — the authorization intent of the
+  attach side is defeated by the detach side. The corrected behaviour: inside the
+  `v_counter > 0` branch, the display-name lookup succeeds only if `mc.mc_file` row
+  `p_related_file_id` exists AND a `mc.mc_file_release` row for that file exists whose
+  `company_id` equals the ticket's `company_id` (expressed as an `EXISTS` sub-select
+  rather than `add_related_file`'s plain join, so a file released more than once to the
+  same company cannot produce `TOO_MANY_ROWS` here — `mc.mc_file_release` has no unique
+  key on `(mc_file_id, company_id)`); on zero rows the routine logs
+  `c_prefix || 'MC File or ticket does not exist or they belong to different companies.'`
+  via `plog.err` and returns WITHOUT deleting the relation and WITHOUT writing the
+  100019 history event. A same-company relation is deleted and its history event written
+  exactly as before. Nothing is raised to the caller in either case (the swallow-all
+  shape of the original handler is preserved).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2003-2006`, `ddl/src/pkgb/tt_ticket_interface.sql:2046-2069`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
@@ -1837,9 +1874,15 @@ rest of the package, independent of whether a COMMIT-reachability hazard exists)
   joins through `mc.mc_file_release` to enforce `t.company_id = r.company_id`;
   `remove_related_file`'s mirror lookup does not. Whether this asymmetry is intentional
   (removal doesn't need the same authorization check because the relation's existence was
-  already checked) or an oversight cannot be determined from static source alone — no
-  live Oracle exists to probe actual authorization intent. Recorded faithfully as
-  written, not silently harmonized.
+  already checked) or an oversight cannot be determined from static source alone.
+  Originally recorded faithfully as written. **Harmonized on branch
+  `phoenix/migrate_tt_only`** (status report 2026-10-13, Q11 (d)): a caller must not be
+  able to detach a relation across companies — S-TICKET-060 states the guard, the
+  translation carries a `DEVIATION(ORACLE-BUG)` annotation and
+  `migration/pgsql/tt/ticket_interface.FINDINGS.md` records it. Still open: a relation
+  whose file has NO `mc.mc_file_release` row at all (release withdrawn after attachment)
+  can no longer be detached through this routine; Oracle allowed that. If that is a
+  real operational case it needs its own decision.
 - **The private-routine naming convention** (`__` double-underscore prefix, see "Private
   routines" above) is REUSED from `migration/spec/tt.osag_notify.md`/
   `migration/spec/tt.event_interface.md`, not reinvented — but, per those specs' own
