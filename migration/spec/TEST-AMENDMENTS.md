@@ -428,6 +428,7 @@ hand against the Oracle body, not trusted because "the Oracle test passes".
 | **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/osag/osag_msg.sql` (57/63) |
 
 commit:b471f1173139938c1942d21c02fe06cfa9583441 file:migration/test/pgtap/osag__osag_msg__spec.sql reason:bookkeeping literals (rows queued so far) miscounted by one and xmin is not visible through a temp view; no asserted behaviour changed
+commit:d982a159bb998b87f04010107a86b04bb9e4e3dc file:migration/test/pgtap/osag__osag_msg__spec.sql reason:S-MSG-014 xmin check must accept subtransaction xids (the INSERT runs inside an EXCEPTION-bearing block); no asserted behaviour changed
 
 ### The defect
 
@@ -447,9 +448,18 @@ Literals 5/5/6/6/6 -> 6/6/7/7/7; the S-MSG-014 query reads `osag.msg_outbox` dir
 compares `xmin = pg_current_xact_id()::xid` (verified live: a row inserted in the current
 transaction matches). No SQLSTATE, column expectation or clause changed.
 
+### Second pass (commit `d982a159bb998b87f04010107a86b04bb9e4e3dc`)
+
+The corrected S-MSG-014 query still failed (`have: 0, want: 7`): the outbox INSERT runs
+inside `osag.osag_msg__enqueue`'s block, which has an `EXCEPTION` clause and is therefore
+a **subtransaction** — the rows carry a subxid, not the top-level `pg_current_xact_id()`.
+The assertion now reads "written by this transaction or one of its subtransactions":
+`xmin::bigint >= (pg_current_xact_id()::xid)::bigint`.
+
 ### Why this is not a weakening
 
 Every amended assertion still asserts the same thing (no row queued on failure; every
 queued row written by the current transaction). A translation that queued a row on a
 `NULL` recipient would still fail S-MSG-008/012; one that COMMITted autonomously would
-still fail S-MSG-014.
+fail the `lives_ok` calls outright (`CALL` cannot COMMIT inside the harness's open
+transaction) and the S-MSG-014 `prosrc` check.
