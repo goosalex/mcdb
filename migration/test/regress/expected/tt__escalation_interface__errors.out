@@ -1,0 +1,8 @@
+ levelname |                                                                                    message                                                                                     
+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ DEBUG     | escalate_to_os called for event id 908999999
+ ERR       | tt.escalation_interface.escalate_os(): event with id 908999999 or its ticket not found. This is needed for escalation. Aborting escalation.
+ ERR       | tt.escalation_interface.escalate_customer(): event with id 908999998 or its ticket not found. This is needed for escalation. Aborting escalation.
+ ERR       | tt.escalation_interface.escalate_isp_outage_to_os(): either ticket, host or company not found for event with id: 908999997 This is needed for escalation. Aborting escalation.
+(4 rows)
+
