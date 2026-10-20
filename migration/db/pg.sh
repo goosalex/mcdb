@@ -36,7 +36,20 @@
 set -euo pipefail
 
 DB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MCDB_ROOT="$(cd "${DB_DIR}/../.." && pwd)"
+# Project root. When pg.sh is invoked from a git WORKTREE (agents run the harness
+# concurrently from .claude/worktrees/*), use the MAIN checkout's root: the mount set is
+# part of the container's identity, and a different root per worktree would make every
+# `pg.sh start` recreate mcdb-pg with other mounts, killing the sessions of everyone else.
+# The worktree itself is still mounted (mount_dirs adds it if it lies outside the root).
+WORKTREE_ROOT="$(cd "${DB_DIR}/../.." && pwd)"
+MCDB_ROOT="$WORKTREE_ROOT"
+if command -v git >/dev/null 2>&1; then
+  common_dir="$(cd "$WORKTREE_ROOT" && git rev-parse --git-common-dir 2>/dev/null || true)"
+  if [ -n "$common_dir" ]; then
+    common_dir="$(cd "$WORKTREE_ROOT" && cd "$common_dir" 2>/dev/null && pwd -P || true)"
+    [ -n "$common_dir" ] && [ -d "$(dirname "$common_dir")/migration" ] && MCDB_ROOT="$(dirname "$common_dir")"
+  fi
+fi
 
 CONTAINER="${MCDB_PG_CONTAINER:-mcdb-pg}"
 VOLUME="${MCDB_PG_VOLUME:-mcdb-pg-data}"
@@ -96,6 +109,11 @@ base_image() {
 mount_dirs() {
   {
     physical_dir "$MCDB_ROOT"
+    # a worktree outside the main root must be visible too (relative -f paths resolve there)
+    case "$(physical_dir "$WORKTREE_ROOT")/" in
+      "$(physical_dir "$MCDB_ROOT")"/*) ;;
+      *) physical_dir "$WORKTREE_ROOT" ;;
+    esac
     local link target
     for link in "$MCDB_ROOT"/*; do
       [ -L "$link" ] && [ -d "$link" ] || continue
