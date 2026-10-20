@@ -695,3 +695,27 @@ amended S-TICKET-045.
 
 `commit:b8c18dd98ba76705c5075f93e9c05cd12171d3b4 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-018 S-TICKET-045 site #66 label only, test-only commit`
 commit:c214e1777859713824b265dbd6ed37dd475dce29 file:migration/test/regress/expected/mc__osag_maintsync__errors.out reason:psql header-line trailing spaces stripped by the editor; whitespace-only (diff -w empty), no asserted value changed
+
+---
+
+## A-020 — `tt__ticket_interface__changes.sql`, `tt__ticket_interface__selectinto.sql`: export commit reverted them to July content, restore commit re-applied them
+
+| | |
+|---|---|
+| **Date** | 2026-10-20 |
+| **Amended by** | orchestrator (ledger entry only; the two files are byte-identical to their e179c5a content) |
+| **Files** | `migration/test/pgtap/tt__ticket_interface__changes.sql`, `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
+| **Assertions affected** | none changed by the restore |
+
+Commit `0e5c990` ("update to 20261020") carried the new Oracle export, master data and the
+pg.sh container wiring, but also overwrote 27 branch files with their 2026-07 content, among
+them these two test files (undoing A-009, A-014, A-018) together with the translation
+`migration/pgsql/tt/ticket_interface.sql` in the same commit. Commit `b9ba1dd` ("intermediate
+update of migration output") restored all 27 files from `e179c5a` in one commit, again test
+files and translation together. Both are the shape `provenance_lint.sh` forbids; neither
+changed what any test asserts. Verified: `git diff e179c5a HEAD -- <both test files>` is empty.
+
+`commit:0e5c990bf11a416578f3498cfa71bb2ebe2defd2 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-020 accidental revert to July content in the export commit, restored verbatim from e179c5a`
+`commit:0e5c990bf11a416578f3498cfa71bb2ebe2defd2 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-020 accidental revert to July content in the export commit, restored verbatim from e179c5a`
+`commit:b9ba1ddb9055679c53aa3581593b243651daaa15 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-020 restore of the e179c5a content, no asserted behaviour changed`
+`commit:b9ba1ddb9055679c53aa3581593b243651daaa15 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-020 restore of the e179c5a content, no asserted behaviour changed`
