@@ -371,11 +371,14 @@ SELECT throws_ok(
     NULL,
     'S-HW-012: replace_hardware raises OSAG_EXCEPTIONS.e_abort as SQLSTATE OS010 when the old hardware has no disposal reason'
 );
-SELECT is(
-    (SELECT count(*) FROM osag.plog_stub_log WHERE levelname = 'ERR'
-       AND message = 'dump_to_hw_history: hardware_disposal_reason_id is NULL while replacing hw for host_id: 931130 hw_id: 931231'),
-    1::bigint,
-    'S-HW-004: with the contact present and the reason NULL, the REASON message is logged (checks run in order contact, reason)'
+-- The S-HW-004 log line cannot be observed through osag.plog_stub_log on this path: the
+-- exception leaves the package and the transactional stub's row is rolled back with it
+-- (spec S-HW-011, osag_plog.FINDINGS.md). The translated e_abort carries the line as its
+-- message instead.
+SELECT throws_like(
+    $$CALL osixinfo.osag_hardware_replace_hardware(931130, 931231, 931232)$$,
+    '%dump_to_hw_history: hardware_disposal_reason_id is NULL while replacing hw for host_id: 931130 hw_id: 931231',
+    'S-HW-004: with the contact present and the reason NULL, the REASON message is the one raised (checks run in order contact, reason)'
 );
 SELECT is(
     (SELECT count(*) FROM osag.plog_stub_log WHERE message LIKE 'dump_to_hw_history: hardware_disposal_contact_id is NULL%931130%'),
