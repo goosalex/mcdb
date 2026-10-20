@@ -36,7 +36,20 @@
 set -euo pipefail
 
 DB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MCDB_ROOT="$(cd "${DB_DIR}/../.." && pwd)"
+# Project root. When pg.sh is invoked from a git WORKTREE (agents run the harness
+# concurrently from .claude/worktrees/*), use the MAIN checkout's root: the mount set is
+# part of the container's identity, and a different root per worktree would make every
+# `pg.sh start` recreate mcdb-pg with other mounts, killing the sessions of everyone else.
+# The worktree itself is still mounted (mount_dirs adds it if it lies outside the root).
+WORKTREE_ROOT="$(cd "${DB_DIR}/../.." && pwd)"
+MCDB_ROOT="$WORKTREE_ROOT"
+if command -v git >/dev/null 2>&1; then
+  common_dir="$(cd "$WORKTREE_ROOT" && git rev-parse --git-common-dir 2>/dev/null || true)"
+  if [ -n "$common_dir" ]; then
+    common_dir="$(cd "$WORKTREE_ROOT" && cd "$common_dir" 2>/dev/null && pwd -P || true)"
+    [ -n "$common_dir" ] && [ -d "$(dirname "$common_dir")/migration" ] && MCDB_ROOT="$(dirname "$common_dir")"
+  fi
+fi
 
 CONTAINER="${MCDB_PG_CONTAINER:-mcdb-pg}"
 VOLUME="${MCDB_PG_VOLUME:-mcdb-pg-data}"
@@ -91,37 +104,22 @@ base_image() {
   esac
 }
 
-# The directory mounted as "the project": normally MCDB_ROOT itself. When MCDB_ROOT is a
-# LINKED git worktree (a second checkout of the same repository, e.g. the
-# .claude/worktrees/<agent>/ trees parallel agents work in), it is the MAIN checkout's
-# root instead -- that directory contains every linked worktree below it, so one
-# container serves all of them. Without this, every worktree computed a different mount
-# set, and each `pg.sh start` from a different worktree recreated the SHARED container
-# (killing the other worktrees' sessions) and left their files invisible to `pg.sh psql`.
-# Falls back to MCDB_ROOT when git is unavailable or the main root does not contain it.
-project_mount_root() {
-  local root common main
-  root="$(physical_dir "$MCDB_ROOT")"
-  if common="$(git -C "$MCDB_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" \
-     && [ -n "$common" ] && [ -d "$(dirname "$common")" ]; then
-    main="$(physical_dir "$(dirname "$common")")"
-    case "$root/" in "$main"/*) root="$main" ;; esac
-  fi
-  echo "$root"
-}
-
 # Directories to mount: the project root plus every top-level symlink target outside
 # it. One absolute path per line, sorted, deduplicated.
 mount_dirs() {
   {
-    local project link target
-    project="$(project_mount_root)"
-    echo "$project"
+    physical_dir "$MCDB_ROOT"
+    # a worktree outside the main root must be visible too (relative -f paths resolve there)
+    case "$(physical_dir "$WORKTREE_ROOT")/" in
+      "$(physical_dir "$MCDB_ROOT")"/*) ;;
+      *) physical_dir "$WORKTREE_ROOT" ;;
+    esac
+    local link target
     for link in "$MCDB_ROOT"/*; do
       [ -L "$link" ] && [ -d "$link" ] || continue
       target="$(physical_dir "$link")"
       case "$target/" in
-        "$project"/*) ;;  # already inside the project mount
+        "$(physical_dir "$MCDB_ROOT")"/*) ;;  # already inside the project mount
         *) echo "$target" ;;
       esac
     done

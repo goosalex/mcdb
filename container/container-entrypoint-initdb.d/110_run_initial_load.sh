@@ -65,6 +65,92 @@ cd "${SCRIPTPATH}" || exit
 f="${SCRIPTPATH}/output/initial_load.sql"
 echo -e "\nCONTAINER: running ${f} ..."; echo "exit" | sqlplus -s / as sysdba @"${f}"; echo  "CONTAINER: DONE: running ${f}"
 
+# ---- master-data changelogs (moved here from 100_generate_initial_load.sh) --------------
+# Generated only now, with the exported schema in place, so that CSVs for tables that are
+# created by the changesets AFTER the export tag can be told apart and loaded later.
+CONTAINER_NAME="XEPDB1"
+OF="${SCRIPTPATH}/initial_changelog.xml"
+echo "creating ${OF}"
+
+# The export in ddl/generated reflects the schema at the latest tag; master data is a
+# snapshot of the current production data and may contain CSVs for tables that only the
+# changesets AFTER the tag create. Those CSVs cannot be loaded before 110_run_initial_load.sh
+# has applied the post-tag changesets, so the master data is split in two changelogs:
+#   initial_changelog.xml       tables that exist now           -> loaded before the update
+#   initial_changelog_post.xml  tables not (yet) in the schema  -> loaded after the update
+EXISTING="${SCRIPTPATH}/output/existing_tables.txt"
+# trimout: sqlplus pads terminal output to linesize (trimspool only affects spool files);
+# the sed strips whatever padding is left so grep -x can match a full line.
+sqlplus -s / as sysdba <<EOF_EXISTING | sed 's/[[:space:]]*$//' | grep -v '^$' >"${EXISTING}"
+set heading off feedback off pagesize 0 linesize 300 trimout on trimspool on
+ALTER SESSION SET CONTAINER=${CONTAINER_NAME};
+select owner||'.'||table_name from dba_tables order by 1;
+exit
+EOF_EXISTING
+echo "  $(grep -c . "${EXISTING}") tables exist in the exported schema"
+XML_HEADER=$(cat << _XML_HEADER
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+	xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog dbchangelog-latest.xsd
+	    http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+        <!-- This is the root of the changelogs and it just includes others in the right order. -->
+	<changeSet author="osdb" id="1::masterData">
+_XML_HEADER
+)
+XML_FOOTER=$(cat << _XML_FOOTER
+	</changeSet>
+</databaseChangeLog>
+_XML_FOOTER
+)
+
+echo "$XML_HEADER" >"${OF}"
+DEFERRED="${SCRIPTPATH}/output/deferred_masterdata.txt"
+: >"${DEFERRED}"
+cd "${SCRIPTPATH}" || exit
+# make sure s and f a relative paths to SCRIPTPATH (liquibase searchPath)
+for s in masterdata/*; do
+    if [ -e "$s/_pre.sql" ]; then
+        echo "<sqlFile path=\"${s}/_pre.sql\"/>" >>"${OF}"
+    fi
+    for f in "$s"/*.csv; do
+        # lqb can not load empty files
+        if [ ! -s "${f}" ]; then
+          continue
+        fi
+        filename=$(basename -- "$f")
+        tablename="${filename%.*}"
+        tablenameUC=$(tr '[:lower:]' '[:upper:]' <<<"$tablename")
+        schemaname=$(basename "$s")
+        xmlname="${f%.csv}.xml"
+        # table created only by post-tag changesets? -> second changelog
+        if ! grep -qxF "${schemaname}.${tablenameUC}" "${EXISTING}"; then
+            echo "  deferred (table not in export): ${schemaname}.${tablenameUC}"
+            echo "${f}|${schemaname}|${tablenameUC}|${xmlname}" >>"${DEFERRED}"
+            continue
+        fi
+        if [ -f "$xmlname" ]; then
+
+            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\">" >>"${OF}"
+            cat "$xmlname" >>"${OF}"
+            echo "</loadData>" >>"${OF}"
+        else
+            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\"/>" >>"${OF}"
+        fi
+    done
+    if [ -e "$s/_post.sql" ]; then
+        echo "<sqlFile path=\"${s}/_post.sql\"/>" >>"${OF}"
+    fi
+done
+echo "$XML_FOOTER" >>"${OF}"
+cd - || exit
+
+
 echo -e "\nCONTAINER: running liquibase update"
 JAVA_OPTS="-Xmx1g"
 # disable JIT on QEMU CPU to prevent SIGILL, colima users should use Haswell-4 CPU
@@ -109,22 +195,76 @@ echo "CONTAINER: changelog-current.sql synced up to the tag at line ${TAG_LINE} 
 
 
 
-OF="${SCRIPTPATH}/output/lqb_apply_mapping.log"
 # apply latest changelog (changelog, mappingdata, but except the PL/SQL)
-if "${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --log-level=INFO --log-file="${OF}" update; then
-# If the liquibase command fails then execute the execute-sql liquibase command
-  echo "Liquibase update succeeded"
-else
+#
+# The master data is a snapshot of CURRENT production data, while the export and the tag
+# describe an older state. A post-tag changeset that INSERTs master-data rows therefore
+# collides (ORA-00001) with rows the snapshot already contains: that changeset is already
+# reflected in the data, so it is marked as ran and the update continues. Any other
+# failure is fatal. Bounded, and every skip is logged, so nothing disappears silently.
+# (A changeset that mixes several statements and fails on a late one has already committed
+# the earlier ones; Oracle DDL autocommits. The invalid-object check in recompile.sql and
+# test.sh are the safety net for that case.)
+LQB_UPD=("${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --log-level=INFO)
+MAX_SKIPS=50
+SKIPPED=0
+while true; do
+  OF="${SCRIPTPATH}/output/lqb_apply_mapping_${SKIPPED}.log"
+  if "${LQB_UPD[@]}" --log-file="${OF}" update; then
+    echo "Liquibase update succeeded (${SKIPPED} post-tag changeset(s) already covered by the master-data snapshot)"
+    break
+  fi
+  FAILED=$(grep -oE 'Migration failed for changeset [^ ]+' "${OF}" | tail -1 | sed 's/Migration failed for changeset //; s/:$//')
+  if [ -n "${FAILED}" ] && grep -q 'ORA-00001' "${OF}" && [ "${SKIPPED}" -lt "${MAX_SKIPS}" ]; then
+    echo "CONTAINER: changeset ${FAILED} collides with master data already present (ORA-00001) -- marking it as ran"
+    echo "${FAILED}" >>"${SCRIPTPATH}/output/changesets_covered_by_masterdata.txt"
+    "${LQB_UPD[@]}" --log-file="${SCRIPTPATH}/output/lqb_mark_next.log" mark-next-changeset-ran || exit 1
+    SKIPPED=$((SKIPPED + 1))
+    continue
+  fi
   echo "Liquibase update failed, executing execute-sql command"
-  "${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata"  execute-sql --sql="select distinct owner, object_name, subobject_name, object_type, status from dba_objects where status!='VALID'" --output-file="${SCRIPTPATH}/output/invalid_objects.txt"
+  "${LQB_UPD[@]}" execute-sql --sql="select distinct owner, object_name, subobject_name, object_type, status from dba_objects where status!='VALID'" --output-file="${SCRIPTPATH}/output/invalid_objects.txt"
   cat "${SCRIPTPATH}/output/invalid_objects.txt"
   exit 1
-fi
+done
 
+# ---- master data for the tables that did not exist in the export -----------------------
+# They were created (and usually seeded) by the post-tag changesets above, so plain INSERTs
+# would collide: use loadUpdateData (update-or-insert on the primary key) wherever the
+# table has a primary key, plain loadData otherwise. Generated only now because the primary
+# keys can only be read once the tables exist.
+OF2="${SCRIPTPATH}/initial_changelog_post.xml"
+echo "${XML_HEADER/1::masterData/2::masterDataPostTag}" >"${OF2}"
+if [ -s "${DEFERRED}" ]; then
+  while IFS='|' read -r f schemaname tablenameUC xmlname; do
+    PK=$(sqlplus -s / as sysdba <<EOF_PK | sed 's/[[:space:]]*$//' | grep -v '^$'
+set heading off feedback off pagesize 0 linesize 300 trimout on
+ALTER SESSION SET CONTAINER=${CONTAINER_NAME};
+select listagg(c.column_name, ',') within group (order by c.position)
+  from dba_constraints k join dba_cons_columns c on c.owner = k.owner and c.constraint_name = k.constraint_name
+ where k.constraint_type = 'P' and k.owner = '${schemaname}' and k.table_name = '${tablenameUC}';
+exit
+EOF_PK
+)
+    if [ -n "${PK}" ]; then
+      TAG="loadUpdateData"; ATTR=" primaryKey=\"${PK}\""
+    else
+      TAG="loadData"; ATTR=""
+      echo "  ${schemaname}.${tablenameUC}: no primary key found, plain loadData"
+    fi
+    echo "  ${schemaname}.${tablenameUC}: ${TAG}${ATTR}"
+    if [ -f "${xmlname}" ]; then
+      echo "<${TAG} file=\"${f}\" schemaName=\"${schemaname}\" tableName=\"${tablenameUC}\"${ATTR}>" >>"${OF2}"
+      cat "${xmlname}" >>"${OF2}"
+      echo "</${TAG}>" >>"${OF2}"
+    else
+      echo "<${TAG} file=\"${f}\" schemaName=\"${schemaname}\" tableName=\"${tablenameUC}\"${ATTR}/>" >>"${OF2}"
+    fi
+  done <"${DEFERRED}"
+fi
+echo "$XML_FOOTER" >>"${OF2}"
 OF="${SCRIPTPATH}/output/lqb_update_post.log"
-# master data for tables that did not exist in the export and were created by the
-# post-tag changesets above (see 100_generate_initial_load.sh)
-echo -e "\nCONTAINER: running liquibase update for post-tag master data"
+echo -e "\nCONTAINER: running liquibase update for post-tag master data ($(grep -c . "${DEFERRED}") table(s))"
 "${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --changelog-file "initial_changelog_post.xml" --log-level=INFO --log-file="${OF}" update || exit 1
 
 # unlock users
