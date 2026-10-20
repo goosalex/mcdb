@@ -83,3 +83,21 @@ is diffed against the hardcoded expected line numbers in `bootstrap/20_ddl.sh` �
 is an explicitly reconciled, ledgered discrepancy (printed either way, in full, every
 build), never a silently swallowed one. Any statement failing OUTSIDE the expected set
 aborts the build non-zero.
+
+## Plan 06-01 additive fix (`schema-fixes/26_p0601_fixes.sql`)
+
+Found while translating `MCAUDIT.OSAG_AUDIT` (plan 06-01). Same ledger columns as above;
+numbering continues the Phase 2 fix files (`21_p09` … `25_p13` document themselves in
+their file headers).
+
+| # | Object | Error observed | Fix applied | Root cause (ora2pg behaviour) | Phase 5 action |
+|---|--------|-----------------|--------------|-------------------------------|-----------------|
+| 10 | `mcaudit.record` — columns `zitadel_user_id`, `zitadel_user_name`, `zitadel_user_company_id` (+ FK `fk_record_zitadel_user_company_id` → `stop.company(id)`, index `idx_record_zitadel_user_company_id`, 3 column comments) | `column "zitadel_user_id" of relation "record" does not exist` the moment `osag_audit_add_record_raw2` runs its INSERT (`ddl/src/pkgb/mcaudit_osag_audit.sql:32-38` writes all three) | `migration/test/schema-fixes/26_p0601_fixes.sql`: `ADD COLUMN IF NOT EXISTS` ×3 (`varchar(128)`, `varchar(128)`, `bigint` — `bigint` to match ora2pg's own typing of this table's sibling `company_id` FK column, which PostgreSQL accepts against `stop.company.id numeric(22,0)`), the FK (DEFERRABLE, like every ora2pg FK), the index, and the three `COMMENT ON COLUMN` texts copied from `ddl/generated/schema.oracle.sql:119-121`. Idempotent. | The Oracle export HAS the columns (`ddl/generated/schema.oracle.sql:110`, FK at `constraints.oracle.sql:386`, index at `schema.oracle.sql:3618`); `ddl/migrated/tables/tables.pg.sql:627-642` does not. Same shape as fix `24_p12_fixes.sql` (`tt.change_request`'s two zitadel columns): ora2pg's export of this table predates, or dropped, the late Liquibase changeset that added them (`changes/changelog-2.archive.sql:4086-4095`). | Regenerate `ddl/migrated/` from the current Oracle export (the columns are in `ddl/generated/` already) and diff; until then carry this file forward verbatim. `build-template.sh` picks it up automatically (it loads every `schema-fixes/*.sql`). |
+
+Not a schema gap but recorded here because the same plan hit it: **`mc.maintenance_status`
+is EMPTY in `mcdb_tmpl`** although `masterdata/MC/maintenance_status.csv` has its four
+rows (1 unknown, 2 active, 3 inactive, 4 maintenance) — `bootstrap/40_fixtures.sh` loads
+masterdata for `AUTH TT MSS MCAUDIT OSAG` only (`fixtures/load_masterdata.py`
+`DEFAULT_SCHEMAS`). `MC.OSAG_MAINTSYNC`'s tests insert the four rows themselves
+(`ON CONFLICT DO NOTHING`) so they pass with or without MC masterdata; the next template
+rebuild should add `MC` to the loaded schemas (open question in 06-01-SUMMARY.md).
