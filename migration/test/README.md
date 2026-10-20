@@ -128,3 +128,17 @@ Every later plan that adds real translation tests to `pgtap/` and `regress/sql/`
 should run `redgreen.sh` against those tests, not just `run-tests.sh` — a run that
 only ever sees GREEN cannot tell you whether the test was exercising the
 translation at all.
+
+## The differential half: `diff/`
+
+Everything above verifies the translations against specs derived from the Oracle
+source by static analysis. [`diff/`](diff/README.md) adds the other kind of evidence:
+`diff/run-diff.sh` runs the same scenario against the MCDB Oracle container
+(`mcdb-ora`, read-only, every scenario rolled back) and against the PostgreSQL
+translations, normalises both outputs (`diff/normalize.py`, error codes mapped through
+`migration/mapping/sqlstate-map.md`) and diffs them, printing a per-scenario
+PASS/KNOWN/DIFF table. Scenarios live in `diff/scenarios/<pg_schema>__<oracle_package_lower>__<topic>/`
+and are validated by the same `lib/pkgname.py` gate. `--ora-capture DIR` / `--ora-from DIR`
+record and replay the Oracle side so the PostgreSQL side can be checked offline. See
+`diff/README.md` for the normalisation rules, the limitations (autonomous plog rows survive
+the rollback; row order, NULL/'' and booleans are collapsed) and the falsifiability record.

@@ -1,0 +1,34 @@
+-- SYNTHETIC capture (tests/pg2synthetic.py) -- not produced by Oracle --
+## probe 1 steps (post-step status in n, valid-until set/null in s; error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"00 initial",,,2,"null"
+"01 open->hot",,,3,"null"
+"02 hot->hot no-op",,,3,"null"
+"03 hot->waiting",,,11,"set"
+"04 waiting->closed",,,102,"null"
+"05 change_subject",,,102,"null"
+"06 nonexistent ticket","-1403","query returned no rows",,
+"07 change_subject nonexistent","-1403","query returned no rows",,
+## probe 2 ticket row
+"ID","TYPE_ID","STATUS_ID","SUBJECT","RECOVERABLE_STATUS_ID","ESCALATION_STATUS_ID","HANDLED_BY_MCC","HAS_LAST_STATUS_CHANGE","HAS_VALID_UNTIL","HAS_LAST_RESOLVED","HAS_LAST_PUBLIC_EVENT"
+950010,1,102,"changed subject",,0,1,1,0,0,0
+## probe 3 events written by the routines (the fixture event 950011 excluded)
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","COMPANY_ID","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+100003,950010,1,950001,950002,"ticket subject changed:
+old: initial subject
+new: changed subject",
+101003,950010,1,,950002,"New status: hot
+Previous status: open
+moved to hot",
+101011,950010,1,,950002,"New status: waiting
+Previous status: hot
+waiting for the customer",
+101102,950010,1,,950002,"New status: closed
+Previous status: waiting
+closing",
+## probe 4 ticket_flow rows
+"TICKET_ID","FLOW_CLOSED","N_ROWS"
+950010,1,1
+## probe 5 ticket_time_statistic rows (presence and which counters are non-zero)
+"TICKET_ID","HAS_OPEN_TIME","HAS_WAITING_TIME","HAS_THIRD_PARTY_TIME","HAS_DEFERRED_TIME","HAS_RESOLVED_TIME"
+950010,1,0,0,0,0
