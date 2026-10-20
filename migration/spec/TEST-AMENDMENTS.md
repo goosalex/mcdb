@@ -437,7 +437,7 @@ follow-up test-only commit `84c0c4b`.
 | **Assertions affected** | 2 changed (S-IP-015 golden case 4 left/right), 2 added (S-IP-020) |
 | **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/mss/osag_ip.sql` (104/106) |
 
-## A-009 — `mc__osag_maintsync__errors.out`: trailing spaces stripped from the golden's header line
+## A-019 — `mc__osag_maintsync__errors.out`: trailing spaces stripped from the golden's header line
 
 | | |
 |---|---|

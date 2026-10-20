@@ -149,7 +149,7 @@ mc.osag_maintsync                        | 109/109            | 1/1             
 ```
 
 (The regress half went 0/1 -> 1/1 after the whitespace-only golden correction c214e17,
-ledgered as TEST-AMENDMENTS A-009.)
+ledgered as TEST-AMENDMENTS A-019.)
 
 **GREEN, whole harness (`run-tests.sh --db mcdb_test_p0601 --install migration/pgsql`):**
 16 packages, 15 pass, 1 fail -- the one fail is the pre-existing, accepted

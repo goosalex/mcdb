@@ -36,7 +36,7 @@ key-files:
     - migration/pgsql/mcaudit/osag_audit.FINDINGS.md
   modified:
     - migration/test/SCHEMA-FIXES.md (fix #10 + the empty mc.maintenance_status note)
-    - migration/spec/TEST-AMENDMENTS.md (A-009)
+    - migration/spec/TEST-AMENDMENTS.md (A-019)
     - migration/db/pg.sh (coordinator's 1a8c31c cherry-picked; my earlier d5cd932 superseded)
 
 key-decisions:
@@ -72,7 +72,7 @@ ora2pg schema gap fixed additively.**
    - `mcaudit.osag_audit`: **12/67 pgTAP, 0/1 regress**
 3. **Translations** + FINDINGS, then GREEN:
    - `mc.osag_maintsync`: **109/109 pgTAP, 1/1 regress** (regress went 0/1 -> 1/1 after the
-     whitespace-only golden correction, see A-009)
+     whitespace-only golden correction, see A-019)
    - `mcaudit.osag_audit`: **67/67 pgTAP, 1/1 regress**
    - whole harness: 16 packages, 15 pass, 1 fail -- the pre-existing, accepted
      `auth.osag_auth 9/10`; no sibling count changed.
@@ -145,7 +145,7 @@ history, superseded.
 | `ef43290` | test(06-01): RED suite for MC.OSAG_MAINTSYNC |
 | `b47193d` | test(06-01): RED suite for MCAUDIT.OSAG_AUDIT (+ 26_p0601_fixes.sql, SCHEMA-FIXES.md) |
 | `c214e17` | test(06-01): restore psql's trailing spaces in the mc__osag_maintsync__errors golden |
-| `a8f1f7d` | docs(06-01): TEST-AMENDMENTS A-009 |
+| `a8f1f7d` | docs(06-01): TEST-AMENDMENTS A-019 |
 | `c8d87fd` | feat(06-01): translate MC.OSAG_MAINTSYNC |
 | `9e4e911` | feat(06-01): translate MCAUDIT.OSAG_AUDIT |
 | (this) | docs(06-01): SUMMARY |
