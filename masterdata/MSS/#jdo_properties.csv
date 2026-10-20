@@ -373,6 +373,7 @@
 "REPORT_TYPE.naming.inverse.MSS.REPORT_CONFIGURATION_FK1","none"
 "REPORT_TYPE.naming.inverse.MSS.REPORT_FK1","none"
 "REPORT.seq.for.pk.ID","REPORT_SEQ"
+"SCOPE.naming","none"
 "SERVICE_COMPONENT.cacheable","true"
 "SERVICE_COMPONENT.naming.inverse.GUMA2.SIGNATURE_FK3","none"
 "SERVICE_COMPONENT.naming.inverse.MSS.APPLICATION_TYPE_FK4","none"

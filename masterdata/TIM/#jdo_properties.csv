@@ -16,3 +16,4 @@
 "EXCLUSION_LIST_VALUE.naming","ExclusionListValue"
 "EXCLUSION_LIST_VALUE.seq.for.pk.ID","EXCLUSION_LIST_VALUE_SEQ"
 "package.prefix","ch.open.mss.db.tim"
+"POLICY.naming","none"

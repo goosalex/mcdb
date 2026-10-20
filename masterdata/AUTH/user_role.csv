@@ -36,6 +36,7 @@
 "2012","mc-cust-api-users-mgmt","Api Users Management","0","1"
 "2013","mc-cust-casb-policy-mgmt","Casb Policy Management","0","1"
 "2014","mc-cust-network-admin","Network Administrator","0","1"
+"2015","mc-cust-network-req","Network Requestor","0","1"
 "3002","mc-cust-users-admin","User Management Administrator","0","2"
 "3003","mc-cust-users-auditor","User Management Auditor","0","2"
 "3004","mc-cust-users-shop","User Management Shop","0","2"

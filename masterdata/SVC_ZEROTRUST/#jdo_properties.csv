@@ -1,3 +1,7 @@
 "KEY","VALUE"
 "package.prefix","ch.open.mss.db.ztna"
 "ZTNA_TENANT.seq.for.pk.ID","ZTNA_TENANT_SEQ"
+"ZTNA_ZITADEL_APP_GRANT_TYPE.naming","none"
+"ZTNA_ZITADEL_APP_REDIRECT_URI.naming","none"
+"ZTNA_ZITADEL_APP_RESPONSE_TYPE.naming","none"
+"ZTNA_ZITADEL_CONFIG.naming","none"

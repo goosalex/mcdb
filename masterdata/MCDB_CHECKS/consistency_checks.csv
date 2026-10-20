@@ -295,8 +295,8 @@ where sr.ROUTE_OWNER_HOST_ID = h.id
              where t1.authsys_id = a1.id and a1.company_id = a.company_id and t.name = t1.name and t.id != t1.id
            ) order by t.name","Found CVPN groups with the same name","6","INFO"
 "68","SEL_mview_incon","critical","SELECT owner schemaName, mview_name mview, staleness staleness, compile_state compileState
-  			FROM dba_mviews
-  			WHERE (staleness in ('UNUSABLE', 'UNKNOWN') OR compile_state in ('NEEDS_COMPILE', 'ERROR') ) AND mview_name NOT LIKE '%_INT'","There are inconsistent materialized views in the database.","4","WARNING"
+FROM dba_mviews
+WHERE (staleness in ('UNUSABLE', 'UNKNOWN') OR compile_state in ('NEEDS_COMPILE', 'ERROR') )","There are inconsistent materialized views in the database.","4","WARNING"
 "69","SEL_datafile_alert","critical","select tablespace_name, size_gb, max_gb,
        (size_gb - free_gb) used_gb,
        free_gb,
