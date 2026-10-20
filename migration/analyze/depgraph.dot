@@ -56,9 +56,9 @@ digraph depgraph {
   "GUMA2_SECONDARY_ISP" [label="GUMA2.SECONDARY_ISP\nwave=4",style=filled,fillcolor="#eeeeee"];
   "MAIL_DMARC_CLEANUP" [label="MAIL.DMARC_CLEANUP\nwave=2",style=filled,fillcolor="#eeeeee"];
   "MC_CONNECTIVITY_COORDINATOR" [label="MC.CONNECTIVITY_COORDINATOR\nwave=2",style=filled,fillcolor="#ffcccc",color="#cc0000"];
-  "MC_MONITORING" [label="MC.MONITORING\nwave=4",style=filled,fillcolor="#ffcccc",color="#cc0000"];
+  "MC_MONITORING" [label="MC.MONITORING\nwave=5",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "MC_MONITORING_STATE" [label="MC.MONITORING_STATE\nwave=1",style=filled,fillcolor="#eeeeee"];
-  "MC_MONITORING_TICKET_PROCESSES" [label="MC.MONITORING_TICKET_PROCESSES\nwave=4",style=filled,fillcolor="#eeeeee"];
+  "MC_MONITORING_TICKET_PROCESSES" [label="MC.MONITORING_TICKET_PROCESSES\nwave=5",style=filled,fillcolor="#eeeeee"];
   "MC_OSAG_ISP_MONITORING" [label="MC.OSAG_ISP_MONITORING\nwave=2",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "MC_OSAG_MAINTSYNC" [label="MC.OSAG_MAINTSYNC\nwave=2",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "MCAUDIT_OSAG_AUDIT" [label="MCAUDIT.OSAG_AUDIT\nwave=2",style=filled,fillcolor="#eeeeee"];
@@ -95,7 +95,7 @@ digraph depgraph {
   "SYS_DECOMAUTHHOST" [label="SYS.DECOMAUTHHOST\nwave=1",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "SYS_OSAG_TABLE_REDEFINITION" [label="SYS.OSAG_TABLE_REDEFINITION\nwave=1",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "TICKETEVOLUTION_CALCULATOR" [label="TICKETEVOLUTION.CALCULATOR\nwave=1",style=filled,fillcolor="#eeeeee"];
-  "TT_ESCALATION_INTERFACE" [label="TT.ESCALATION_INTERFACE\nwave=3",style=filled,fillcolor="#ffcccc",color="#cc0000"];
+  "TT_ESCALATION_INTERFACE" [label="TT.ESCALATION_INTERFACE\nwave=4",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "TT_EVENT_INTERFACE" [label="TT.EVENT_INTERFACE\nwave=3",style=filled,fillcolor="#ffcccc",color="#cc0000"];
   "TT_EVENT_INTERFACE_STATE" [label="TT.EVENT_INTERFACE_STATE\nwave=1",style=filled,fillcolor="#eeeeee"];
   "TT_OSAG_NOTIFY" [label="TT.OSAG_NOTIFY\nwave=3",style=filled,fillcolor="#ffcccc",color="#cc0000"];
@@ -184,7 +184,6 @@ digraph depgraph {
   "TT_ESCALATION_INTERFACE" -> "TT_TICKET_INTERFACE" [label="qualified"];
   "TT_EVENT_INTERFACE" -> "MSS_OSAG_DBPROP" [label="qualified"];
   "TT_EVENT_INTERFACE" -> "OSAG_OSAG_PLOG" [label="synonym"];
-  "TT_EVENT_INTERFACE" -> "TT_ESCALATION_INTERFACE" [label="dynamic_sql"];
   "TT_EVENT_INTERFACE" -> "TT_OSAG_NOTIFY" [label="qualified"];
   "TT_EVENT_INTERFACE" -> "TT_TICKET_INTERFACE" [label="qualified"];
   "TT_EVENT_INTERFACE" -> "TT_UTIL" [label="qualified"];

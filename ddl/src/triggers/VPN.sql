@@ -1,0 +1,70 @@
+--liquibase formatted sql logicalFilePath:triggers/VPN.sql
+--changeset sys:1 runOnChange:true endDelimiter:/
+CREATE OR REPLACE TRIGGER VPN.t_t2ee_contact_sync_contact
+  AFTER INSERT OR UPDATE OR DELETE ON VPN.PARTNER_CONTACT
+  FOR EACH ROW
+DECLARE
+
+  v_company_id PARTNER_PHASE1.CUSTOMER_COMPANY_ID%TYPE;
+  v_address    PARTNER_LOCATION.ADDRESS%TYPE;
+
+BEGIN
+
+  IF DELETING THEN
+    DELETE FROM VPN.T2EE_CONTACT WHERE PARTNER_CONTACT_ID = :OLD.ID;
+    RETURN;
+  END IF;
+
+  SELECT p1.CUSTOMER_COMPANY_ID
+    INTO v_company_id
+    FROM VPN.PARTNER_PHASE1 p1
+   WHERE p1.ID = :NEW.PARTNER_PHASE1_ID;
+
+  SELECT MIN(loc.ADDRESS)
+    INTO v_address
+    FROM VPN.PARTNER_LOCATION loc
+   WHERE loc.PARTNER_PHASE1_ID = :NEW.PARTNER_PHASE1_ID;
+
+  UPDATE VPN.T2EE_CONTACT
+     SET COMPANY_ID        = v_company_id,
+         NAME              = :NEW.CONTACT_NAME,
+         EMAIL             = :NEW.CONTACT_EMAIL,
+         PHONE             = :NEW.CONTACT_PHONE,
+         ADDRESS           = v_address,
+         PARTNER_PHASE1_ID = :NEW.PARTNER_PHASE1_ID
+   WHERE PARTNER_CONTACT_ID = :NEW.ID;
+
+  IF SQL%ROWCOUNT = 0 THEN
+    INSERT INTO VPN.T2EE_CONTACT (ID, COMPANY_ID, NAME, EMAIL, PHONE, ADDRESS, PARTNER_CONTACT_ID, PARTNER_PHASE1_ID)
+    VALUES (VPN.T2EE_CONTACT_SEQUENCE.NEXTVAL, v_company_id, :NEW.CONTACT_NAME, :NEW.CONTACT_EMAIL,
+            :NEW.CONTACT_PHONE, v_address, :NEW.ID, :NEW.PARTNER_PHASE1_ID);
+  END IF;
+
+END t_t2ee_contact_sync_contact;
+/
+
+--changeset sys:2 runOnChange:true endDelimiter:/
+CREATE OR REPLACE TRIGGER VPN.t_t2ee_contact_sync_location
+  AFTER INSERT OR UPDATE OR DELETE ON VPN.PARTNER_LOCATION
+  FOR EACH ROW
+DECLARE
+
+  v_phase1_id PARTNER_LOCATION.PARTNER_PHASE1_ID%TYPE;
+  v_address   PARTNER_LOCATION.ADDRESS%TYPE;
+
+BEGIN
+
+  IF DELETING THEN
+    v_phase1_id := :OLD.PARTNER_PHASE1_ID;
+    v_address   := NULL;
+  ELSE
+    v_phase1_id := :NEW.PARTNER_PHASE1_ID;
+    v_address   := :NEW.ADDRESS;
+  END IF;
+
+  UPDATE VPN.T2EE_CONTACT
+     SET ADDRESS = v_address
+   WHERE PARTNER_PHASE1_ID = v_phase1_id;
+
+END t_t2ee_contact_sync_location;
+/

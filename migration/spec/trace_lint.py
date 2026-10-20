@@ -52,7 +52,6 @@ PGTAP_DIR = REPO_ROOT / "migration" / "test" / "pgtap"
 REGRESS_SQL_DIR = REPO_ROOT / "migration" / "test" / "regress" / "sql"
 
 CANARY_NAME = "_canary"
-SUPPORT_SCHEMA = "_support"  # migration/pgsql/_support/: no Oracle original, no spec, exempt like the canary
 
 CLAUSE_ID_RE = re.compile(r"S-[A-Z0-9]+-\d{3}")
 LEADING_CLAUSE_ID_RE = re.compile(r"^(S-[A-Z0-9]+-\d{3}):\s")
@@ -272,7 +271,7 @@ def package_key_from_filename(path: Path) -> Optional[Tuple[str, str]]:
 
 
 def is_canary(schema: str, pkg: str) -> bool:
-    return schema == CANARY_NAME or pkg == CANARY_NAME or schema == SUPPORT_SCHEMA
+    return schema == CANARY_NAME or pkg == CANARY_NAME
 
 
 def load_spec_clauses(spec_path: Path) -> Set[str]:

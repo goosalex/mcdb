@@ -30,13 +30,24 @@ migration/test/
 └── .gitignore                 regress/results/, *.log
 ```
 
+## Database container
+
+The harness runs against PostgreSQL 18.6 with orafce, pgTAP and `pg_prove`, in a Docker container managed by [`migration/db/pg.sh`](../db/pg.sh) (image: [`migration/db/Dockerfile`](../db/Dockerfile)). No local PostgreSQL installation is needed; Docker is.
+
+- Every entry point (`bootstrap.sh`, `build-template.sh`, `run-tests.sh`, `run-all.sh`, `redgreen.sh`, the `bootstrap/*.sh` steps and `../regenerate.sh`) runs `pg.sh start` first. It builds the image when the Dockerfile changed, starts or recreates the container `mcdb-pg`, and waits until the server accepts connections.
+- Every `psql` and `pg_prove` call goes through `pg.sh psql|pg_prove`, which runs the tool inside the container as `postgres`, in the caller's working directory.
+- The container mounts the `mcdb` project and the targets of its `ddl/` and `masterdata/` symlinks read-only at their host paths, so `-f` paths, relative paths and `\ir` includes resolve as on the host.
+- Data lives in the Docker volume `mcdb-pg-data`, so `mcdb_tmpl` survives container restarts. `pg.sh stop` removes the container and keeps the data; `pg.sh reset` removes both.
+- The image build needs `deb.debian.org` and `apt.postgresql.org`. `pg.sh` forwards `http_proxy`/`https_proxy`/`no_proxy` from the environment to the build.
+- `pg.sh shell` opens an interactive `psql` session; `pg.sh status` shows the container state.
+
+`run-tests.sh` and `../spec/provenance_lint.sh` need bash 4 or later (associative arrays, `mapfile`); on macOS run them with a Homebrew bash.
+
 ## The three commands
 
 ### `bootstrap.sh --db NAME [--template TMPL] [--bare]`
 
-Builds a disposable PostgreSQL database, run as the `postgres` superuser via peer
-auth (`sudo -u postgres psql` — this machine's PostgreSQL 17.10 is reached that
-way).
+Builds a disposable PostgreSQL database, run as the `postgres` superuser in the PostgreSQL 18.6 container (see [Database container](#database-container)).
 
 - `--bare`: drop-if-exists, create empty, apply `bootstrap/00_extensions.sql`
   only. No schema. Used when no template exists yet (this plan, 02-01).
@@ -92,12 +103,6 @@ Test files — both `pgtap/*.sql` and `regress/sql/*.sql` (with its matching
 oracle_package)` pair is not a real pair in `migration/mapping/name-map.csv`, with
 one reserved exception: the literal schema `_canary`, used only for this harness's
 own self-tests (never a real Oracle package).
-
-Triggers have no package (their `oracle_package` column is empty); for `kind=trigger`
-rows the pair is `(pg_schema, lower(oracle_object))` instead, so a trigger's tests are
-named `<pg_schema>__<trigger_name_lower>__<topic>.sql` (e.g.
-`tt__ticket_update_trg__spec.sql`). The companion `trigger_function` row never forms an
-identity. Unit tests: `python3 -m unittest discover -s migration/test/tests -v`.
 
 ## Design decisions carried from the plan
 

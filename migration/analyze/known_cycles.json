@@ -6,9 +6,9 @@
     "note": "MC.MONITORING calls MC.MONITORING_TICKET_PROCESSES.new_event (same-schema bare call); MC.MONITORING_TICKET_PROCESSES calls back into MC.MONITORING.get_sang_status_from_state / get_mode_from_state (qualified call). Verified as a genuine mutual reference in ddl/src/pkgb/mc_monitoring.sql and ddl/src/pkgb/mc_monitoring_ticket_processes.sql, not a resolver artifact. Translate both packages in one batch."
   },
   {
-    "id": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL",
-    "members": ["TT.ESCALATION_INTERFACE", "TT.EVENT_INTERFACE", "TT.OSAG_NOTIFY", "TT.TICKET_INTERFACE", "TT.UTIL"],
+    "id": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL",
+    "members": ["TT.EVENT_INTERFACE", "TT.OSAG_NOTIFY", "TT.TICKET_INTERFACE", "TT.UTIL"],
     "confirmed": true,
-    "note": "The core ticketing packages call each other extensively: TICKET_INTERFACE <-> EVENT_INTERFACE (both directions, both qualified and same-schema bare shapes), EVENT_INTERFACE/TICKET_INTERFACE/UTIL -> OSAG_NOTIFY, OSAG_NOTIFY -> TICKET_INTERFACE, and UTIL <-> TICKET_INTERFACE. Verified as genuine mutual references across ddl/src/pkgb/tt_event_interface.sql, tt_ticket_interface.sql, tt_osag_notify.sql, tt_util.sql, not a resolver artifact. ESCALATION_INTERFACE joined the group on 2026-10-16: it calls EVENT_INTERFACE.addevent_new / TICKET_INTERFACE.newticket_new statically, and EVENT_INTERFACE.exec_event_type_actions calls it back through EXECUTE IMMEDIATE (dynamic_edges.json, from DYNAMIC-SQL-TRACE.md). Translate all five packages in one batch."
+    "note": "The core ticketing packages call each other extensively: TICKET_INTERFACE <-> EVENT_INTERFACE (both directions, both qualified and same-schema bare shapes), EVENT_INTERFACE/TICKET_INTERFACE/UTIL -> OSAG_NOTIFY, OSAG_NOTIFY -> TICKET_INTERFACE, and UTIL <-> TICKET_INTERFACE. Verified as genuine mutual references across ddl/src/pkgb/tt_event_interface.sql, tt_ticket_interface.sql, tt_osag_notify.sql, tt_util.sql, not a resolver artifact. Translate all four packages in one batch."
   }
 ]

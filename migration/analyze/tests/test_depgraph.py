@@ -196,10 +196,7 @@ class TestWavesAndCyclesReal(unittest.TestCase):
 class TestReconciliation(unittest.TestCase):
     def test_15_node_count_matches_inventory_then_fails_when_removed(self):
         inventory, name_map_rows = load_real()
-        # known_cycles.json describes the graph INCLUDING the human-traced dynamic-SQL
-        # edges (dynamic_edges.json) -- build it the way the generator does.
-        dynamic_edges = depgraph.load_dynamic_edges()
-        result = depgraph.build_graph(inventory, name_map_rows, dynamic_edges)
+        result = depgraph.build_graph(inventory, name_map_rows)
         known_cycles = json.loads((ANALYZE_DIR / "known_cycles.json").read_text())
 
         ok, messages = depgraph.check(result, inventory, known_cycles)
@@ -224,22 +221,3 @@ class TestCheckCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class TestDynamicEdges(unittest.TestCase):
-    def test_17_dynamic_edge_closes_the_escalation_cycle(self):
-        inventory, name_map_rows = load_real()
-        without = depgraph.build_graph(inventory, name_map_rows)
-        with_dyn = depgraph.build_graph(inventory, name_map_rows, depgraph.load_dynamic_edges())
-        self.assertIsNone(find_edge(without["edges"], "TT.EVENT_INTERFACE", "TT.ESCALATION_INTERFACE"))
-        e = find_edge(with_dyn["edges"], "TT.EVENT_INTERFACE", "TT.ESCALATION_INTERFACE")
-        self.assertIsNotNone(e)
-        self.assertEqual(e["via"], "dynamic_sql")
-        esc = find_node(with_dyn["nodes"], "TT.ESCALATION_INTERFACE")
-        self.assertIn("TT.EVENT_INTERFACE", esc["cycle_group"] or "")
-
-    def test_18_unknown_object_in_dynamic_edges_is_rejected(self):
-        inventory, name_map_rows = load_real()
-        with self.assertRaises(ValueError):
-            depgraph.build_graph(inventory, name_map_rows, [{"from": "TT.EVENT_INTERFACE", "to": "NO.SUCH", "call_sites": [1]}])
-

@@ -98,7 +98,7 @@ $fn$;
 CREATE OR REPLACE FUNCTION mss.osag_dbprop_get_string_by_host(i_host_id integer, i_property_name varchar)
 RETURNS varchar
 LANGUAGE plpgsql
-AS $fn$ DECLARE v_key_id integer; v_property_name varchar := NULLIF(i_property_name, ''); BEGIN BEGIN SELECT id INTO STRICT v_key_id FROM mss.key WHERE name = v_property_name; EXCEPTION WHEN NO_DATA_FOUND THEN CALL osag.osag_plog_err('OSAG_DBPROP.get_string_by_host(): unknown db property ' || coalesce(i_property_name, '')); RAISE EXCEPTION 'unknown db property ''%''', coalesce(i_property_name, '') USING ERRCODE = 'OS801'; /* -20801 -> OS801, migration/mapping/sqlstate-map.md */
+AS $fn$ DECLARE v_key_id integer; v_property_name varchar := NULLIF(i_property_name, ''); BEGIN BEGIN SELECT id INTO STRICT v_key_id FROM mss.key WHERE name = v_property_name; EXCEPTION WHEN NO_DATA_FOUND THEN CALL osag.osag_plog_err('OSAG_DBPROP.get_string_by_host(): unknown db property ' || coalesce(i_property_name, '')); RAISE EXCEPTION 'unknown db property ''%''', coalesce(i_property_name, '');
     WHEN OTHERS THEN
         CALL osag.osag_plog_err('OSAG_DBPROP.get_string_by_host(): unexpected error while fetching key id for db property ' || coalesce(i_property_name, '') || ': ' || SQLERRM);
         RAISE;

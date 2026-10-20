@@ -10,6 +10,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before anything else.
+PG="${SCRIPT_DIR}/../../db/pg.sh"
+bash "$PG" start
 TEST_DIR="${SCRIPT_DIR}/.."
 
 DB=""

@@ -63,6 +63,8 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
         v_ticket_type_id NUMBER;
         v_create_cr NUMBER;
         v_cr_id NUMBER;
+        v_sign_off_sender NUMBER;
+        v_sender_contact_id NUMBER;
 
     BEGIN
         plog.AuditUsage($$PLSQL_UNIT_OWNER, $$PLSQL_UNIT_TYPE, $$PLSQL_UNIT);
@@ -92,23 +94,47 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
 
         END IF;
 
+        -- ServiceNow sign-off senders (see the change request below) come through the tickets API with their Zitadel user ID only.
+        -- Use their legacy contact like the old mail gateway did, for the ticket and event contact and the change request.
+        --  260976466693466175 - ServiceNow ServiceDesk (swissre@service-now.com)
+        --  260976421227212858 - ServiceNow ServiceDesk (swissreesm@service-now.com)
+        --  260976444195221562 - InfoSec_ServiceDesk (Protection_Monitoring@swissre.com)
+        --  249698997185305231 - ServiceNow Production Sign-Off (snow.mc.approval@partnersgroup.com)
+        --  250130937734526554 - ServiceNow Test Sign-OFF (snow.mc.approval.test@partnersgroup.com)
+        --  250130921494181466 - ServiceNow Develpoment Sign-OFF (snow.mc.approval.dev@partnersgroup.com)
+        --  296895704029212305 - Sika Network Servicedesk Production Sign-OFF (network.servicedesk@int.sika.com)
+        --  389858629131441574 - Swiss Post Cybersecurity portal (portal@swisspost-cybersecurity.ch)
+        v_sign_off_sender := 0;
+        IF (p_event_type_id = 30002
+            AND p_zitadel_contact_id IN ('260976466693466175', '260976421227212858', '260976444195221562',
+                                         '249698997185305231', '250130937734526554', '250130921494181466',
+                                         '296895704029212305', '389858629131441574')) THEN
+            v_sign_off_sender := 1;
+        END IF;
+        v_sender_contact_id := p_contact_id;
+        IF (v_sender_contact_id IS NULL AND v_sign_off_sender = 1) THEN
+            SELECT MAX(l.contact_id) INTO v_sender_contact_id
+            FROM auth.login l
+            WHERE l.oidc_zitadel_id = TO_CHAR(p_zitadel_contact_id);
+        END IF;
+
         -- if a contact id is given we select the company_id from the contact table
         -- this overrides the company selection from the service id
-        IF (p_contact_id is not null) THEN
+        IF (v_sender_contact_id is not null) THEN
             SELECT company_id INTO v_company_id
             FROM stop.contact
-            WHERE contact.id = p_contact_id;
+            WHERE contact.id = v_sender_contact_id;
         END IF;
 
         -- for company wide tickets check if the given contact is a company wide
         -- admin and therefore suitable as ticket owner
-        v_contact_id := p_contact_id;
-        IF (p_host_id is null AND p_contact_id is not null) THEN
+        v_contact_id := v_sender_contact_id;
+        IF (p_host_id is null AND v_sender_contact_id is not null) THEN
             -- role id 2 is mc_cust_admin
             SELECT count(*) INTO v_count
             FROM auth.permission p, auth.login l
             WHERE p.login_id = l.id
-              AND l.contact_id = p_contact_id
+              AND l.contact_id = v_sender_contact_id
               AND p.role_id = 2
               AND p.company_unit_id IS NULL
               AND p.user_unit_id IS NULL
@@ -164,7 +190,10 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
         --  430181  - ServiceNow Develpoment Sign-OFF (snow.mc.approval.dev@partnersgroup.com)
         --  3598    - Sika Network Servicedesk (network.servicedesk) Production Sign-OFF (network.servicedesk@int.sika.com)
         --  796216  - PG splunk monitor Sign-off (splunk-monitoring@notification.partnersgroup.com)
-        IF (p_event_type_id = 30002 AND p_contact_id is not null AND p_contact_id IN (224019, 1150408, 235692, 371508, 458818, 430183, 430181, 3598, 796216)) THEN
+        -- or if it is a sign-off sender known by Zitadel user ID (see above).
+        IF (p_event_type_id = 30002
+            AND (v_sender_contact_id IN (224019, 1150408, 235692, 371508, 458818, 430183, 430181, 3598, 796216)
+                 OR v_sign_off_sender = 1)) THEN
             -- remember to create a CR after creating the ticket
             v_create_cr := 1;
             -- use ticket type "change" (ID 2)
@@ -173,7 +202,8 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
 
         -- open a new ticket for this event
         INSERT INTO ticket (id, type_id, contact_id, worker_id, company_id, host_id, subject, last_status_change_date,
-                            mss_service_id, service_confirmed, type_confirmed, fast_resolvable, service_component_id, contact_zitadel_id)
+                            mss_service_id, service_confirmed, type_confirmed, fast_resolvable, service_component_id, contact_zitadel_id,
+                            worker_zitadel_id)
         VALUES (p_ticket_id,
                 v_ticket_type_id,
                 v_contact_id,
@@ -187,7 +217,8 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
                 v_confirmed,
                 v_fast_resolvable,
                 p_service_component_id,
-                p_zitadel_contact_id);
+                p_zitadel_contact_id,
+                (SELECT oidc_zitadel_id FROM auth.login WHERE contact_id = p_worker_id));
 
         -- set ux timeout
         UPDATE tt.ticket SET ux_timeout_start = from_tz(cast(open_date as timestamp), 'EUROPE/ZURICH') WHERE id = p_ticket_id;
@@ -196,8 +227,8 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
         -- determine contact for event
         IF (p_worker_id is not NULL) THEN
             v_contact_id := p_worker_id;
-        ELSIF (p_contact_id is not NULL) THEN
-            v_contact_id := p_contact_id;
+        ELSIF (v_sender_contact_id is not NULL) THEN
+            v_contact_id := v_sender_contact_id;
         ELSE
             v_contact_id := NULL;
         END IF;
@@ -699,7 +730,8 @@ CREATE OR REPLACE PACKAGE BODY tt.ticket_interface IS
 
         -- set the worker id for the ticket to the new worker_id
         UPDATE ticket
-        SET worker_id = v_worker_id
+        SET worker_id = v_worker_id,
+            worker_zitadel_id = (SELECT oidc_zitadel_id FROM auth.login WHERE contact_id = v_worker_id)
         WHERE ticket.id = p_ticket_id;
 
         -- set the handled by mcc flag for the ticket to the new p_handled_by_mcc

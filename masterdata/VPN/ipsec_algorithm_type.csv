@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"1","ENCRYPTION","Block cipher for confidentiality"
+"2","AEAD","Combined confidentiality and integrity cipher"
+"3","INTEGRITY","Integrity protection algorithm"
+"4","PRF","Pseudo-random function, IKEv2 only"
+"5","DH","Diffie-Hellman group"

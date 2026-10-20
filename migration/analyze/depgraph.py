@@ -11,9 +11,7 @@ Input:  migration/analyze/inventory.json (nodes + calls_out_raw -- the raw,
 Output: migration/analyze/depgraph.json  (THE dependency graph + wave list)
         migration/analyze/depgraph.dot   (human-review rendering)
 
-Reads migration/analyze/dynamic_edges.json (human-authored input: call edges found by
-a manual dynamic-SQL trace, see load_dynamic_edges) and
-migration/analyze/known_cycles.json (human-authored input, not
+Reads migration/analyze/known_cycles.json (human-authored input, not
 generated) to gate newly-appearing cycles.
 
 Two modes:
@@ -53,7 +51,6 @@ DEFAULT_NAME_MAP_PATH = MAPPING_DIR / "name-map.csv"
 DEFAULT_OUTPUT_JSON_PATH = ANALYZE_DIR / "depgraph.json"
 DEFAULT_OUTPUT_DOT_PATH = ANALYZE_DIR / "depgraph.dot"
 DEFAULT_KNOWN_CYCLES_PATH = ANALYZE_DIR / "known_cycles.json"
-DEFAULT_DYNAMIC_EDGES_PATH = ANALYZE_DIR / "dynamic_edges.json"
 
 EXTERNAL_PREFIXES = ("DBMS_", "UTL_")
 CALLABLE_KINDS = ("package", "procedure", "trigger")
@@ -73,18 +70,6 @@ def load_name_map(path: Path = DEFAULT_NAME_MAP_PATH) -> List[Dict]:
 
 
 def load_known_cycles(path: Path = DEFAULT_KNOWN_CYCLES_PATH) -> List[Dict]:
-    if not path.exists():
-        return []
-    return json.loads(path.read_text())
-
-
-def load_dynamic_edges(path: Path = DEFAULT_DYNAMIC_EDGES_PATH) -> List[Dict]:
-    """Human-authored call edges the lexer cannot see (EXECUTE IMMEDIATE targets
-    resolved by a manual trace, e.g. migration/spec/DYNAMIC-SQL-TRACE.md). Each entry:
-    {"from": "SCHEMA.PKG", "to": "SCHEMA.PKG", "call_sites": [line, ...], "note": "..."}.
-    They enter the graph as ordinary edges with via="dynamic_sql", so wave order and
-    cycle detection account for them; nothing else about the node changes (it stays
-    static_resolution=incomplete -- the trace is a human claim, not a parse result)."""
     if not path.exists():
         return []
     return json.loads(path.read_text())
@@ -271,22 +256,13 @@ def assign_waves(nodes: List[str], edges: List[Tuple[str, str]], sccs: List[List
 # Graph assembly
 # ---------------------------------------------------------------------------
 
-def build_graph(inventory: Dict, name_map_rows: List[Dict], dynamic_edges: Optional[List[Dict]] = None) -> Dict:
+def build_graph(inventory: Dict, name_map_rows: List[Dict]) -> Dict:
     objects = inventory["objects"]
     package_index = build_package_index(objects)
     synonym_index = build_synonym_index(name_map_rows)
 
     unresolved_by_node: Dict[str, List[Dict]] = defaultdict(list)
     edge_info: Dict[Tuple[str, str], Dict] = {}
-
-    object_ids = {o["id"] for o in objects}
-    for d in dynamic_edges or []:
-        if d["from"] not in object_ids or d["to"] not in object_ids:
-            raise ValueError(f"dynamic_edges.json names an unknown object: {d['from']} -> {d['to']}")
-        key = (d["from"], d["to"])
-        if key not in edge_info:
-            edge_info[key] = {"via": "dynamic_sql", "call_sites": []}
-        edge_info[key]["call_sites"].extend(d.get("call_sites", []))
 
     for o in objects:
         if o["kind"] not in CALLABLE_KINDS:
@@ -510,7 +486,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--inventory-path", type=Path, default=DEFAULT_INVENTORY_PATH)
     parser.add_argument("--name-map-path", type=Path, default=DEFAULT_NAME_MAP_PATH)
     parser.add_argument("--known-cycles-path", type=Path, default=DEFAULT_KNOWN_CYCLES_PATH)
-    parser.add_argument("--dynamic-edges-path", type=Path, default=DEFAULT_DYNAMIC_EDGES_PATH)
     parser.add_argument("--output-json-path", type=Path, default=DEFAULT_OUTPUT_JSON_PATH)
     parser.add_argument("--output-dot-path", type=Path, default=DEFAULT_OUTPUT_DOT_PATH)
     args = parser.parse_args(argv)
@@ -518,9 +493,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     inventory = load_inventory(args.inventory_path)
     name_map_rows = load_name_map(args.name_map_path)
     known_cycles = load_known_cycles(args.known_cycles_path)
-    dynamic_edges = load_dynamic_edges(args.dynamic_edges_path)
 
-    result = build_graph(inventory, name_map_rows, dynamic_edges)
+    result = build_graph(inventory, name_map_rows)
     print_report(result)
 
     ok, messages = check(result, inventory, known_cycles)

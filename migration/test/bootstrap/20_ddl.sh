@@ -45,6 +45,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before anything else.
+PG="${SCRIPT_DIR}/../../db/pg.sh"
+bash "$PG" start
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 TEST_DIR="${SCRIPT_DIR}/.."
 SCRATCH_DIR="${TEST_DIR}/.build-scratch"
@@ -62,7 +66,7 @@ mkdir -p "$SCRATCH_DIR"
 chmod 755 "$SCRATCH_DIR"
 
 psql_super() {
-  sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -d "$DB" "$@"
+  bash "$PG" psql -X -v ON_ERROR_STOP=on -q -d "$DB" "$@"
 }
 
 # Strip every `\set ON_ERROR_STOP ...` line from $1, write result to $2, make it
@@ -80,7 +84,7 @@ strip_error_stop() {
 run_inventory() {
   local file="$1" label="$2"
   local log="${SCRATCH_DIR}/$(basename "$file").log"
-  sudo -u postgres psql -X -v ON_ERROR_STOP=off -q -d "$DB" -f "$file" > "$log" 2>&1 || true
+  bash "$PG" psql -X -v ON_ERROR_STOP=off -q -d "$DB" -f "$file" > "$log" 2>&1 || true
   local lines
   lines="$(grep -oE ":[0-9]+: ERROR" "$log" | grep -oE '[0-9]+' | sort -n -u | tr '\n' ' ')"
   echo "-- ${label}: failed statement line numbers: [${lines}]" >&2

@@ -208,10 +208,13 @@ BEGIN
                              'mc-cust-mail-config-mgmt', 'mail_self_service_editor',
                              'mc-cust-api', 'api_access_user',
                              'mc-cust-api-users-mgmt', 'api_users_self_service_editor',
+                             'mc-cust-api-users-monitor', 'api_users_viewer',
+                             'mc-cust-api-users-auditor', 'api_users_auditor',
                              'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                              'mc-cust-cert-mgmt', 'cert_self_service_manager',
                              'mc-cust-network-admin', 'network_editor',
                              'mc-cust-network-req', 'network_requester',
+                             'mc-cust-sdwan-editor', 'sdwan_editor',
                              'mc-cust-sign-off', 'approver',
                              'mc-cust-users-monitor', 'mep_user_viewer',
                              'mc-cust-users-auditor', 'mep_user_auditor',
@@ -228,6 +231,8 @@ BEGIN
                                  'mc-cust-tp-mgmt', 'mc-cust-prx-config-mgmt', 'mc-cust-fw-config-mgmt',
                                  'mc-cust-casb-policy-mgmt', 'mc-cust-mail-config-mgmt', 'mc-cust-api',
                                  'mc-cust-api-users-mgmt', 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                                 'mc-cust-api-users-monitor', 'mc-cust-api-users-auditor',
+                                 'mc-cust-sdwan-editor',
                                  'mc-cust-sign-off', 'mc-cust-users-monitor', 'mc-cust-users-auditor', 'mc-cust-users-admin',
                                  'mc-cust-open-systems-identity-users-admin', 'mc-cust-open-systems-identity-users-auditor', 'mc-cust-open-systems-identity-users-monitor')
                  and l2p.PROFILE_ID = up.PROFILE_ID
@@ -252,6 +257,7 @@ BEGIN
                              'mc-cust-cert-mgmt', 'cert_self_service_manager',
                              'mc-cust-network-admin', 'network_editor',
                              'mc-cust-network-req', 'network_requester',
+                             'mc-cust-sdwan-editor', 'sdwan_editor',
                              'mc-cust-sign-off', 'approver',
                              'mc-cust-users-monitor', 'mep_user_viewer',
                              'mc-cust-users-auditor', 'mep_user_auditor',
@@ -263,6 +269,7 @@ BEGIN
                where up.USER_ROLE_ID = ur.id
                  and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
                                  'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req', 'mc-cust-sign-off',
+                                 'mc-cust-sdwan-editor',
                                  'mc-cust-users-monitor', 'mc-cust-users-auditor', 'mc-cust-users-admin')
                  and l2p.PROFILE_ID = up.PROFILE_ID
                  and l2p.LOGIN_ID = NVL(:NEW.id, :OLD.id)
@@ -285,14 +292,16 @@ BEGIN
                              'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                              'mc-cust-cert-mgmt', 'cert_self_service_manager',
                              'mc-cust-network-admin', 'network_editor',
-                             'mc-cust-network-req', 'network_requester'
+                             'mc-cust-network-req', 'network_requester',
+                             'mc-cust-sdwan-editor', 'sdwan_editor'
                       ) rel,
                       NVL(:NEW.OIDC_ZITADEL_ID, :OLD.OIDC_ZITADEL_ID) user_id,
                       uss.service_id
                from auth.USER_SERVICE_SCOPE uss, auth.USER_PERMISSION up, auth.USER_ROLE ur, auth.LOGIN2PROFILE l2p
                where up.USER_ROLE_ID = ur.id
                  and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
-                                 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req')
+                                 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                                 'mc-cust-sdwan-editor')
                  and l2p.PROFILE_ID = up.PROFILE_ID
                  and l2p.LOGIN_ID = NVL(:NEW.id, :OLD.id)
                  and up.id = uss.PERMISSION_ID) loop
@@ -870,12 +879,15 @@ BEGIN
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
                           'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor',
                           'mc-cust-prx-config-mgmt', 'proxy_self_service_editor',
                           'mc-cust-fw-config-mgmt', 'firewall_self_service_editor',
                           'mc-cust-casb-policy-mgmt', 'casb_self_service_editor',
                           'mc-cust-mail-config-mgmt', 'mail_self_service_editor',
                           'mc-cust-api', 'api_access_user',
                           'mc-cust-api-users-mgmt', 'api_users_self_service_editor',
+                          'mc-cust-api-users-monitor', 'api_users_viewer',
+                          'mc-cust-api-users-auditor', 'api_users_auditor',
                           'mc-cust-sign-off', 'approver',
                           'mc-cust-users-monitor', 'mep_user_viewer',
                           'mc-cust-users-auditor', 'mep_user_auditor',
@@ -890,7 +902,8 @@ BEGIN
               and ur.NAME in ('mc-cust-access', 'mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
                              'mc-cust-tp-mgmt', 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req', 'mc-cust-prx-config-mgmt', 'mc-cust-fw-config-mgmt',
                              'mc-cust-casb-policy-mgmt', 'mc-cust-mail-config-mgmt', 'mc-cust-api',
-                             'mc-cust-api-users-mgmt', 'mc-cust-sign-off',
+                             'mc-cust-api-users-mgmt', 'mc-cust-sign-off', 'mc-cust-sdwan-editor',
+                             'mc-cust-api-users-monitor', 'mc-cust-api-users-auditor',
                              'mc-cust-users-monitor', 'mc-cust-users-auditor', 'mc-cust-users-admin',
                              'mc-cust-open-systems-identity-users-admin', 'mc-cust-open-systems-identity-users-auditor', 'mc-cust-open-systems-identity-users-monitor')
               and l2p.PROFILE_ID = up.PROFILE_ID
@@ -936,13 +949,15 @@ BEGIN
                           'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
-                          'mc-cust-network-req', 'network_requester'
+                          'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor'
                    ) rel,
                    l.OIDC_ZITADEL_ID user_id
             from auth.USER_PERMISSION up, auth.USER_ROLE ur, auth.LOGIN2PROFILE l2p, auth.LOGIN l
             where up.USER_ROLE_ID = ur.id
               and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
-                              'mc-cust-sign-off', 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req')
+                              'mc-cust-sign-off', 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                              'mc-cust-sdwan-editor')
               and l2p.PROFILE_ID = up.PROFILE_ID
               and l2p.LOGIN_ID = l.id
               and l.OIDC_ZITADEL_ID is not null
@@ -1060,10 +1075,13 @@ BEGIN
                           'mc-cust-mail-config-mgmt', 'mail_self_service_editor',
                           'mc-cust-api', 'api_access_user',
                           'mc-cust-api-users-mgmt', 'api_users_self_service_editor',
+                          'mc-cust-api-users-monitor', 'api_users_viewer',
+                          'mc-cust-api-users-auditor', 'api_users_auditor',
                           'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
                           'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor',
                           'mc-cust-sign-off', 'approver',
                           'mc-cust-users-monitor', 'mep_user_viewer',
                           'mc-cust-users-auditor', 'mep_user_auditor',
@@ -1080,6 +1098,8 @@ BEGIN
                               'mc-cust-tp-mgmt', 'mc-cust-prx-config-mgmt', 'mc-cust-fw-config-mgmt',
                               'mc-cust-casb-policy-mgmt', 'mc-cust-mail-config-mgmt', 'mc-cust-api',
                               'mc-cust-api-users-mgmt', 'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                              'mc-cust-api-users-monitor', 'mc-cust-api-users-auditor',
+                              'mc-cust-sdwan-editor',
                               'mc-cust-sign-off', 'mc-cust-users-monitor', 'mc-cust-users-auditor', 'mc-cust-users-admin',
                               'mc-cust-open-systems-identity-users-admin', 'mc-cust-open-systems-identity-users-auditor', 'mc-cust-open-systems-identity-users-monitor')
               and l2p.PROFILE_ID = v_profile_id
@@ -1105,6 +1125,7 @@ BEGIN
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
                           'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor',
                           'mc-cust-sign-off', 'approver'
                    ) rel,
                    l.OIDC_ZITADEL_ID user_id,
@@ -1112,7 +1133,8 @@ BEGIN
             from auth.USER_COMPANY_UNIT_SCOPE uus, auth.USER_ROLE ur, auth.LOGIN2PROFILE l2p, auth.LOGIN l
             where ur.id = v_urole_id
               and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
-                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req', 'mc-cust-sign-off')
+                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req', 'mc-cust-sign-off',
+                              'mc-cust-sdwan-editor')
               and l2p.PROFILE_ID = v_profile_id
               and l2p.LOGIN_ID = l.id
               and l.OIDC_ZITADEL_ID is not null
@@ -1160,14 +1182,16 @@ BEGIN
                           'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
-                          'mc-cust-network-req', 'network_requester'
+                          'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor'
                    ) rel,
                    l.OIDC_ZITADEL_ID user_id,
                    uss.service_id
             from auth.USER_SERVICE_SCOPE uss, auth.USER_ROLE ur, auth.LOGIN2PROFILE l2p, auth.LOGIN l
             where ur.id = v_urole_id
               and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
-                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req')
+                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                              'mc-cust-sdwan-editor')
               and l2p.PROFILE_ID = v_profile_id
               and l2p.LOGIN_ID = l.id
               and l.OIDC_ZITADEL_ID is not null
@@ -1210,12 +1234,14 @@ BEGIN
                           'mc-cust-incident-resp-mgmt', 'ndr_service_handler',
                           'mc-cust-cert-mgmt', 'cert_self_service_manager',
                           'mc-cust-network-admin', 'network_editor',
-                          'mc-cust-network-req', 'network_requester') rel,
+                          'mc-cust-network-req', 'network_requester',
+                          'mc-cust-sdwan-editor', 'sdwan_editor') rel,
                    l.OIDC_ZITADEL_ID user_id
             from auth.USER_PERMISSION up, auth.USER_ROLE ur, auth.LOGIN2PROFILE l2p, auth.LOGIN l
             where up.USER_ROLE_ID = ur.id
               and ur.NAME in ('mc-cust-monitor', 'mc-cust-auditor', 'mc-cust-admin',
-                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req')
+                              'mc-cust-incident-resp-mgmt', 'mc-cust-cert-mgmt', 'mc-cust-network-admin', 'mc-cust-network-req',
+                              'mc-cust-sdwan-editor')
               and l2p.PROFILE_ID = up.PROFILE_ID
               and l2p.LOGIN_ID = l.id
               and l.OIDC_ZITADEL_ID is not null

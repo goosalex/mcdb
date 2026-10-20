@@ -45,6 +45,7 @@ separate from `pg_migration/` (ora2pg's raw, untrusted output) — nothing under
 - `regenerate.sh` — one command that regenerates all three artifacts, runs every
   `--check` gate, and runs the full test suite. `regenerate.sh --check` proves the
   checked-in artifacts are not stale (regenerates into a temp dir and diffs).
+- `db/` — the PostgreSQL 18.6 container (orafce, pgTAP, `pg_prove`) that every regeneration and test script starts before it runs. `pg.sh` starts it and runs `psql`/`pg_prove` inside it; see [Database container](test/README.md#database-container).
 
 ## Decisions (from 01-01-PLAN.md, stated here verbatim so every consumer sees them)
 

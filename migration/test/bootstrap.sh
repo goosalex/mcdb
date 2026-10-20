@@ -28,6 +28,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before anything else.
+PG="${SCRIPT_DIR}/../db/pg.sh"
+bash "$PG" start
 NAME_RE='^mcdb_(test|tmpl|harness)[a-z0-9_]*$'
 
 DB=""
@@ -66,7 +70,7 @@ if [[ -n "$TEMPLATE" ]]; then
 fi
 
 psql_super() {
-  sudo -u postgres psql -X -v ON_ERROR_STOP=on -q "$@"
+  bash "$PG" psql -X -v ON_ERROR_STOP=on -q "$@"
 }
 
 db_exists() {

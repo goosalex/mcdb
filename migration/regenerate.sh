@@ -26,6 +26,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before any regeneration.
+bash "$SCRIPT_DIR/db/pg.sh" start
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ANALYZE_DIR="$SCRIPT_DIR/analyze"
 MAPPING_DIR="$SCRIPT_DIR/mapping"

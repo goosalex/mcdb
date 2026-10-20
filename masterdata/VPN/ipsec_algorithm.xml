@@ -1,0 +1,7 @@
+<column name="ID" type="NUMERIC" />
+<column name="ALGORITHM_TYPE_ID" type="NUMERIC" />
+<column name="NAME" type="STRING" />
+<column name="BLOCK_SIZE" type="NUMERIC" />
+<column name="ESP_IV_SIZE" type="NUMERIC" />
+<column name="ESP_ICV_SIZE" type="NUMERIC" />
+<column name="DEPRECATED" type="NUMERIC" />

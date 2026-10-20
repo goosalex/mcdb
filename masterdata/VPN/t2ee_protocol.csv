@@ -1,0 +1,4 @@
+"ID","NAME","DESCRIPTION"
+"1","IP_GRE_IP","Plain GRE tunnel"
+"2","IP_ESP_IP","Plain IPsec encapsulation"
+"3","IP_ESP_GRE_IP","GRE over IPsec encapsulation"

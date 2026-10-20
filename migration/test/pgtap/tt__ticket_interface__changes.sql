@@ -77,13 +77,10 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (906020, 1, 2,
 INSERT INTO mc.mc_file (id, uploader_id, display_name, description, filename, mime_type, mc_file_type_id)
     VALUES (906021, 906002, 'pilot-file.txt', 'pilot file', 'pilot-file.txt', 'text/plain', 900299999);
 INSERT INTO mc.mc_file_release (id, company_id, mc_file_id) VALUES (906022, 906023, 906021);
--- A second, same-company file/relation for remove_related_file's own fixture.
--- TEST-AMENDMENTS.md A-014: the fixture always described this file as "same-company"
--- but never released it to the ticket's company 906001; since the Q11 (d) correction
--- (S-TICKET-060) remove_related_file requires that release, so the row is added.
+-- A second, same-company file/relation for remove_related_file's own fixture
+-- (its lookup has no same-company guard at all -- S-TICKET-045).
 INSERT INTO mc.mc_file (id, uploader_id, display_name, description, filename, mime_type, mc_file_type_id)
     VALUES (906028, 906002, 'pilot-file2.txt', 'pilot file 2', 'pilot-file2.txt', 'text/plain', 900299999);
-INSERT INTO mc.mc_file_release (id, company_id, mc_file_id) VALUES (906031, 906001, 906028);
 INSERT INTO tt.ticket2mc_file (ticket_id, mc_file_id) VALUES (906020, 906028);
 
 -- classify_request / clear_todo_list / add_todo_item / update_todo_item_status.
@@ -531,7 +528,7 @@ SELECT ok(
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_remove_related_file(906020, 906028, 906002)$$,
-    'S-TICKET-045: remove_related_file succeeds removing an EXISTING same-company relation (906020/906028) -- file 906028 is released to the ticket''s company 906001, which the corrected same-company guard (S-TICKET-060) requires'
+    'S-TICKET-045: remove_related_file succeeds removing an EXISTING same-company relation (906020/906028) -- unlike add_related_file, this mirror routine has no same-company guard at all on its own lookup'
 );
 
 SELECT ok(

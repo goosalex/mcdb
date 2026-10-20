@@ -19,6 +19,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before anything else.
+PG="${SCRIPT_DIR}/../db/pg.sh"
+bash "$PG" start
+
 DB="mcdb_tmpl"
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -45,9 +49,9 @@ echo "############################################################"
 # this on every successful build). Un-mark it first so a re-run of this idempotent
 # script can DROP/CREATE it again -- bootstrap.sh's own DROP does not know about this
 # self-inflicted condition, since ordinarily only THIS script's step 6 ever sets it.
-EXISTING="$(sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB}'")"
+EXISTING="$(bash "$PG" psql -X -v ON_ERROR_STOP=on -q -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB}'")"
 if [[ "$EXISTING" == "1" ]]; then
-  sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} IS_TEMPLATE false;"
+  bash "$PG" psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} IS_TEMPLATE false;"
 fi
 
 echo ""
@@ -55,7 +59,7 @@ echo "--- Step 0/6: bootstrap.sh --bare ---"
 "${SCRIPT_DIR}/bootstrap.sh" --db "$DB" --bare
 
 psql_super() {
-  sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -d "$DB" "$@"
+  bash "$PG" psql -X -v ON_ERROR_STOP=on -q -d "$DB" "$@"
 }
 
 # --- Step 1: roles + schemas ------------------------------------------------
@@ -106,8 +110,8 @@ if [[ "$DISABLED_TRIGGERS" -ne 0 ]]; then
 fi
 echo "-- 0 disabled triggers (T-02-11 OK)"
 
-sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} WITH ALLOW_CONNECTIONS true;"
-sudo -u postgres psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} IS_TEMPLATE true;"
+bash "$PG" psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} WITH ALLOW_CONNECTIONS true;"
+bash "$PG" psql -X -v ON_ERROR_STOP=on -q -c "ALTER DATABASE ${DB} IS_TEMPLATE true;"
 echo "-- ${DB} marked IS_TEMPLATE true, ALLOW_CONNECTIONS true"
 
 echo ""

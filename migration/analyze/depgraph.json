@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-16T17:17:36.295677+00:00",
+  "generated_at": "2026-07-11T21:52:15.188327+00:00",
   "generator_version": "1.0.0",
   "nodes": [
     {
@@ -1444,7 +1444,7 @@
           "line": 688
         }
       ],
-      "wave": 4,
+      "wave": 5,
       "cycle_group": "MC.MONITORING|MC.MONITORING_TICKET_PROCESSES"
     },
     {
@@ -1466,7 +1466,7 @@
       "static_resolution": "complete",
       "reasons": [],
       "unresolved_refs": [],
-      "wave": 4,
+      "wave": 5,
       "cycle_group": "MC.MONITORING|MC.MONITORING_TICKET_PROCESSES"
     },
     {
@@ -2294,8 +2294,8 @@
           "line": 170
         }
       ],
-      "wave": 3,
-      "cycle_group": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+      "wave": 4,
+      "cycle_group": null
     },
     {
       "id": "TT.EVENT_INTERFACE",
@@ -2312,7 +2312,7 @@
       ],
       "unresolved_refs": [],
       "wave": 3,
-      "cycle_group": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
     },
     {
       "id": "TT.EVENT_INTERFACE_STATE",
@@ -2435,7 +2435,7 @@
         }
       ],
       "wave": 3,
-      "cycle_group": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
     },
     {
       "id": "TT.TICKET_INTERFACE",
@@ -2493,7 +2493,7 @@
         }
       ],
       "wave": 3,
-      "cycle_group": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
     },
     {
       "id": "TT.TICKET_INTERFACE_STATE",
@@ -2537,7 +2537,7 @@
       "reasons": [],
       "unresolved_refs": [],
       "wave": 3,
-      "cycle_group": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
+      "cycle_group": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL"
     },
     {
       "id": "VPN.OSAG_VPN",
@@ -3632,14 +3632,6 @@
     },
     {
       "from": "TT.EVENT_INTERFACE",
-      "to": "TT.ESCALATION_INTERFACE",
-      "call_sites": [
-        971
-      ],
-      "via": "dynamic_sql"
-    },
-    {
-      "from": "TT.EVENT_INTERFACE",
       "to": "TT.OSAG_NOTIFY",
       "call_sites": [
         504,
@@ -4000,7 +3992,6 @@
       "STOP.T_COMPANYTYPE_ASERTO",
       "STOP.T_COMPANYUNIT_ASERTO",
       "STOP.T_COMPANY_ASERTO",
-      "TT.ESCALATION_INTERFACE",
       "TT.EVENT_INTERFACE",
       "TT.OSAG_NOTIFY",
       "TT.TICKET_INTERFACE",
@@ -4012,13 +4003,14 @@
       "GUMA2.OSAG_GUMA",
       "GUMA2.OSAG_IMPLICATION",
       "GUMA2.SECONDARY_ISP",
-      "MC.MONITORING",
-      "MC.MONITORING_TICKET_PROCESSES",
       "NIDS.OSAG_NIDS",
-      "OSIXINFO.OSAG_HARDWARE"
+      "OSIXINFO.OSAG_HARDWARE",
+      "TT.ESCALATION_INTERFACE"
     ],
     [
-      "ASERTO_TEST.E2ETEST"
+      "ASERTO_TEST.E2ETEST",
+      "MC.MONITORING",
+      "MC.MONITORING_TICKET_PROCESSES"
     ]
   ],
   "cycle_groups": [
@@ -4028,13 +4020,12 @@
         "MC.MONITORING",
         "MC.MONITORING_TICKET_PROCESSES"
       ],
-      "wave": 4,
+      "wave": 5,
       "note": "all members translate as one batch -- none can precede the others"
     },
     {
-      "id": "TT.ESCALATION_INTERFACE|TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL",
+      "id": "TT.EVENT_INTERFACE|TT.OSAG_NOTIFY|TT.TICKET_INTERFACE|TT.UTIL",
       "members": [
-        "TT.ESCALATION_INTERFACE",
         "TT.EVENT_INTERFACE",
         "TT.OSAG_NOTIFY",
         "TT.TICKET_INTERFACE",
@@ -4046,7 +4037,7 @@
   ],
   "stats": {
     "node_count": 105,
-    "edge_count": 95,
+    "edge_count": 94,
     "unresolved_count": 131,
     "incomplete_count": 31
   }

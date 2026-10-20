@@ -24,7 +24,6 @@ CREATE OR REPLACE PACKAGE BODY AUTH.OSAG_AUTH IS
 
         TT.OSAG_NOTIFY.delete_notifications_for_login(p_login_id);
 
-        DELETE FROM auth.consented_term WHERE login_id = p_login_id;
         DELETE FROM mss.news_entry_2_login WHERE login_id = p_login_id;
 
         BEGIN

@@ -1,9 +1,9 @@
 psql:migration/test/regress/sql/tt__ticket_interface__errors.sql:26: ERROR:  no data found
-CONTEXT:  PL/pgSQL function tt.ticket_interface_update_ux_timeout_for_ticket(numeric,boolean) line 25 at RAISE
+CONTEXT:  PL/pgSQL function tt.ticket_interface_update_ux_timeout_for_ticket(numeric,boolean) line 1 at SQL statement
 psql:migration/test/regress/sql/tt__ticket_interface__errors.sql:31: ERROR:  no data found
-CONTEXT:  PL/pgSQL function tt.ticket_interface_clear_todo_list(numeric,numeric,numeric,numeric) line 29 at RAISE
- swallowed_error_logged 
-------------------------
-                      1
+CONTEXT:  PL/pgSQL function tt.ticket_interface_clear_todo_list(numeric,numeric,numeric,numeric) line 1 at SQL statement
+ swallowed_error_logged
+-------------------------
+                       1
 (1 row)
 

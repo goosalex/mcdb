@@ -38,15 +38,6 @@ spec clause.
    invents a PostgreSQL name, drops a routine, skips a checklist dimension, leaves
    Assumptions empty, or cites a source line that does not exist.
 
-**Triggers** (standalone objects with an EMPTY `oracle_package` column in `name-map.csv`):
-name the spec `migration/spec/<pg_schema>.<trigger_name_lower>.md`, put the trigger name in
-`oracle_package`, add the optional front-matter field `oracle_kind: trigger` (default:
-`package`), set `pg_prefix` to the trigger row's `pg_object_name` verbatim (the linter demands
-equality, not a prefix match), `public_routines: 1`, and name the trigger itself in at least one
-clause's `routines:` field. `oracle_spec` and `oracle_body` both point at the
-`ddl/src/triggers/<SCHEMA>.sql` file. Test files follow the same shape:
-`<pg_schema>__<trigger_name_lower>__<topic>.sql`.
-
 ## The three linters
 
 | Linter | Gate | Rejects |

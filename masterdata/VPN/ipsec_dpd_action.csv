@@ -1,0 +1,6 @@
+"ID","NAME","DESCRIPTION"
+"1","none","Take no action"
+"2","clear","Close the CHILD_SA without further action"
+"3","trap","Install a trap policy and re-establish on matching traffic"
+"4","start","Re-establish the CHILD_SA immediately"
+"5","restart","Restart the IKE_SA and its CHILD_SAs"

@@ -67,13 +67,15 @@ import xml.etree.ElementTree as ET
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 MASTERDATA_ROOT = os.path.join(REPO_ROOT, "masterdata")
 SCRATCH_DIR = os.path.join(os.path.dirname(__file__), "..", ".build-scratch")
+# PostgreSQL runs in a container; every psql call goes through migration/db/pg.sh.
+PG_SH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "db", "pg.sh")
 
 DEFAULT_SCHEMAS = ["AUTH", "TT", "MSS", "MCAUDIT", "OSAG"]
 
 
 def psql(db, args, **kw):
     return subprocess.run(
-        ["sudo", "-u", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=on", "-q", "-d", db, *args],
+        ["bash", PG_SH, "psql", "-X", "-v", "ON_ERROR_STOP=on", "-q", "-d", db, *args],
         **kw,
     )
 

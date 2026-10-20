@@ -30,6 +30,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# PostgreSQL runs in a container (migration/db/pg.sh); start it before anything else.
+PG="${SCRIPT_DIR}/../db/pg.sh"
+bash "$PG" start
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PGTAP_DIR="${SCRIPT_DIR}/pgtap"
 REGRESS_SQL_DIR="${SCRIPT_DIR}/regress/sql"
@@ -53,11 +57,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 psql_super() {
-  sudo -u postgres psql -X -q -v ON_ERROR_STOP=on "$@"
+  bash "$PG" psql -X -q -v ON_ERROR_STOP=on "$@"
 }
 
 db_exists() {
-  [[ "$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB}'")" == "1" ]]
+  [[ "$(bash "$PG" psql -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB}'")" == "1" ]]
 }
 
 # --- 1. Ensure the target database exists ----------------------------------
@@ -73,15 +77,15 @@ else
   # plan 02-12/02-13 verification an mcdb_test from ten days earlier under-reported
   # tt.ticket_interface by 6 assertions and made two correct agent results look wrong.
   # Compare on-disk creation time and re-bootstrap when the template is newer.
-  DB_MTIME=$(sudo -u postgres psql -tAc \
+  DB_MTIME=$(bash "$PG" psql -tAc \
     "SELECT extract(epoch FROM (pg_stat_file('base/'||oid||'/PG_VERSION')).modification)::bigint
      FROM pg_database WHERE datname = '${DB}'" 2>/dev/null || echo "")
-  TMPL_MTIME=$(sudo -u postgres psql -tAc \
+  TMPL_MTIME=$(bash "$PG" psql -tAc \
     "SELECT extract(epoch FROM (pg_stat_file('base/'||oid||'/PG_VERSION')).modification)::bigint
      FROM pg_database WHERE datname = 'mcdb_tmpl'" 2>/dev/null || echo "")
   if [[ -n "$DB_MTIME" && -n "$TMPL_MTIME" && "$TMPL_MTIME" -gt "$DB_MTIME" ]]; then
     echo "run-tests.sh: '${DB}' is OLDER than mcdb_tmpl (stale schema-fixes) -- re-bootstrapping..."
-    sudo -u postgres psql -X -q -c "DROP DATABASE IF EXISTS ${DB};"
+    bash "$PG" psql -X -q -c "DROP DATABASE IF EXISTS ${DB};"
     bash "${SCRIPT_DIR}/bootstrap.sh" --db "${DB}"
   fi
 fi
@@ -95,7 +99,7 @@ if [[ -n "$INSTALL_DIR" ]]; then
   fi
   echo "run-tests.sh: installing *.sql from ${INSTALL_DIR} (sorted by path)..."
   while IFS= read -r -d '' f; do
-    if ! sudo -u postgres psql -X -q -v ON_ERROR_STOP=on -d "$DB" -f "$f" >/tmp/run-tests-install.log 2>&1; then
+    if ! bash "$PG" psql -X -q -v ON_ERROR_STOP=on -d "$DB" -f "$f" >/tmp/run-tests-install.log 2>&1; then
       echo "FATAL: load failed for ${f}" >&2
       cat /tmp/run-tests-install.log >&2
       exit 1
@@ -187,7 +191,7 @@ for f in "${PGTAP_FILES[@]:-}"; do
   pkg="$(python3 "$PKGNAME_PY" --list "$f" | cut -f1)"
   TAP_OUT="$(mktemp)"
   set +e
-  sudo -u postgres pg_prove --ext .sql -d "$DB" "$f" >"$TAP_OUT" 2>&1
+  bash "$PG" pg_prove --ext .sql -d "$DB" "$f" >"$TAP_OUT" 2>&1
   RC=$?
   set -e
   # Count assertions HONESTLY, per file. The old logic credited a file's passing
@@ -257,7 +261,7 @@ for f in "${REGRESS_FILES[@]:-}"; do
   # ordinary query results, so this does not hide anything any existing golden
   # depends on (found in plan 02-09 against mss.osag_dbprop's error-path golden).
   rel_f="${f#"${REPO_ROOT}"/}"
-  (cd "$REPO_ROOT" && sudo -u postgres psql -X -q -v ON_ERROR_STOP=0 -d "$DB" \
+  (cd "$REPO_ROOT" && bash "$PG" psql -X -q -v ON_ERROR_STOP=0 -d "$DB" \
       -c "SET client_min_messages TO WARNING;" -f "$rel_f") > "$result" 2>&1 || true
 
   if [[ ! -f "$expected" ]]; then
