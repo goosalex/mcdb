@@ -254,5 +254,170 @@ class TestMandatorySectionsAndChecklist(unittest.TestCase):
         )
 
 
+TRIGGER_SPEC_GOOD = """---
+oracle_schema: TT
+oracle_package: TICKET_UPDATE_TRG
+oracle_kind: trigger
+pg_schema: tt
+pg_prefix: ticket_update_trg
+clause_prefix: TTRG
+oracle_spec: ddl/src/triggers/TT.sql
+oracle_body: ddl/src/triggers/TT.sql
+public_routines: 1
+---
+
+# TT.TICKET_UPDATE_TRG -- PostgreSQL spec (unit-test probe, real SSOT data)
+
+## Routines
+
+### ticket_update_trg
+
+- **Oracle signature:** `TRIGGER TICKET_UPDATE_TRG BEFORE INSERT OR UPDATE OF ... ON TT.TICKET`
+- **PostgreSQL name:** `tt.ticket_update_trg` (trigger) / `tt.ticket_update_trg_fn` (function)
+- **Declared:** `ddl/src/triggers/TT.sql:3`
+- **Defined:** `ddl/src/triggers/TT.sql:3`
+
+## Clauses
+
+### S-TTRG-001
+
+- **routines:** ticket_update_trg
+- **claim:** Test probe clause.
+- **source:** `ddl/src/triggers/TT.sql:6`
+
+## Checklist
+
+### 1. Empty-string / NULL handling
+Test probe -- not a real answer.
+
+### 2. SELECT INTO strictness
+Test probe -- not a real answer.
+
+### 3. Exception codes
+Test probe -- not a real answer.
+
+### 4. Package state
+Test probe -- not a real answer.
+
+### 5. FUNCTION vs PROCEDURE
+Test probe -- not a real answer.
+
+## Assumptions / Unresolved
+Test probe -- not a real answer.
+"""
+
+
+class TestTriggerSpecs(unittest.TestCase):
+    """Pins the `oracle_kind: trigger` front-matter extension: a trigger spec is
+    matched against inventory.json's kind=trigger object and name-map.csv's
+    kind=trigger row (empty oracle_package), pg_prefix must EQUAL the trigger's
+    pg_object_name, and the trigger name itself is the one 'routine' every
+    clause set must cover. Uses the REAL SSOT files (TT.TICKET_UPDATE_TRG)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmpdir.cleanup)
+
+    def _write(self, name: str, content: str) -> Path:
+        p = Path(self.tmpdir.name) / name
+        p.write_text(content)
+        return p
+
+    def test_well_formed_trigger_spec_passes(self):
+        p = self._write("tt.ticket_update_trg.md", TRIGGER_SPEC_GOOD)
+        violations = _lint(p)
+        self.assertEqual(violations, [], f"expected no violations, got: {violations}")
+
+    def test_default_oracle_kind_is_package(self):
+        # Without oracle_kind the same file is treated as a package spec and
+        # must fail the package SSOT checks (no package TT.TICKET_UPDATE_TRG).
+        bad = TRIGGER_SPEC_GOOD.replace("oracle_kind: trigger\n", "")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("no rows found in name-map.csv" in v for v in violations),
+            f"expected the package-shaped not-found violation, got: {violations}",
+        )
+
+    def test_unknown_oracle_kind_rejected(self):
+        bad = TRIGGER_SPEC_GOOD.replace("oracle_kind: trigger", "oracle_kind: view")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("oracle_kind" in v and "not one of" in v for v in violations),
+            f"expected an unknown-oracle_kind violation, got: {violations}",
+        )
+
+    def test_trigger_pg_prefix_must_equal_pg_object_name(self):
+        # 'ticket_update' is a valid PREFIX of the trigger's pg_object_name, which the
+        # package rule would accept -- the trigger rule demands equality.
+        bad = TRIGGER_SPEC_GOOD.replace("pg_prefix: ticket_update_trg", "pg_prefix: ticket_update")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("pg_prefix" in v and "must EQUAL" in v for v in violations),
+            f"expected a pg_prefix-must-equal violation, got: {violations}",
+        )
+
+    def test_trigger_function_name_is_not_the_trigger_name(self):
+        bad = TRIGGER_SPEC_GOOD.replace("pg_prefix: ticket_update_trg", "pg_prefix: ticket_update_trg_fn")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("pg_prefix" in v and "must EQUAL" in v for v in violations),
+            f"expected a pg_prefix-must-equal violation, got: {violations}",
+        )
+
+    def test_trigger_wrong_pg_schema_rejected(self):
+        bad = TRIGGER_SPEC_GOOD.replace("pg_schema: tt", "pg_schema: totallywrong")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("pg_schema" in v and "invent" in v for v in violations),
+            f"expected a pg_schema mismatch violation, got: {violations}",
+        )
+
+    def test_trigger_name_must_be_covered_by_a_clause(self):
+        bad = TRIGGER_SPEC_GOOD.replace("- **routines:** ticket_update_trg", "- **routines:** something_else")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("TICKET_UPDATE_TRG" in v and "not covered" in v for v in violations),
+            f"expected a dropped-routine violation naming the trigger, got: {violations}",
+        )
+
+    def test_trigger_public_routines_must_be_one(self):
+        bad = TRIGGER_SPEC_GOOD.replace("public_routines: 1", "public_routines: 2")
+        p = self._write("tt.ticket_update_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("public_routines=2" in v for v in violations),
+            f"expected a public_routines mismatch violation, got: {violations}",
+        )
+
+    def test_unknown_trigger_rejected(self):
+        bad = TRIGGER_SPEC_GOOD.replace("TICKET_UPDATE_TRG", "NO_SUCH_TRG").replace("ticket_update_trg", "no_such_trg")
+        p = self._write("tt.no_such_trg.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("no kind=trigger row found in name-map.csv" in v for v in violations),
+            f"expected a trigger-not-found violation, got: {violations}",
+        )
+        self.assertTrue(
+            any("no trigger TT.NO_SUCH_TRG found in inventory.json" in v for v in violations),
+            f"expected an inventory trigger-not-found violation, got: {violations}",
+        )
+
+    def test_package_spec_with_trigger_kind_rejected(self):
+        # A real package name declared as a trigger must not sneak past either SSOT.
+        bad = REAL_SPEC_GOOD.replace("oracle_package: OSAG_DBPROP\n", "oracle_package: OSAG_DBPROP\noracle_kind: trigger\n")
+        p = self._write("mss.osag_dbprop.md", bad)
+        violations = _lint(p)
+        self.assertTrue(
+            any("no kind=trigger row found" in v for v in violations),
+            f"expected a trigger-not-found violation, got: {violations}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

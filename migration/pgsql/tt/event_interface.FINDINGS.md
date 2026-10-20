@@ -331,3 +331,22 @@ depgraph gap, `moveevent`'s acknowledged bug). This plan's own new findings (the
 `contact_zitadel_id` schema gap, the `auth.permission`/`auth.mv_service_access` dead-code
 discovery, and the pgTAP cascading-abort defect) are recorded above, not in the spec itself
 (out of this plan's scope to amend the spec).
+
+## Deviations from Oracle
+
+Recorded per the branch owner's instruction for `phoenix/migrate_tt_only`: "Don't mimic
+broken behaviour of oracle routines, but annotate/explain what changed with the
+correction." Each entry is marked `DEVIATION(ORACLE-BUG)` at the site in
+`event_interface.sql`.
+
+### `moveevent` honours `p_event_id` (status report 2026-10-13, Q11 (a))
+
+| | |
+|---|---|
+| **Oracle** | `UPDATE tt.event e SET ticket_id = p_newticket_id WHERE ticket_id = p_oldticket_id` (`ddl/src/pkgb/tt_event_interface.sql:880`) -- `p_event_id` is never read; one call re-parents every event of the old ticket. Oracle's own header comment (line 866): "FIXME / BROKEN the p_event_id is not actually used! This moves ALL events of a ticket. Looks like this code is never run." |
+| **Why wrong** | The package spec (`ddl/src/pkg/tt_event_interface.sql:67-73`) defines the routine as moving ONE event, with "nothing happens" when the event is not on the old ticket and a warning when the event or the new ticket does not exist. The body can satisfy none of the event-related promises because it never looks at the event. |
+| **Corrected** | `UPDATE ... WHERE e.id = p_event_id AND e.ticket_id = p_oldticket_id` (S-EVENT-046). If zero rows match: event exists elsewhere -> silent no-op; event missing -> `plog.warning(... 'event does not exist')` with the same `v_errmsg` prefix as the existing `'new ticket does not exist'` warning (S-EVENT-047). |
+| **Unchanged** | The three-parameter non-NULL gate; the `STRICT` existence check of `p_newticket_id` and its 3-arm swallow/log handler (S-EVENT-033 -- both locked assertions in `tt__event_interface__spec.sql` still pass); the `DUP_VAL_ON_INDEX`/`unique_violation` arm (still structurally unreachable, kept for shape parity). |
+| **Spec** | `migration/spec/tt.event_interface.md` S-EVENT-033 (amended), S-EVENT-046, S-EVENT-047 (new), commit `35a92fd`. |
+| **Tests** | `migration/test/pgtap/tt__event_interface__corrections.sql` (new, 10 assertions; RED 4/10 against the pre-correction translation: tests 3, 6, 9, 10), commit `0499bc8`, ledger A-012. |
+| **Residual risk** | No caller of `moveevent` exists anywhere in `ddl/src/`; whether an Oracle-side client ever depended on the move-everything behaviour cannot be determined statically. The body comment's own verdict ("never run") makes that unlikely. |

@@ -42,6 +42,14 @@ narrative):
   6. Routine coverage: for real specs, every PUBLIC routine inventory.json lists
      for that package must appear in at least one clause's routines: field
      (T-02-07: a package can't quietly drop routines it found hard).
+  7. Triggers (optional front-matter `oracle_kind: trigger`; default `package`):
+     the spec's `oracle_package` field carries the TRIGGER NAME, the spec is
+     matched against inventory.json's kind=trigger object `<SCHEMA>.<NAME>`
+     and name-map.csv's kind=trigger row (whose oracle_package column is
+     empty), `pg_prefix` must EQUAL that row's pg_object_name (there is no
+     routine suffix to prefix), and routine coverage requires the trigger
+     name itself in some clause's routines: field. `oracle_spec` may be the
+     same file as `oracle_body` (a trigger has no separate spec file).
 """
 from __future__ import annotations
 
@@ -81,6 +89,11 @@ REQUIRED_FRONTMATTER_FIELDS = [
     "oracle_body",
     "public_routines",
 ]
+
+# Optional front-matter field: what kind of Oracle object the spec describes.
+ORACLE_KIND_FIELD = "oracle_kind"
+ORACLE_KINDS = ("package", "trigger")
+DEFAULT_ORACLE_KIND = "package"
 
 MANDATORY_SECTIONS = ["## Routines", "## Clauses", "## Checklist", "## Assumptions / Unresolved"]
 
@@ -192,6 +205,28 @@ def name_map_rows_for(name_map_rows: List[Dict[str, str]], oracle_schema: str, o
     ]
 
 
+def find_inventory_trigger(inventory: Dict, oracle_schema: str, trigger_name: str) -> Optional[Dict]:
+    target = f"{oracle_schema.upper()}.{trigger_name.upper()}"
+    for obj in inventory.get("objects", []):
+        if obj.get("kind") == "trigger" and obj.get("id") == target:
+            return obj
+    return None
+
+
+def name_map_rows_for_trigger(name_map_rows: List[Dict[str, str]], oracle_schema: str, trigger_name: str) -> List[Dict[str, str]]:
+    """The kind=trigger row(s) for SCHEMA.TRIGGER_NAME. Trigger rows carry an EMPTY
+    oracle_package; the trigger's own name is in oracle_object. The companion
+    kind=trigger_function row (pg_object_name <trigger>_fn) is deliberately NOT
+    matched -- the spec names the trigger, and the function is its implementation."""
+    return [
+        r
+        for r in name_map_rows
+        if r.get("oracle_schema", "").upper() == oracle_schema.upper()
+        and r.get("oracle_object", "").upper() == trigger_name.upper()
+        and r.get("kind") == "trigger"
+    ]
+
+
 def is_fixture_path(path: Path) -> bool:
     return "fixtures" in path.parts
 
@@ -277,6 +312,14 @@ def lint_file(
     pg_schema = fm.get("pg_schema", "")
     pg_prefix = fm.get("pg_prefix", "")
     clause_prefix = fm.get("clause_prefix", "")
+
+    oracle_kind = (fm.get(ORACLE_KIND_FIELD) or DEFAULT_ORACLE_KIND).strip().lower()
+    if oracle_kind not in ORACLE_KINDS:
+        violations.append(
+            f"{path}: front-matter {ORACLE_KIND_FIELD} {fm.get(ORACLE_KIND_FIELD)!r} is not one of "
+            f"{', '.join(ORACLE_KINDS)}"
+        )
+        oracle_kind = DEFAULT_ORACLE_KIND
 
     if "public_routines" in fm:
         try:
@@ -387,39 +430,81 @@ def lint_file(
     # fixtures deliberately use throwaway package names that were never meant
     # to exist in migration/mapping/name-map.csv or migration/analyze/inventory.json.
     if not is_fixture_path(path) and oracle_schema and oracle_package:
-        matching_rows = name_map_rows_for(name_map_rows, oracle_schema, oracle_package)
-        if not matching_rows:
-            violations.append(
-                f"{path}: no rows found in name-map.csv for {oracle_schema}.{oracle_package} -- "
-                f"check spelling, or this package has no public routines to map"
-            )
-        else:
-            for row in matching_rows:
-                if row.get("pg_schema", "").lower() != pg_schema.lower():
-                    violations.append(
-                        f"{path}: front-matter pg_schema '{pg_schema}' does not match name-map.csv's "
-                        f"pg_schema '{row.get('pg_schema')}' for {oracle_schema}.{oracle_package}.{row.get('oracle_object')} "
-                        f"-- a spec may not invent a PostgreSQL schema"
-                    )
-                    break
-            expected_prefix = f"{pg_prefix.lower()}_"
-            for row in matching_rows:
-                pg_object_name = row.get("pg_object_name", "").lower()
-                if not pg_object_name.startswith(expected_prefix):
-                    violations.append(
-                        f"{path}: front-matter pg_prefix '{pg_prefix}' does not match name-map.csv's "
-                        f"pg_object_name '{row.get('pg_object_name')}' for {oracle_schema}.{oracle_package}.{row.get('oracle_object')} "
-                        f"-- a spec may not invent a PostgreSQL name"
-                    )
+        inventory_routine_names: Optional[Set[str]] = None
 
-        pkg_obj = find_inventory_package(inventory, oracle_schema, oracle_package)
-        if pkg_obj is None:
-            violations.append(
-                f"{path}: no package {oracle_schema}.{oracle_package} found in inventory.json -- "
-                f"check spelling of oracle_schema/oracle_package"
-            )
+        if oracle_kind == "trigger":
+            # oracle_package holds the TRIGGER NAME (the spec file is
+            # <pg_schema>.<trigger_name_lower>.md, mirroring the package convention).
+            matching_rows = name_map_rows_for_trigger(name_map_rows, oracle_schema, oracle_package)
+            if not matching_rows:
+                violations.append(
+                    f"{path}: no kind=trigger row found in name-map.csv for {oracle_schema}.{oracle_package} -- "
+                    f"check spelling, or this is not a trigger (oracle_kind: trigger)"
+                )
+            else:
+                for row in matching_rows:
+                    if row.get("pg_schema", "").lower() != pg_schema.lower():
+                        violations.append(
+                            f"{path}: front-matter pg_schema '{pg_schema}' does not match name-map.csv's "
+                            f"pg_schema '{row.get('pg_schema')}' for trigger {oracle_schema}.{oracle_package} "
+                            f"-- a spec may not invent a PostgreSQL schema"
+                        )
+                        break
+                for row in matching_rows:
+                    pg_object_name = row.get("pg_object_name", "").lower()
+                    if pg_object_name != pg_prefix.lower():
+                        violations.append(
+                            f"{path}: front-matter pg_prefix '{pg_prefix}' must EQUAL name-map.csv's "
+                            f"pg_object_name '{row.get('pg_object_name')}' for trigger {oracle_schema}.{oracle_package} "
+                            f"-- a spec may not invent a PostgreSQL name"
+                        )
+
+            trg_obj = find_inventory_trigger(inventory, oracle_schema, oracle_package)
+            if trg_obj is None:
+                violations.append(
+                    f"{path}: no trigger {oracle_schema}.{oracle_package} found in inventory.json -- "
+                    f"check spelling of oracle_schema/oracle_package (oracle_kind: trigger)"
+                )
+            else:
+                # A trigger has exactly one "routine": itself. Its name must be
+                # claimed by at least one clause, exactly like a package routine.
+                inventory_routine_names = {str(trg_obj.get("name", oracle_package)).upper()}
         else:
-            inventory_routine_names = {r["name"].upper() for r in pkg_obj.get("routines", [])}
+            matching_rows = name_map_rows_for(name_map_rows, oracle_schema, oracle_package)
+            if not matching_rows:
+                violations.append(
+                    f"{path}: no rows found in name-map.csv for {oracle_schema}.{oracle_package} -- "
+                    f"check spelling, or this package has no public routines to map"
+                )
+            else:
+                for row in matching_rows:
+                    if row.get("pg_schema", "").lower() != pg_schema.lower():
+                        violations.append(
+                            f"{path}: front-matter pg_schema '{pg_schema}' does not match name-map.csv's "
+                            f"pg_schema '{row.get('pg_schema')}' for {oracle_schema}.{oracle_package}.{row.get('oracle_object')} "
+                            f"-- a spec may not invent a PostgreSQL schema"
+                        )
+                        break
+                expected_prefix = f"{pg_prefix.lower()}_"
+                for row in matching_rows:
+                    pg_object_name = row.get("pg_object_name", "").lower()
+                    if not pg_object_name.startswith(expected_prefix):
+                        violations.append(
+                            f"{path}: front-matter pg_prefix '{pg_prefix}' does not match name-map.csv's "
+                            f"pg_object_name '{row.get('pg_object_name')}' for {oracle_schema}.{oracle_package}.{row.get('oracle_object')} "
+                            f"-- a spec may not invent a PostgreSQL name"
+                        )
+
+            pkg_obj = find_inventory_package(inventory, oracle_schema, oracle_package)
+            if pkg_obj is None:
+                violations.append(
+                    f"{path}: no package {oracle_schema}.{oracle_package} found in inventory.json -- "
+                    f"check spelling of oracle_schema/oracle_package"
+                )
+            else:
+                inventory_routine_names = {r["name"].upper() for r in pkg_obj.get("routines", [])}
+
+        if inventory_routine_names is not None:
             missing = sorted(inventory_routine_names - all_clause_routines)
             if missing:
                 violations.append(

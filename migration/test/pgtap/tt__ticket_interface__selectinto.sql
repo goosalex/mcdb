@@ -78,7 +78,10 @@ SELECT throws_ok(
 -- Site #14 (S-TICKET-009): the NEW status name lookup, by a bad p_status_id.
 -------------------------------------------------------------------------------
 
-INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907011, 1, 2, 907001);
+-- A-009: last_status_change_date added (see 907012 below) -- updateTicketTimeStats runs
+-- before site #14 is reached, so a NULL date fails on open_time NOT NULL first.
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_status_change_date)
+    VALUES (907011, 1, 2, 907001, now() - interval '1 hour');
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(907011, 907099998, 907002, 'pub')$$,
@@ -93,7 +96,10 @@ SELECT throws_ok(
 -- immediate/non-deferrable FK enforcement preventing this at write time).
 -------------------------------------------------------------------------------
 
-INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907012, 1, 907099997, 907001);
+-- A-009: last_status_change_date added -- newticket_new always sets it; without it the
+-- routine fails in updateTicketTimeStats before reaching site #15 (same class as A-008).
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_status_change_date)
+    VALUES (907012, 1, 907099997, 907001, now() - interval '1 hour');
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_status(907012, 3, 907002, 'pub')$$,
@@ -176,7 +182,9 @@ SELECT throws_ok(
 -- reached only when the ticket's CURRENT company_id is NOT NULL but orphaned.
 -------------------------------------------------------------------------------
 
-INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907018, 1, 907099992, NULL);
+-- A-009: the orphan value belongs in company_id (this is the OLD-company lookup, site
+-- #39), not in status_id; status_id must be a real status (2) so site #15 passes first.
+INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907018, 1, 2, 907099992);
 
 SELECT throws_ok(
     $$CALL tt.ticket_interface_change_company(907018, 907001, 907002)$$,
@@ -257,7 +265,9 @@ SELECT throws_ok(
 -- (their own change_status calls never cross the deferred boundary).
 -------------------------------------------------------------------------------
 
-INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907025, 1, 2, 907001);
+-- A-009: last_status_change_date added (see 907012 above).
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_status_change_date)
+    VALUES (907025, 1, 2, 907001, now() - interval '1 hour');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_status(907025, 60, 907002, 'deferring this ticket')$$,
@@ -267,8 +277,10 @@ SELECT lives_ok(
 -------------------------------------------------------------------------------
 -- Site #66 (S-TICKET-045): remove_related_file's conditional mc.mc_file
 -- lookup, reached when an orphaned ticket2mc_file relation references a
--- mc_file row that no longer exists -- the whole-routine WHEN OTHERS (no
--- dedicated NO_DATA_FOUND arm, unlike add_related_file) swallows it.
+-- mc_file row that no longer exists. Oracle's whole-routine WHEN OTHERS
+-- swallowed it; since the Q11 (d) correction (S-TICKET-060) the mirrored
+-- NO_DATA_FOUND arm swallows it -- either way nothing propagates
+-- (TEST-AMENDMENTS.md A-018: label only, assertion unchanged).
 -------------------------------------------------------------------------------
 
 INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907026, 1, 2, 907001);
@@ -276,7 +288,7 @@ INSERT INTO tt.ticket2mc_file (ticket_id, mc_file_id) VALUES (907026, 907099987)
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_remove_related_file(907026, 907099987, 907002)$$,
-    'S-TICKET-045: remove_related_file succeeds (swallowed by its whole-routine WHEN OTHERS, no dedicated NO_DATA_FOUND arm) at site #66 when the ticket2mc_file relation exists but the mc_file row it references is orphaned'
+    'S-TICKET-045: remove_related_file succeeds (swallowed -- Oracle via WHEN OTHERS, the corrected translation via its mirrored NO_DATA_FOUND arm; nothing propagates) at site #66 when the ticket2mc_file relation exists but the mc_file row it references is orphaned'
 );
 
 -------------------------------------------------------------------------------
@@ -320,7 +332,12 @@ SELECT throws_ok(
 -- changes.sql transitions any ticket into this set.
 -------------------------------------------------------------------------------
 
-INSERT INTO tt.ticket (id, type_id, status_id, company_id) VALUES (907030, 1, 4, 907001);
+-- A-009: status 4 -> 2: every sibling fixture starts at 2 (open); 4 is not in the
+-- tracked-transition set {2,11,12,60,61,101}, so updateTicketTimeStats had nothing to
+-- write and the "created a NEW row" assertion could never pass. last_status_change_date
+-- added for the same reason as 907012.
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, last_status_change_date)
+    VALUES (907030, 1, 2, 907001, now() - interval '1 hour');
 
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_status(907030, 11, 907002, 'moving to waiting')$$,

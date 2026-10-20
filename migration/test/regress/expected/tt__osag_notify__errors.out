@@ -1,5 +1,3 @@
 psql:migration/test/regress/sql/tt__osag_notify__errors.sql:23: ERROR:  no data found
-CONTEXT:  PL/pgSQL function tt.osag_notify_send_test_notification(character varying,numeric,numeric,character varying,character varying,numeric,timestamp with time zone) line 1 at SQL statement
-psql:migration/test/regress/sql/tt__osag_notify__errors.sql:28: ERROR:  null value in column "type_id" of relation "event" violates not-null constraint
-DETAIL:  Failing row contains (null value(s) redacted for golden-file stability).
-CONTEXT:  PL/pgSQL function tt.osag_notify_add_notification_event(numeric,numeric,character varying,numeric) line 1 at SQL statement
+CONTEXT:  PL/pgSQL function tt.osag_notify_send_test_notification(character varying,numeric,numeric,character varying,character varying,numeric,timestamp with time zone,character varying,character varying) line 26 at RAISE
+psql:migration/test/regress/sql/tt__osag_notify__errors.sql:33: ERROR:  null value in column "type_id" of relation "event" violates not-null constraint
