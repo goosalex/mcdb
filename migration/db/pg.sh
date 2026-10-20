@@ -91,17 +91,37 @@ base_image() {
   esac
 }
 
+# The directory mounted as "the project": normally MCDB_ROOT itself. When MCDB_ROOT is a
+# LINKED git worktree (a second checkout of the same repository, e.g. the
+# .claude/worktrees/<agent>/ trees parallel agents work in), it is the MAIN checkout's
+# root instead -- that directory contains every linked worktree below it, so one
+# container serves all of them. Without this, every worktree computed a different mount
+# set, and each `pg.sh start` from a different worktree recreated the SHARED container
+# (killing the other worktrees' sessions) and left their files invisible to `pg.sh psql`.
+# Falls back to MCDB_ROOT when git is unavailable or the main root does not contain it.
+project_mount_root() {
+  local root common main
+  root="$(physical_dir "$MCDB_ROOT")"
+  if common="$(git -C "$MCDB_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" \
+     && [ -n "$common" ] && [ -d "$(dirname "$common")" ]; then
+    main="$(physical_dir "$(dirname "$common")")"
+    case "$root/" in "$main"/*) root="$main" ;; esac
+  fi
+  echo "$root"
+}
+
 # Directories to mount: the project root plus every top-level symlink target outside
 # it. One absolute path per line, sorted, deduplicated.
 mount_dirs() {
   {
-    physical_dir "$MCDB_ROOT"
-    local link target
+    local project link target
+    project="$(project_mount_root)"
+    echo "$project"
     for link in "$MCDB_ROOT"/*; do
       [ -L "$link" ] && [ -d "$link" ] || continue
       target="$(physical_dir "$link")"
       case "$target/" in
-        "$(physical_dir "$MCDB_ROOT")"/*) ;;  # already inside the project mount
+        "$project"/*) ;;  # already inside the project mount
         *) echo "$target" ;;
       esac
     done
