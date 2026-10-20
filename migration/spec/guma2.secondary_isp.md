@@ -496,6 +496,14 @@ performs no transaction control). No XCUT-04 collision.
   and the NULL/0 equivalence at line 706), not from this package. If the monitoring team
   considers only `NULL` as "up", the correction would need the literal `IS NULL` test
   instead; recorded for 06-04 (MC.MONITORING translation) to confirm.
+- **Log lines written immediately before `RAISE E_ABORT`** (S-SISP-004/006/008/009/011/
+  015): Oracle's `plog` ran in an autonomous transaction
+  (`ddl/src/pkgb/osag_osag_plog.sql:47, 54`), so the line survived the raise; the PostgreSQL
+  plog stub is transactional (`migration/pgsql/osag/osag_plog.FINDINGS.md`) and the catching
+  handler's subtransaction rollback would erase it. The translation lets `E_ABORT` carry its
+  log line (exception message + level) and the public handler emits it once — same line, same
+  level, same order, and since `E_ABORT` never leaves the package the line is always
+  observable. Not a behavioural difference; recorded so the mechanic is not mistaken for one.
 - **Message-text parity of `sqlerrm`** (S-SISP-007/014/017): the `unexpected error`
   log lines embed engine text that necessarily differs between Oracle and PostgreSQL;
   tests pin the fixed prefix only. Not a behavioural difference a client can observe

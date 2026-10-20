@@ -241,7 +241,9 @@ Private helper (body only): `dump_to_hw_history(p_host_id, p_old_hardware_id)`, 
   || p_host_id` and returns: because the abort happens before any DML (S-HW-003 (1)), the
   host still points at its old hardware, `replacement_hardware_id` is still set, no
   history row, no lifecycle item, no `disposal_date`, no 10017 event, and no exception
-  reaches the caller. The `plog.err` line from S-HW-004 precedes the warning.
+  reaches the caller. The `plog.err` line from S-HW-004 precedes the warning (in the
+  translation it is emitted by this handler from the exception's message, see S-HW-011 —
+  same two lines, same order).
 - **source:** `ddl/src/pkgb/osixinfo_osag_hardware.sql:31-40, 122, 167, 200-201`
 
 ### S-HW-011
@@ -253,8 +255,19 @@ Private helper (body only): `dump_to_hw_history(p_host_id, p_old_hardware_id)`, 
   nonexistent `p_old_hw_id` raises `NO_DATA_FOUND` (`P0002`, message `no data found`);
   a host with two services raises `TOO_MANY_ROWS` (`P0003`). In every one of these cases
   the database is unchanged (the failure precedes all DML). A nonexistent `p_host_id`
-  likewise fails in S-HW-006's join with `NO_DATA_FOUND` before any change.
-- **source:** `ddl/src/pkgb/osixinfo_osag_hardware.sql:27-28, 34, 39, 53-60, 114-150`
+  likewise fails in S-HW-006's join with `NO_DATA_FOUND` before any change. **Observability
+  of the S-HW-004 log line on this path:** Oracle's `plog.err` ran in an AUTONOMOUS
+  transaction (`PRAGMA AUTONOMOUS_TRANSACTION` + `COMMIT`, `ddl/src/pkgb/osag_osag_plog.sql:47,
+  54`), so the line survived the propagating `e_abort`. The PostgreSQL plog stub is
+  transactional (`migration/pgsql/osag/osag_plog.FINDINGS.md`, "Rollback limitation"), so
+  when `e_abort` leaves `replace_hardware` and the caller rolls back, NO log row can
+  survive — a test cannot observe it through `osag.plog_stub_log`. The translated `e_abort`
+  therefore carries the S-HW-004 log line as its exception MESSAGE_TEXT (Oracle's
+  `ORA-06510: PL/SQL: unhandled user-defined exception` carried no text, so no client
+  depends on the old wording), and a test pins the reason through the exception message
+  instead. Inside `check_replaced_hw_for_host` (S-HW-010) the catching handler emits the
+  carried line itself, so there the row IS observable, before the `WARNING`.
+- **source:** `ddl/src/pkgb/osixinfo_osag_hardware.sql:27-28, 34, 39, 53-60, 114-150`, `ddl/src/pkgb/osag_osag_plog.sql:47, 54`
 
 ### S-HW-012
 
@@ -391,6 +404,11 @@ XCUT-04 collision.
   host-without-service data problem (S-HW-013) — is preserved because it is explicitly
   Oracle's own "nothing to replace" contract and the data stays consistent (the failure
   precedes all DML); it is flagged here for the project owner rather than changed.
+- **Log lines written immediately before a raise** are only observable in PostgreSQL where
+  a handler of this package catches the exception (S-HW-010); when the exception leaves the
+  package (S-HW-011) the transactional plog stub loses the row — a known stub limitation
+  (`osag_plog.FINDINGS.md`), resolved by Phase 3's non-transactional shipper (XCUT-02). Until
+  then the exception message carries the text.
 - **SQLSTATE values `OS010`/`OS011`** for `OSAG_EXCEPTIONS` are this plan's proposal; the
   shared `sqlstate-map.md` table was deliberately not edited by a wave-parallel plan.
   06-07 must add the rows (and reconcile with 06-03/06-04, which map their own `*_STATE`
