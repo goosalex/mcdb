@@ -28,6 +28,15 @@ If you want to truncate the changelog and incorporate the current PROD status:
    SELECT 1 FROM DUAL;
   ```
 
+- run and use the output to update `schemas` in [liquibase-prod.properties](../changes/liquibase-prod.properties):
+```sql
+select listagg(distinct grantee, ',') within group (order by grantee)
+from (select r.grantee
+      from dba_role_privs r
+      where granted_role in ('MSS_SCHEMA_USER')
+        and r.grantee not in ('SYS', 'ASERTO_TEST', 'LQB'));
+```
+- `cd $PANTA_HOME/osdb/mcdb/changes`
 - Make sure PROD DB is uptodate: `liquibase  --defaults-file=liquibase-prod.properties --password=... update`
 - `rm ../ddl/generated/schema.oracle.sql`
 - `rm ../ddl/generated/users/*.sql`
@@ -38,9 +47,10 @@ If you want to truncate the changelog and incorporate the current PROD status:
 - Review the changes carefully
 
 Then build the new container:
+- `cd $PANTA_HOME/osdb/mcdb/container/docker_orafree_based/arm64`
 - build the new container locally: `make build`
 - shell into the container: `make run` and check the logs in `/mcdb/output`
-- Adapt CHANGELOG & Versions.yaml for Kaeter Autorelease of a new Version. See [also here](docker_orafree_based/README.md).
+- Adapt CHANGELOG.md and versions.yaml and run `kaeter ar`. See [also here](docker_orafree_based/README.md).
 - Submit a PR
 - Check the created snapshot on OSDP DEV:
 ```

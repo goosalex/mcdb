@@ -33,5 +33,9 @@ snapshot: build
 
 # To run it locally with a bash:
 .PHONY: run
-run: build
+run:
 	docker run -it --rm --entrypoint=/bin/bash --platform=linux/arm64 $(CONTAINER_TAG)
+
+.PHONY: start
+start:
+	docker run --rm -p 1521:1521 --platform=linux/arm64 $(CONTAINER_TAG)

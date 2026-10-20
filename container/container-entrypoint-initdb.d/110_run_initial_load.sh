@@ -2,7 +2,7 @@
 shopt -s nullglob
 LQB_VER="4.21.1"
 SCRIPTPATH="/mcdb"
-GH="https://artifacts.open.ch/artifactory/github-releases-remote"
+GH="https://artifacts.open.ch/repository/github-releases-remote"
 
 # no core dumps.
 ulimit -c 0

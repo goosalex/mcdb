@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2.5.2 - 07.08.2026
+- Fix missing VPN jdo properties
+- export to state ogl:2650
+
+## 2.5.1 - 05.08.2026
+- Refresh export to state alg:2603
+- SCN 628454616564
+
 ## 2.5.0 - 23.03.2026
 - update list of schemas
 - use changelog-sync-to-tag

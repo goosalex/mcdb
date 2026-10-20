@@ -18,3 +18,8 @@ select 1 from dual;
 --precondition-sql-check expectedResult:0 select count(*) from SYS.DBA_OBJECTS h where h.OBJECT_TYPE='PACKAGE' and not exists (select 1 from SYS.DBA_OBJECTS b where  b.OBJECT_TYPE='PACKAGE BODY' and h.OBJECT_NAME = b.OBJECT_NAME and h.OWNER = b.OWNER) and h.OWNER in (select distinct r.grantee from dba_role_privs r where granted_role in ('MSS_LOGIN_USER', 'MSS_SCHEMA_USER') and r.grantee != 'SYS')
 --comment:
 select 1 from dual;
+
+--changeset ogl:check-index-owner runAlways:true
+--preconditions onFail:HALT onFailMessage:There are indexes owned by SYS on non-SYS tables
+--precondition-sql-check expectedResult:0 select count(*) from dba_indexes where owner = 'SYS' and TABLE_OWNER != 'SYS'
+select 1 from dual;

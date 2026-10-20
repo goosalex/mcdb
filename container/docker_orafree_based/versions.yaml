@@ -1,5 +1,8 @@
 id: ch.open.osdb.mcdb.container:local_ora_mcdb
 type: Makefile
+metadata:
+  annotations:
+    open.ch/kaeter-hook/autorelease-version: scripts/kaeter/version-from-changelogmd.sh
 versioning: SemVer
 versions:
   0.0.0: 1970-01-01T00:00:00Z|INIT
@@ -28,3 +31,5 @@ versions:
   2.3.4: 2026-01-13T08:03:01Z|4881ef7b7e97b4841b97e8ede08ffe8f3a64973d
   2.4.0: 2026-03-21T18:03:01Z|4a9527b1d4df744c1a2eb725618f12c10b6331cb
   2.5.0: 2026-03-23T09:10:18Z|21ee7a3acaaeb98b38fc90e0c139bddbefc12061
+  2.5.1: 2026-08-05T09:10:18Z|ba78975852ebb3938fd349cc0fa19d2c9eb392fd
+  2.5.2: 2026-08-07T12:53:48Z|cf0dd68a7481fc71c6d85b927c0d30342b126511

@@ -1,7 +1,7 @@
 #!/bin/bash
 #Recreates the masterdata CSV files from the database
 # typically pass --defaults-file=liquibase-prod.properties --password=... as arguments to this script
-set -e
+#set -e
 shopt -s nullglob
 
 function csv_sort() {
@@ -53,8 +53,8 @@ for d in "${OUT}"/*; do
     OBJS="${OBJS}table:${f}"
   done
 
-  # the || true we currently need until the NPE in lqb is fixed: https://github.com/liquibase/liquibase/issues/3491
-  [ -n "${OBJS}" ] && liquibase "$@" --includeObjects="${OBJS}" generate-changelog --schemas="${SCHEMA}" --changelog-file="${CL}" --dataOutputDirectory="${d}" --diffTypes=data || true
+  # NPE in lqb? https://github.com/liquibase/liquibase/issues/3491
+  [ -n "${OBJS}" ] && liquibase "$@" --includeObjects="${OBJS}" generate-changelog --schemas="${SCHEMA}" --changelog-file="${CL}" --dataOutputDirectory="${d}" --diffTypes=data
   echo "exported $OBJS"
   rm -f "${CL}"
 
@@ -62,4 +62,7 @@ for d in "${OUT}"/*; do
   for f in "${d}"/*.csv; do
     csv_sort "${f}"
   done
+  echo "OK $SCHEMA"
 done
+
+echo "all OK"
