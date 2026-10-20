@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Cross-cutting Semantics** - Exceptions, plog as a UDP log shipper, DBMS_* replacements, transaction audit — decided once
 - [ ] **Phase 4: Wave-Ordered Translation & Verification** - All packages, procs, triggers, types specified, translated, and green
 - [ ] **Phase 5: Container Build & Client Migration Aids** - From-scratch runnable container, green suite inside it, client rename regexps
+- [ ] **Phase 6 (TT-only track): TT callers translated + Oracle/PostgreSQL differential testing** - MC/NIDS/GUMA2/OSIXINFO/MCAUDIT callers of TT translated; harness compares Oracle container results with PostgreSQL (opened 2026-10-20, see phases/06-*/06-CONTEXT.md)
 
 ## Phase Details
 

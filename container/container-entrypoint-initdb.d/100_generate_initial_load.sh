@@ -134,7 +134,23 @@ echo "-- finish" >>"${OF}"
 echo "exit;" >>"${OF}"
 
 OF="${SCRIPTPATH}/initial_changelog.xml"
-echo "creating ${OF}"
+OF2="${SCRIPTPATH}/initial_changelog_post.xml"
+echo "creating ${OF} and ${OF2}"
+
+# The export in ddl/generated reflects the schema at the latest tag; master data is a
+# snapshot of the current production data and may contain CSVs for tables that only the
+# changesets AFTER the tag create. Those CSVs cannot be loaded before 110_run_initial_load.sh
+# has applied the post-tag changesets, so the master data is split in two changelogs:
+#   initial_changelog.xml       tables that exist now           -> loaded before the update
+#   initial_changelog_post.xml  tables not (yet) in the schema  -> loaded after the update
+EXISTING="${SCRIPTPATH}/output/existing_tables.txt"
+sqlplus -s / as sysdba >"${EXISTING}" <<EOF_EXISTING
+set heading off feedback off pagesize 0 linesize 300 trimspool on
+ALTER SESSION SET CONTAINER=${CONTAINER_NAME};
+select owner||'.'||table_name from dba_tables order by 1;
+exit
+EOF_EXISTING
+echo "  $(grep -c . "${EXISTING}") tables exist in the exported schema"
 XML_HEADER=$(cat << _XML_HEADER
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
@@ -157,6 +173,7 @@ _XML_FOOTER
 )
 
 echo "$XML_HEADER" >"${OF}"
+echo "${XML_HEADER/1::masterData/2::masterDataPostTag}" >"${OF2}"
 cd "${SCRIPTPATH}" || exit
 # make sure s and f a relative paths to SCRIPTPATH (liquibase searchPath)
 for s in masterdata/*; do
@@ -173,13 +190,15 @@ for s in masterdata/*; do
         tablenameUC=$(tr '[:lower:]' '[:upper:]' <<<"$tablename")
         schemaname=$(basename "$s")
         xmlname="${f%.csv}.xml"
+        # table created only by post-tag changesets? -> second changelog
+        if grep -qxF "${schemaname}.${tablenameUC}" "${EXISTING}"; then TARGET="${OF}"; else TARGET="${OF2}"; echo "  deferred (table not in export): ${schemaname}.${tablenameUC}"; fi
         if [ -f "$xmlname" ]; then
 
-            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\">" >>"${OF}"
-            cat "$xmlname" >>"${OF}"
-            echo "</loadData>" >>"${OF}"
+            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\">" >>"${TARGET}"
+            cat "$xmlname" >>"${TARGET}"
+            echo "</loadData>" >>"${TARGET}"
         else
-            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\"/>" >>"${OF}"
+            echo "<loadData file=\"$f\" schemaName=\"$schemaname\" tableName=\"$tablenameUC\"/>" >>"${TARGET}"
         fi
     done
     if [ -e "$s/_post.sql" ]; then
@@ -187,6 +206,7 @@ for s in masterdata/*; do
     fi
 done
 echo "$XML_FOOTER" >>"${OF}"
+echo "$XML_FOOTER" >>"${OF2}"
 cd - || exit
 
 OF="${SCRIPTPATH}/output/unlock_users.sql"

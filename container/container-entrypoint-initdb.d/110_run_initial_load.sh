@@ -121,6 +121,12 @@ else
   exit 1
 fi
 
+OF="${SCRIPTPATH}/output/lqb_update_post.log"
+# master data for tables that did not exist in the export and were created by the
+# post-tag changesets above (see 100_generate_initial_load.sh)
+echo -e "\nCONTAINER: running liquibase update for post-tag master data"
+"${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --changelog-file "initial_changelog_post.xml" --log-level=INFO --log-file="${OF}" update || exit 1
+
 # unlock users
 f="${SCRIPTPATH}/output/unlock_users.sql"
 echo -e "\nCONTAINER: running ${f} ..."; echo "exit" | sqlplus -s / as sysdba @"${f}"; echo  "CONTAINER: DONE: running ${f}"
