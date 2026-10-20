@@ -719,3 +719,27 @@ changed what any test asserts. Verified: `git diff e179c5a HEAD -- <both test fi
 `commit:0e5c990bf11a416578f3498cfa71bb2ebe2defd2 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-020 accidental revert to July content in the export commit, restored verbatim from e179c5a`
 `commit:b9ba1ddb9055679c53aa3581593b243651daaa15 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-020 restore of the e179c5a content, no asserted behaviour changed`
 `commit:b9ba1ddb9055679c53aa3581593b243651daaa15 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-020 restore of the e179c5a content, no asserted behaviour changed`
+
+---
+
+## A-021 — `osixinfo__osag_hardware__spec.sql`: S-HW-004 reason text read from the exception
+
+| | |
+|---|---|
+| **Date** | 2026-10-20 |
+| **Amended by** | plan 06-02 agent, branch `phoenix/migrate_tt_only` (touches NO translation file) |
+| **File** | `migration/test/pgtap/osixinfo__osag_hardware__spec.sql` |
+| **Assertions affected** | 1 replaced (`is(count(*) FROM osag.plog_stub_log ...) = 1` -> `throws_like(..., '%<same text>')`); count unchanged (78) |
+
+The RED suite asserted, after a `throws_ok` on a DIRECT `replace_hardware` call, that the
+S-HW-004 `plog.err` line (`dump_to_hw_history: hardware_disposal_reason_id is NULL while
+replacing hw for host_id: 931130 hw_id: 931231`) exists in `osag.plog_stub_log`. That can
+never be observed: the exception leaves the package, pgTAP rolls the statement back to its
+savepoint, and the transactional plog stub's row goes with it (`osag_plog.FINDINGS.md`,
+"Rollback limitation" -- Oracle's plog was autonomous). The spec was amended first
+(`09b4ae2`, S-HW-011: the translated `e_abort` carries the log line as its message). The
+assertion now pins the SAME text through `throws_like` on the exception message. What is
+asserted (the reason text, and that the contact check passed first) is unchanged; the
+sibling "contact message NOT logged" count-0 assertion is untouched.
+
+`commit:7c15c784339fabecd30a207246933e3aa2a9d6e0 file:migration/test/pgtap/osixinfo__osag_hardware__spec.sql reason:A-021 S-HW-004 reason text pinned via throws_like instead of the transactional plog stub table, test-only commit`
