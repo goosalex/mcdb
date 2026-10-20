@@ -1,0 +1,6 @@
+ levelname |                              message                               
+-----------+--------------------------------------------------------------------
+ ERR       | update_single_host(): caught exception: query returned no rows
+ ERR       | update_single_isp_link(): caught exception: query returned no rows
+(2 rows)
+

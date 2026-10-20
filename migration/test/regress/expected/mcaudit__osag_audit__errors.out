@@ -1,0 +1,3 @@
+psql:migration/test/regress/sql/mcaudit__osag_audit__errors.sql:18: ERROR:  no data found
+psql:migration/test/regress/sql/mcaudit__osag_audit__errors.sql:20: ERROR:  no data found
+psql:migration/test/regress/sql/mcaudit__osag_audit__errors.sql:22: ERROR:  null value in column "message" of relation "record" violates not-null constraint

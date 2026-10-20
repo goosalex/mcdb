@@ -437,6 +437,31 @@ follow-up test-only commit `84c0c4b`.
 | **Assertions affected** | 2 changed (S-IP-015 golden case 4 left/right), 2 added (S-IP-020) |
 | **Surfaced by** | the first GREEN run of the then-uncommitted `migration/pgsql/mss/osag_ip.sql` (104/106) |
 
+## A-009 — `mc__osag_maintsync__errors.out`: trailing spaces stripped from the golden's header line
+
+| | |
+|---|---|
+| **Date** | 2026-10-20 |
+| **Amended by** | plan 06-01's own agent, BEFORE its translation commit and in a commit touching no translation file (c214e17) |
+| **File** | `migration/test/regress/expected/mc__osag_maintsync__errors.out` |
+| **Assertions affected** | 1 regress golden (header line only) |
+| **Surfaced by** | the first GREEN run of `run-tests.sh --package mc.osag_maintsync`: pgTAP 109/109, regress 0/1 with a diff on line 1 only |
+
+### The defect
+
+The golden was authored from the spec's values rendered through psql itself (a stand-in
+`SELECT ... FROM (VALUES ...)` with the harness's exact flags), but the editor used to save it
+stripped trailing whitespace. psql pads the LAST column's header to the column width
+(`message` + 31 spaces) while leaving data rows unpadded, so the saved golden lost exactly
+those 31 spaces and nothing else: `diff -w expected actual` is empty.
+
+### The fix
+
+The actual output file was copied over the golden (whitespace-only change, `1 insertion(+),
+1 deletion(-)`). No asserted value changed: the two ERR lines, their order and their text are
+byte-identical to the hand-authored version. Same class as the "header-whitespace drift" plan
+02-13 recorded for four Phase 2 goldens.
+
 commit:670fc0a0b362edd8c42c8782b1b288ec99da187c file:migration/test/pgtap/mss__osag_ip__spec.sql reason:Oracle golden case 4 input has seven groups; spec S-IP-015 amended first (05832a1) with Oracle-side evidence
 
 ### The defect
@@ -669,3 +694,4 @@ identical and passes before and after. Label corrected so it does not contradict
 amended S-TICKET-045.
 
 `commit:b8c18dd98ba76705c5075f93e9c05cd12171d3b4 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-018 S-TICKET-045 site #66 label only, test-only commit`
+commit:c214e1777859713824b265dbd6ed37dd475dce29 file:migration/test/regress/expected/mc__osag_maintsync__errors.out reason:psql header-line trailing spaces stripped by the editor; whitespace-only (diff -w empty), no asserted value changed
