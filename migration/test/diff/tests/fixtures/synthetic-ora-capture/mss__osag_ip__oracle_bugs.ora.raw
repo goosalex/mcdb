@@ -1,0 +1,24 @@
+-- SYNTHETIC capture -- HAND-DERIVED from ddl/src/pkgb/mss_osag_ip.sql, NOT produced by Oracle --
+-- Each value below is what the cited Oracle lines compute for the input (traced by hand,
+-- see migration/spec/mss.osag_ip.md S-IP-008/009/014/020/023). The first live run of
+-- run-diff.sh against mcdb-ora confirms or corrects this file and the scenario's known.diff.
+## probe 1 results per input
+"STEP","CODE","MSG","N","S"
+"bug01 ip2num 1.a.3.4","-6502","ORA-06502: PL/SQL: numeric or value error: character to number conversion error",,
+"bug02 ip2num a.b.c.d","-6502","ORA-06502: PL/SQL: numeric or value error: character to number conversion error",,
+"bug03 ip2num 10.0.0.1x","-6502","ORA-06502: PL/SQL: numeric or value error: character to number conversion error",,
+"bug04 ip2num 1.2.3.4.5",,,16909060.5,
+"bug05 num2ip 1.5",,,,"0.0.0.1.5"
+"bug06 ipv6left 1:2:3:4:5",,,281483566841860,
+"bug07 ipv6right 1:2:3:4:5",,,,
+"bug08 ipv6left g::","-1722","ORA-01722: invalid number",,
+"bug09 ipv6right ::12345","-1722","ORA-01722: invalid number",,
+"bug10 ipv6left 1:2:3:4:5:6:7:8:9",,,281483566841860,
+"bug11 ipv6right 1:2:3:4:5:6:7:8:9",,,1407400653815816,
+"bug12 ipv6left 7 groups 0:0:0:0:0:0:0001",,,0,
+"bug13 ipv6right 7 groups 0:0:0:0:0:0:0001",,,,
+"bug14 num2ipv6 NULL,NULL",,,,"::"
+"bug15 num2ipv6 NULL,1",,,,"::1"
+"bug16 num2ipv6 -1,0",,,,"#####::"
+"bug17 num2ipv6 1.5,0",,,,"0:0:0:2::"
+"bug18 num2ipv6 2^64,0",,,,"::"
