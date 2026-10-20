@@ -2,7 +2,35 @@
 shopt -s nullglob
 LQB_VER="4.21.1"
 SCRIPTPATH="/mcdb"
-GH="https://artifacts.open.ch/repository/github-releases-remote"
+
+# Where to download the JDK and Liquibase from. Inside the company network the
+# company mirror of GitHub releases is used; anywhere else (no route to
+# artifacts.open.ch) the public GitHub release URLs. Both serve the same files under the
+# same paths. MCDB_ARTIFACT_REPO=company|public overrides the probe.
+COMPANY_MIRROR="artifacts.open.ch"
+GH_COMPANY="https://${COMPANY_MIRROR}/repository/github-releases-remote"
+GH_PUBLIC="https://github.com"
+# Reachability only: any HTTP status (even 401/404) means the mirror answered; a
+# connection failure or timeout (curl prints 000) means we are outside the company.
+artifact_repo() {
+  case "${MCDB_ARTIFACT_REPO:-}" in
+    company|public) echo "$MCDB_ARTIFACT_REPO"; return ;;
+  esac
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "https://${COMPANY_MIRROR}/" 2>/dev/null || true)"
+  if [ -n "$code" ] && [ "$code" != "000" ]; then echo company; else echo public; fi
+}
+ARTIFACT_REPO="$(artifact_repo)"
+case "$ARTIFACT_REPO" in
+  company) GH="$GH_COMPANY" ;;
+  *)       GH="$GH_PUBLIC" ;;
+esac
+echo -e "\nCONTAINER: artifact repository '${ARTIFACT_REPO}' -> ${GH}"
+
+# curl: -f fail on HTTP errors, -L follow redirects (GitHub release downloads redirect;
+# the company mirror does not), -S show errors despite -s. A failed download must
+# stop the load instead of leaving an empty archive for tar to choke on silently.
+fetch() { curl -fsSL --output "$1" "$2" || { echo "CONTAINER: download failed: $2" >&2; exit 1; }; }
 
 # no core dumps.
 ulimit -c 0
@@ -16,7 +44,7 @@ else
   # https://adoptium.net/en-GB/temurin/releases/?version=17&os=linux&arch=x64
   JDK="${GH}/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.9_9.tar.gz"
 fi
-curl -s --output /tmp/jdk.tar.gz "${JDK}"
+fetch /tmp/jdk.tar.gz "${JDK}"
 cd /opt/oracle || exit
 mkdir jdk-17
 echo -e "\nCONTAINER: Installing JDK"
@@ -25,7 +53,7 @@ export JAVA_HOME="/opt/oracle/jdk-17"
 
 # install Liquibase
 echo -e "\nCONTAINER: Downloading Liquibase ${LQB_VER}"
-curl -s --output /tmp/liquibase.tar.gz "${GH}/liquibase/liquibase/releases/download/v${LQB_VER}/liquibase-${LQB_VER}.tar.gz"
+fetch /tmp/liquibase.tar.gz "${GH}/liquibase/liquibase/releases/download/v${LQB_VER}/liquibase-${LQB_VER}.tar.gz"
 echo -e "\nCONTAINER: Installing Liquibase ${LQB_VER}"
 mkdir liquibase
 cd liquibase || exit
@@ -58,9 +86,24 @@ for a in "${SCRIPTPATH}"/changes/changelog-*.archive.sql; do
   "${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --changelogFile="$FN"  --log-level=INFO --log-file="${OF}" changelog-sync
 done
 
-# mark current changelog up to latest tag as synced (already part of schema)
-TAG=$(grep -E -e '^--changeset.*tag' "${SCRIPTPATH}/changes/changelog-current.sql" | tail -1 | sed -n 's/.*tag:\([^[:space:]]*\).*/\1/p')
-"${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --log-level=INFO --log-file="${OF}" changelog-sync-to-tag --tag="$TAG"
+# Mark changelog-current.sql as synced up to and including its latest tag changeset (the
+# export in ddl/generated already contains everything up to there); everything after the
+# tag is applied by the `update` below. Liquibase 4.21.1 does not recognise the `tag:`
+# attribute in formatted-SQL changeset headers, so `changelog-sync-to-tag` would silently
+# mark the WHOLE file as run and nothing after the tag would ever be applied. Instead the
+# file is copied up to the first changeset after the tag line, header included (same
+# logicalFilePath, so the DATABASECHANGELOG rows match), and that copy is changelog-sync'ed.
+CL="${SCRIPTPATH}/changes/changelog-current.sql"
+TAG_LINE=$(grep -nE '^--changeset.*tag:' "${CL}" | tail -1 | cut -d: -f1)
+if [ -z "${TAG_LINE}" ]; then
+  echo "CONTAINER: no tag changeset found in ${CL} -- cannot tell where the export ends" >&2
+  exit 1
+fi
+NEXT_LINE=$(awk -v t="${TAG_LINE}" 'NR > t && /^--changeset/ { print NR; exit }' "${CL}")
+UPTO="${SCRIPTPATH}/output/changelog-current-upto-tag.sql"
+if [ -n "${NEXT_LINE}" ]; then head -n $((NEXT_LINE - 1)) "${CL}" > "${UPTO}"; else cp "${CL}" "${UPTO}"; fi
+echo "CONTAINER: changelog-current.sql synced up to the tag at line ${TAG_LINE} ($(grep -c '^--changeset' "${UPTO}") changeset(s)); the rest is applied by update"
+"${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --changelogFile="output/changelog-current-upto-tag.sql" --log-level=INFO --log-file="${OF}" changelog-sync
 
 
 

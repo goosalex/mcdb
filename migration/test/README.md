@@ -38,6 +38,7 @@ The harness runs against PostgreSQL 18.6 with orafce, pgTAP and `pg_prove`, in a
 - Every `psql` and `pg_prove` call goes through `pg.sh psql|pg_prove`, which runs the tool inside the container as `postgres`, in the caller's working directory.
 - The container mounts the `mcdb` project and the targets of its `ddl/` and `masterdata/` symlinks read-only at their host paths, so `-f` paths, relative paths and `\ir` includes resolve as on the host.
 - Data lives in the Docker volume `mcdb-pg-data`, so `mcdb_tmpl` survives container restarts. `pg.sh stop` removes the container and keeps the data; `pg.sh reset` removes both.
+- The base image comes from the company mirror `artifacts.open.ch` when that is reachable, otherwise from Docker Hub (same pinned digest). `pg.sh` probes the mirror before building; `MCDB_ARTIFACT_REPO=company|public` overrides the probe.
 - The image build needs `deb.debian.org` and `apt.postgresql.org`. `pg.sh` forwards `http_proxy`/`https_proxy`/`no_proxy` from the environment to the build.
 - `pg.sh shell` opens an interactive `psql` session; `pg.sh status` shows the container state.
 

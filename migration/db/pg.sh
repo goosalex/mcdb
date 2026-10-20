@@ -28,6 +28,9 @@
 #   MCDB_PG_IMAGE      image tag        (default: mcdb-pg:18.6)
 #   http_proxy, https_proxy, no_proxy (and upper-case variants) are forwarded to the
 #   image build, which needs to reach deb.debian.org and apt.postgresql.org.
+#   MCDB_ARTIFACT_REPO  company|public  which artifact repository to pull the base image
+#                      from. Default: auto-detect -- "company" (artifacts.open.ch) when
+#                      the mirror answers, "public" (Docker Hub, same digest) otherwise.
 #
 # Must stay bash 3.2 compatible (macOS /bin/bash).
 set -euo pipefail
@@ -54,6 +57,39 @@ dockerfile_hash() {
 
 # Physical path of a directory (resolves symlinks).
 physical_dir() { (cd "$1" && pwd -P); }
+
+COMPANY_MIRROR="artifacts.open.ch"
+COMPANY_DOCKER_PREFIX="${COMPANY_MIRROR}/public-docker-virtual/"
+
+# Which artifact repository is reachable from here: prints "company" or "public".
+# Inside the company network artifacts.open.ch answers (any HTTP status counts, the
+# probe is reachability only, not product specific); anywhere else the connection fails
+# or times out (curl prints 000) and the public upstreams are used.
+# MCDB_ARTIFACT_REPO=company|public overrides the probe.
+artifact_repo() {
+  case "${MCDB_ARTIFACT_REPO:-}" in
+    company|public) echo "$MCDB_ARTIFACT_REPO"; return ;;
+    "") ;;
+    *) die "MCDB_ARTIFACT_REPO must be 'company' or 'public', got '${MCDB_ARTIFACT_REPO}'" ;;
+  esac
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "https://${COMPANY_MIRROR}/" 2>/dev/null || true)"
+  if [ -n "$code" ] && [ "$code" != "000" ]; then echo company; else echo public; fi
+}
+
+# The base image reference for the given repository. The Dockerfile's ARG default is
+# the single source of truth for name + pinned digest; the public form is the same
+# reference with the company mirror prefix removed (public-docker-virtual proxies Docker
+# Hub, so the digest is identical).
+base_image() {
+  local company_ref
+  company_ref="$(sed -n 's/^ARG BASE_IMAGE=//p' "${DB_DIR}/Dockerfile" | head -1)"
+  [ -n "$company_ref" ] || die "no 'ARG BASE_IMAGE=' line in ${DB_DIR}/Dockerfile"
+  case "$1" in
+    company) echo "$company_ref" ;;
+    public)  echo "${company_ref#"$COMPANY_DOCKER_PREFIX"}" ;;
+  esac
+}
 
 # Directories to mount: the project root plus every top-level symlink target outside
 # it. One absolute path per line, sorted, deduplicated.
@@ -94,6 +130,11 @@ build_image_if_needed() {
   for v in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
     if [ -n "${!v:-}" ]; then args+=(--build-arg "${v}=${!v}"); fi
   done
+  local repo base
+  repo="$(artifact_repo)"
+  base="$(base_image "$repo")"
+  echo "pg.sh: artifact repository '${repo}' -> base image ${base}" >&2
+  args+=(--build-arg "BASE_IMAGE=${base}")
   docker build -q ${args[@]+"${args[@]}"} \
     --label "mcdb.dockerfile-sha256=${want}" \
     -t "$IMAGE" "$DB_DIR" >/dev/null

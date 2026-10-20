@@ -1,5 +1,10 @@
 # Fixes the base artifact on AMD64 ! This build will not Start correctly on ARM!
-FROM artifacts.open.ch/public-docker-virtual/gvenzl/oracle-free:23.7@sha256:091eb0c844ad15ea4034530f0ed6d342211342410ecc9e3f80dc013bbbb2267a AS base
+#
+# Base image: the company mirror by default (what the Kaeter/Makefile build uses).
+# Outside the company network build with the public Docker Hub reference, same digest:
+#   docker build --build-arg BASE_IMAGE=gvenzl/oracle-free:23.7@sha256:091eb0c844ad15ea4034530f0ed6d342211342410ecc9e3f80dc013bbbb2267a ...
+ARG BASE_IMAGE=artifacts.open.ch/public-docker-virtual/gvenzl/oracle-free:23.7@sha256:091eb0c844ad15ea4034530f0ed6d342211342410ecc9e3f80dc013bbbb2267a
+FROM ${BASE_IMAGE} AS base
 
 USER root
 RUN mkdir -p /mcdb && chown -R oracle:oinstall /mcdb

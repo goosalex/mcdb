@@ -1,6 +1,9 @@
 # Fixes the base artifact on ARM64 ! This build will not Start correctly on AMD64/x86!
 # see https://artifacts.open.ch/ui/repos/tree/DockerV2Info/public-docker-virtual/gvenzl/oracle-free/23.7/list.manifest.json
-FROM artifacts.open.ch/public-docker-virtual/gvenzl/oracle-free:23.7@sha256:90fda7cf4204951665af74eb918872eb6bf66c70bc5b9d8eb45c542a3a8d15fa AS base
+# Base image: company mirror by default; outside the company network pass
+#   --build-arg BASE_IMAGE=gvenzl/oracle-free:23.7@sha256:90fda7cf4204951665af74eb918872eb6bf66c70bc5b9d8eb45c542a3a8d15fa
+ARG BASE_IMAGE=artifacts.open.ch/public-docker-virtual/gvenzl/oracle-free:23.7@sha256:90fda7cf4204951665af74eb918872eb6bf66c70bc5b9d8eb45c542a3a8d15fa
+FROM ${BASE_IMAGE} AS base
 
 USER root
 RUN mkdir -p /mcdb && chown -R oracle:oinstall /mcdb
