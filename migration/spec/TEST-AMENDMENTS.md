@@ -815,3 +815,27 @@ previously asserted changed. They are RED against the translation as committed a
 with the `coalesce(.., '')` correction in the following translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-202 five change_status NULL-text assertions and fixture ticket 905030 from the live Oracle run; test-only commit`
+
+## A-401 — `tt__osag_notify__spec.sql`: Zurich time-zone abbreviation in composed messages (S-NOTIFY-038)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__osag_notify__spec.sql` |
+| **Assertions affected** | 0 changed; 2 added (`plan(10)` -> `plan(12)`) |
+
+The live Oracle-vs-PostgreSQL run of scenario `tt__osag_notify__event_notify` (2026-10-21,
+Oracle 23.7 container `mcdb-ora`) showed the 20003 "sms notification" event text ending in
+`... at 20.10.2026 10:30 CEST - Open Systems Mission Control` on Oracle and in
+`... at 20.10.2026 10:30  - Open Systems Mission Control` (two spaces, empty abbreviation) on
+PostgreSQL. Oracle appends `TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD')` after every
+rendered date (`ddl/src/pkgb/tt_osag_notify.sql:1178, 1183, 1196, 1269, 1272, 1398`); the
+translation used `to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ')`, which is empty
+because `AT TIME ZONE` yields a `timestamp without time zone`. No spec clause named the
+abbreviation; S-NOTIFY-038 was added first, citing the Oracle lines. The two `matches()`
+assertions added here encode Oracle's observed rendering (`CES?T` admits the winter abbreviation);
+nothing previously asserted changed. They are RED against the translation as committed and go
+GREEN with the `pg_timezone_names` lookup in the following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__osag_notify__spec.sql reason:A-401 two S-NOTIFY-038 time-zone abbreviation assertions from the live Oracle run; test-only commit`
