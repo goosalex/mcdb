@@ -662,8 +662,13 @@ BEGIN
     SELECT name INTO STRICT status_name FROM tt.status WHERE id = p_status_id;
     SELECT name INTO STRICT v_cur_status_name FROM tt.status WHERE id = v_cur_status;
 
+    -- S-TICKET-064 (live differential run 2026-10-21): p_details_private defaults to NULL
+    -- and rate_ticket / merge_tickets pass BOTH texts as NULL. Oracle's NULL || 'x' = 'x'
+    -- keeps the status header ('New status: hot' || CHR(10) || 'Previous status: open' ||
+    -- CHR(10)); PostgreSQL's 'x' || NULL is NULL and would erase the whole public text.
+    -- coalesce(.., '') at the two caller-text sites restores Oracle's result.
     dets_pub := 'New status: ' || status_name || chr(10) || 'Previous status: ' || v_cur_status_name;
-    dets_pub := dets_pub || chr(10) || p_details_public;
+    dets_pub := dets_pub || chr(10) || coalesce(p_details_public, '');
 
     IF (p_escalate_after_defer) THEN
         dets_pub := dets_pub || ', escalation to os when reached.';
@@ -671,8 +676,9 @@ BEGIN
 
     -- status id 3 is hot
     IF (p_hot_reason IS NOT NULL AND p_status_id = 3) THEN
-        -- hot status is currently private
-        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || p_details_private;
+        -- hot status is currently private. S-TICKET-064: same NULL-concatenation hazard
+        -- for p_details_private (Oracle: 'Hot because: <reason>' || CHR(10)).
+        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || coalesce(p_details_private, '');
     ELSE
         v_details_private := p_details_private;
     END IF;
