@@ -1993,8 +1993,12 @@ AS $fn$
 DECLARE
     v_text varchar;
 BEGIN
-    v_text := substr(replace(p_text, '##ticket_id##', p_ticket_id::varchar), 1, 30000);
-    v_text := substr(replace(v_text, '##event_id##', p_event_id::varchar), 1, 30000);
+    -- S-TICKET-037 (amended 2026-10-21, live differential run): Oracle's REPLACE with a
+    -- NULL replacement string REMOVES the placeholder and keeps the rest of the text;
+    -- PostgreSQL's replace(text, from, NULL) is NULL for the WHOLE text (it would even
+    -- NULL out a text without any placeholder). coalesce(.., '') restores Oracle's result.
+    v_text := substr(replace(p_text, '##ticket_id##', coalesce(p_ticket_id::varchar, '')), 1, 30000);
+    v_text := substr(replace(v_text, '##event_id##', coalesce(p_event_id::varchar, '')), 1, 30000);
     RETURN v_text;
 END;
 $fn$;
