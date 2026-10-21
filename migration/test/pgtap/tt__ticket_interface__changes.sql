@@ -21,7 +21,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(73);
+SELECT plan(83);
 
 -------------------------------------------------------------------------------
 -- Fixtures (906xxx id range, disjoint from lifecycle.sql's 905xxx and the
@@ -263,6 +263,17 @@ SELECT ok(
     'S-TICKET-016: change_service_host still wrote the new (nonexistent, but caller-supplied) service_id/host_id onto the ticket -- the local handlers only guard the LABEL lookups, not the final UPDATE'
 );
 
+-- A-102 (S-TICKET-016 amended): the new-service label defaults to NULL on a miss and Oracle's
+-- || concatenates NULL as '' -- the audit text ends in ' to <empty>' (old host, old service
+-- label, new host '<empty>', no new service label). Observed live (differential scenario
+-- tt__ticket_interface__change_owner_company, steps 07/08), where a literal port wrote NULL.
+SELECT is(
+    (SELECT details_public::text FROM tt.event
+      WHERE ticket_id = 906010 AND type_id = 100003 AND details_public LIKE 'service changed from%'),
+    'service changed from pilot-ti-host-old (Security Gateway [906006]) to <empty>',
+    'S-TICKET-016: the audit text of change_service_host with a nonexistent service and host is Oracle''s concatenation with the NULL service label as empty string, not NULL'
+);
+
 -------------------------------------------------------------------------------
 -- change_owner (S-TICKET-023) -- three mutually exclusive branches
 -------------------------------------------------------------------------------
@@ -352,9 +363,27 @@ SELECT lives_ok(
     'S-TICKET-027: change_notification succeeds when BOTH text parameters are NULL -- the prefix is only concatenated inside an IS NOT NULL guard, so the local variable stays NULL (not NULL||''x''), correctly avoiding the empty string vs NULL divergence Pitfall 2 warns about'
 );
 
+-- A-101 (S-TICKET-027 amended): in Oracle a VARCHAR2 argument of '' IS NULL, so the
+-- IS NOT NULL guard is FALSE for '' and -- with a non-NULL private text -- the event is
+-- HIDDEN by add_status_change_event (public_event = 0, details_public NULL). Observed live
+-- (differential scenario tt__ticket_interface__change_attributes, step 17).
 SELECT lives_ok(
-    $$CALL tt.ticket_interface_change_notification(906014, '', NULL, 906002)$$,
-    'S-TICKET-027: change_notification succeeds when p_change_text_public is an empty string -- an empty string is never NULL in either engine, so the prefix IS applied here (unlike the NULL case above), which is Oracle''s own correct, non-divergent behavior for this specific check'
+    $$CALL tt.ticket_interface_change_notification(906014, '', 'a101 private text', 906002)$$,
+    'S-TICKET-027: change_notification succeeds when p_change_text_public is an empty string and the private text is set -- Oracle treats the VARCHAR2 argument '''' as NULL, so the guard is FALSE and the public text stays NULL (amended: the original description claimed the prefix IS applied)'
+);
+
+SELECT is(
+    (SELECT public_event FROM tt.event WHERE ticket_id = 906014
+      AND details_private = 'Notification settings changed' || chr(10) || 'a101 private text'),
+    0::smallint,
+    'S-TICKET-027: the event written for an empty-string public text and a non-NULL private text is HIDDEN (public_event = 0), as Oracle''s ''''-is-NULL semantics make add_status_change_event do'
+);
+
+SELECT is(
+    (SELECT details_public::text FROM tt.event WHERE ticket_id = 906014
+      AND details_private = 'Notification settings changed' || chr(10) || 'a101 private text'),
+    NULL::text,
+    'S-TICKET-027: details_public of that event is NULL -- the prefix was NOT prepended to the empty string'
 );
 
 -------------------------------------------------------------------------------
@@ -376,6 +405,54 @@ SELECT is(
     (SELECT summary_relevant_events_count FROM tt.ticket WHERE id = 906014),
     0::bigint,
     'S-TICKET-029: summary_relevant_events_count was reset to 0 because the PUBLIC summary changed'
+);
+
+-- A-101 (S-TICKET-029 amended): a VARCHAR2 argument of '' IS NULL in Oracle. The first
+-- call below therefore clears both summaries (the '<empty>' path); the second is a complete
+-- no-op (both old and new NULL). Observed live (differential scenario
+-- tt__ticket_interface__change_attributes, step 22), where a literal port wrote two
+-- 'changed to:\n' events and stored '' instead.
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_summary(906014, '', '', 906002)$$,
+    'S-TICKET-029: change_summary succeeds with empty-string summaries -- Oracle sees NULL/NULL against the stored texts, i.e. a change to <empty> on both paths'
+);
+
+SELECT is(
+    (SELECT summary_private::text FROM tt.ticket WHERE id = 906014),
+    NULL::text,
+    'S-TICKET-029: an empty-string p_summary_private is stored as NULL (Oracle cannot store an empty VARCHAR2), not as the empty string'
+);
+
+SELECT is(
+    (SELECT summary_public::text FROM tt.ticket WHERE id = 906014),
+    NULL::text,
+    'S-TICKET-029: an empty-string p_summary_public is stored as NULL, not as the empty string'
+);
+
+SELECT is(
+    (SELECT count(*) FROM tt.event WHERE ticket_id = 906014
+      AND details_private = 'private summary changed to:' || chr(10) || '<empty>'),
+    1::bigint,
+    'S-TICKET-029: the private-summary audit text for an empty-string input is the NVL fallback <empty>, exactly as for NULL'
+);
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_summary(906014, '', '', 906002)$$,
+    'S-TICKET-029: change_summary with empty strings against NULL summaries succeeds as a no-op (both NULL -> the NOT (old IS NULL AND new IS NULL) guard is FALSE in Oracle)'
+);
+
+SELECT is(
+    (SELECT count(*) FROM tt.event WHERE ticket_id = 906014
+      AND details_private LIKE 'private summary changed to:%'),
+    2::bigint,
+    'S-TICKET-029: exactly two private-summary audit events exist (new private summary, <empty>) -- the second empty-string call wrote none'
+);
+
+SELECT is(
+    (SELECT count(*) FROM tt.event WHERE ticket_id = 906014
+      AND details_public LIKE 'public summary changed to:%'),
+    2::bigint,
+    'S-TICKET-029: exactly two public-summary audit events exist (new public summary, <empty>) -- the second empty-string call wrote none'
 );
 
 -------------------------------------------------------------------------------

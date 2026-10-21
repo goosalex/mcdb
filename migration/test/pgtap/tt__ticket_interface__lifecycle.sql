@@ -13,7 +13,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(44);
+SELECT plan(50);
 
 -------------------------------------------------------------------------------
 -- Fixtures. Reference rows reused from the template's masterdata (status ids
@@ -81,6 +81,16 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_
     VALUES (905019, 1, 4, 905001, 0, now() - interval '1 hour');
 INSERT INTO tt.ticket_flow (id, ticket_id, flow_in_date, flow_out_date)
     VALUES (905024, 905019, now() - interval '1 hour', NULL);
+
+-- A-103 (S-TICKET-065): two resolved tickets for the recoverable-status guard's
+-- three-valued logic -- H has NO last public event (NULL -> ELSE branch), I has one
+-- (type 905006, not 30016 -> THEN branch).
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905025, 1, 101, 905001, 905002, now() - interval '1 hour');
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905026, 1, 101, 905001, 905002, now() - interval '1 hour');
+INSERT INTO tt.event (id, type_id, ticket_id) VALUES (905027, 905006, 905026);
+UPDATE tt.ticket SET last_public_event_id = 905027 WHERE id = 905026;
 
 -------------------------------------------------------------------------------
 -- newticket_new (S-TICKET-001 .. S-TICKET-005)
@@ -233,6 +243,48 @@ SELECT is(
     (SELECT label_id FROM tt.ticket WHERE id = 905019),
     NULL::bigint,
     'S-TICKET-021: expire_status left label_id untouched (NULL) -- proof that p_label_id=1 was silently ignored, matching the doc/body disagreement this clause records'
+);
+
+-- A-103 (S-TICKET-064, S-TICKET-021 amended): the texts of the status-change event
+-- expire_status triggers. Public: Oracle's || concatenates the NULL public details as ''
+-- (status lines + trailing newline, never NULL). Private: the elapsed hours are rendered
+-- Oracle-style -- the call above uses two DATE-truncated timestamps, so the difference is
+-- 0 or 24 hours depending on the time of day, rendered '0' / '24' (never '0.00'/'24.00').
+-- Found live (differential scenario tt__ticket_interface__status_engine, steps 01-03).
+SELECT is(
+    (SELECT details_public::text FROM tt.event WHERE ticket_id = 905019 AND type_id = 101003),
+    'New status: hot' || chr(10) || 'Previous status: acknowledged' || chr(10),
+    'S-TICKET-064: the public text of the hot event written for expire_status (NULL public details) is the two status lines plus a trailing newline, not NULL'
+);
+
+SELECT ok(
+    (SELECT details_private FROM tt.event WHERE ticket_id = 905019 AND type_id = 101003)
+        IN ('Status changed to: hot (was hot for 0 hours)', 'Status changed to: hot (was hot for 24 hours)'),
+    'S-TICKET-021: the elapsed hours in the private text are rendered the Oracle way (no trailing zeros / decimal point)'
+);
+
+-- A-103 (S-TICKET-065): recoverable_status_id follows Oracle's three-valued guard --
+-- NULL last public event -> reset to NULL; a non-30016 last public event -> recorded.
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_status(905025, 2, 905002, 'reopen without last public event')$$,
+    'S-TICKET-065: change_status resolved -> open succeeds on a ticket without a last public event'
+);
+
+SELECT is(
+    (SELECT recoverable_status_id FROM tt.ticket WHERE id = 905025),
+    NULL::numeric,
+    'S-TICKET-065: with last_public_event_id NULL, NOT (NULL IN (30016)) is NULL -> the ELSE branch resets recoverable_status_id to NULL (Oracle contract, not corrected)'
+);
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_status(905026, 2, 905002, 'reopen with last public event')$$,
+    'S-TICKET-065: change_status resolved -> open succeeds on a ticket with a last public event'
+);
+
+SELECT is(
+    (SELECT recoverable_status_id FROM tt.ticket WHERE id = 905026),
+    101::numeric,
+    'S-TICKET-065: with a last public event that is not 30016, resolved (101) is recorded as recoverable'
 );
 
 -------------------------------------------------------------------------------

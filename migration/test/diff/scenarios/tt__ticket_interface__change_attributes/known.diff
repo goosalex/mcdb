@@ -1,0 +1,7 @@
+-23 customer_reference nonexistent ticket,,,ok
++23 customer_reference nonexistent ticket,P0002,,
+-952010,100003,null,10
+-952010,100003,set,3
+-952011,100003,null,4
++952010,100003,set,13
++952011,100003,set,4

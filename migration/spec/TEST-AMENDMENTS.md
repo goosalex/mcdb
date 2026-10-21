@@ -769,6 +769,7 @@ in `CALL`) -- now a `DO` block with a variable.
 
 ## A-201 — `tt__ticket_interface__changes.sql`: replace_id_placeholders NULL-id assertions (S-TICKET-037)
 ## A-301 — `tt__event_interface__spec.sql`: S-EVENT-001 asserted a path Oracle cannot take (two services per host)
+## A-101 — `tt__ticket_interface__changes.sql`: S-TICKET-027/029 empty-string inputs asserted Oracle's `''`≡NULL behaviour
 
 | | |
 |---|---|
@@ -814,6 +815,35 @@ asserted because the clause itself changed; it does not weaken a test to match a
 `commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-301 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`
 
 ## A-302 — `tt__ticket_interface__selectinto.sql`: S-TICKET-001 asserted the same impossible two-services path
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 1 description corrected (the `change_notification(906014, '', NULL, ...)` `lives_ok`), 9 added; `plan(70)` -> `plan(79)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__change_attributes` (steps 17 and 22): Oracle hid the notification event / skipped the summary change for `''`, PostgreSQL did not |
+| **Spec amended first** | S-TICKET-027, S-TICKET-029 and Checklist §1 item 2 in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The original `lives_ok` described the `''` public text as "the prefix IS applied here ...
+Oracle's own correct, non-divergent behavior" -- a misreading of Oracle, where a `VARCHAR2`
+argument of `''` IS NULL (`ddl/src/pkgb/tt_ticket_interface.sql:1305`: `IF
+(p_change_text_public IS NOT NULL)` is FALSE for `''`). The test only asserted that the
+call lives, so it could not detect the translation writing a PUBLIC event with a bare
+prefix where Oracle writes a HIDDEN one. `change_summary` had no `''` case at all
+(`ddl/src/pkgb/tt_ticket_interface.sql:1337-1353`: both change-detection conditions see
+NULL for `''`).
+
+### The amendment
+
+The `''` notification call now passes a non-NULL private text and is followed by two `is()`
+assertions (event hidden, `details_public` NULL). Seven assertions were added for
+`change_summary(906014, '', '', ...)`: both summaries stored as NULL, the `<empty>` audit
+text, and the second identical call being a no-op (event counts). Nothing previously
+asserted was weakened; the file was RED against the pre-fix translation (5 failures: tests 39, 40, 45, 46, 47) and
+green after the `NULLIF` boundary normalisation landed in the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-101 S-TICKET-027/029 empty-string inputs; test-only commit`
+
+## A-102 — `tt__ticket_interface__changes.sql`: S-TICKET-016 audit text with a NULL service label
 
 | | |
 |---|---|
@@ -854,3 +884,53 @@ second service row (907005) stays as a fixture, only its `host2service` mapping 
 the `throws_ok`. The translation is untouched by this amendment.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-302 S-TICKET-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible at site #2); test-only commit`
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 0 changed, 1 added; `plan(79)` -> `plan(80)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__change_owner_company` (steps 07 and 08): Oracle wrote `'service changed from <empty> to diff-owner-host-a (Security Gateway [952108])'` / `'... to <empty>'`, PostgreSQL wrote a NULL `details_public` |
+| **Spec amended first** | S-TICKET-016 in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The suite proved that `change_service_host` survives nonexistent service/host ids and
+still writes the ids, but never looked at the audit text. `ddl/src/pkgb/tt_ticket_interface.sql:865`
+concatenates the two service labels that default to `NULL` on a miss; Oracle's `||`
+treats NULL as `''`, PostgreSQL's propagates it -- the whole `details_public` became NULL.
+
+### The amendment
+
+One `is()` on the 100003 event of ticket 906010 pins the Oracle text
+`'service changed from pilot-ti-host-old (Security Gateway [906006]) to <empty>'`. RED
+against the pre-fix translation (have: NULL), green after the `COALESCE(label, '')`
+boundary normalisation landed in the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-102 S-TICKET-016 audit text with NULL service label; test-only commit`
+
+## A-103 — `tt__ticket_interface__lifecycle.sql`: S-TICKET-064/065 and the S-TICKET-021 number rendering
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed, 6 added (+ 2 fixture tickets 905025/905026, 1 event 905027); `plan(39)` -> `plan(45)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__status_engine`: NULL `details_public` on the three expiry events and NULL `details_private` on the hot-with-reason event (S-TICKET-064), `2.50`/`2.00`/`0.33` hours where Oracle prints `2.5`/`2`/`.33` (S-TICKET-021), `recoverable_status_id` 101/11 where Oracle leaves NULL on tickets without a last public event (S-TICKET-065) |
+| **Spec amended first** | S-TICKET-064 and S-TICKET-065 added, S-TICKET-021 amended, in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The suite asserted only the status/label effects of `expire_status`, never the texts of the
+event it writes, and nothing about `recoverable_status_id`. The `IS DISTINCT FROM 30016`
+in the translation silently inverted Oracle's `NOT NULL IN (30016)` (NULL -> ELSE branch,
+`ddl/src/pkgb/tt_ticket_interface.sql:558-574`), and two `||` sites plus the implicit
+NUMBER->VARCHAR2 rendering (lines 451, 460, 1046) diverged unobserved.
+
+### The amendment
+
+Two assertions on ticket 905019's 101003 event (public text = status lines + newline;
+private text's hours rendered `0`/`24`, the two values the existing DATE-truncated call can
+produce), and four on two new resolved fixture tickets re-opened by `change_status` -- H
+without a last public event (recoverable NULL), I with one (recoverable 101). RED against
+the pre-fix translation (3 failures: tests 20, 21, 23), green after the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-103 S-TICKET-064/065 and S-TICKET-021 rendering; test-only commit`

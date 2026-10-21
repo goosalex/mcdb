@@ -826,8 +826,22 @@ plan's SUMMARY.
   `TICKET_PK`), so `TOO_MANY_ROWS` is structurally impossible at all four; zero rows is
   reachable at each independently (orphaned/absent service or host references), and each
   is caught LOCALLY — none of the four can ever reach an outer handler because this
-  routine has none (S-TICKET-015).
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:782-832`
+  routine has none (S-TICKET-015). **Amended (branch `phoenix/migrate_tt_only`,
+  differential run 2026-10-21, scenario `tt__ticket_interface__change_owner_company`
+  steps 07/08):** the two service-label defaults are `NULL`, and line 865 concatenates
+  them unconditionally: `'service changed from' || v_host_label_old || v_service_label_old
+  || ' to' || v_host_label_new || v_service_label_new`. In Oracle `||` treats a NULL
+  operand as the empty string, so a ticket without a service yields `'service changed from
+  <empty> to diff-host (Security Gateway [952108])'` and a nonexistent new service yields
+  `'... to <empty>'`. Observed live: a literal PostgreSQL `||` propagates the NULL and the
+  whole `details_public` of the 100003 event became NULL. The contract is Oracle's text;
+  the translation must concatenate the two NULL-defaulting labels as `''`
+  (`COALESCE(v_service_label_old, '')`, `COALESCE(v_service_label_new, '')`) — the two
+  host labels default to `' <empty>'` and need nothing. This corrects Checklist §1's
+  remark that these defaults "are Oracle string LITERALS ... not caller input subject to
+  collapsing": true for `'<empty>'`, but the `NULL` default IS subject to the `||`
+  divergence.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:814-865`
 
 ### S-TICKET-017
 
@@ -928,7 +942,20 @@ plan's SUMMARY.
   since the base import). The locked assertions (`tt__ticket_interface__lifecycle.sql`,
   S-TICKET-021: `label_id` untouched after `expire_status(..., p_label_id => 1)`) remain
   the pinned behaviour. Unlike Q11 (a)/(b)/(d) this item is NOT a `DEVIATION`.
-- **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:999-1017`
+  **Amended (branch `phoenix/migrate_tt_only`, differential run 2026-10-21, scenario
+  `tt__ticket_interface__status_engine` steps 01-03) — the private text's number
+  rendering.** Line 1046 builds `'Status changed to: hot (was ' || p_status_name || ' for
+  ' || round(v_time_difference,2) || ' hours)'`; the `round(...)` is a `NUMBER` converted
+  implicitly to `VARCHAR2`, and Oracle's default conversion prints the shortest form: no
+  trailing zeros, no trailing decimal point, no leading zero before the point. Observed
+  live: 2.5 hours -> `'... for 2.5 hours)'`, 2 hours -> `'... for 2 hours)'`, 20 minutes
+  -> `'... for .33 hours)'`. A PostgreSQL `round(numeric, 2)::text` keeps scale 2
+  (`2.50`, `2.00`, `0.33`); the translation must render the number Oracle's way (strip
+  trailing zeros and point, drop the leading `0` of a pure fraction). The public text of
+  the status-change event this routine triggers is `'New status: hot' || CHR(10) ||
+  'Previous status: <old>' || CHR(10)` — `expire_status` always passes NULL public
+  details, see S-TICKET-064.
+- **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:1045-1048`
 
 ### S-TICKET-022
 
@@ -1008,13 +1035,23 @@ plan's SUMMARY.
   concatenated at all) if the input is `NULL`, so there is no `NULL || 'x'`
   collapsing-vs-not divergence to translate here (unlike
   `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator, which DOES
-  concatenate onto a NULL-seeded variable). If a caller passes `''` instead of `NULL` for
-  either text parameter, the `IS NOT NULL` check is TRUE in both Oracle and PostgreSQL
-  (an empty string is never NULL in either engine, so no `''`≡`NULL` collapsing is
-  relevant to THIS specific check) — the prefix is prepended to `''`, producing a
-  visible-but-otherwise-empty change line in both engines identically. No `EXCEPTION`
-  block of its own; delegates to `add_status_change_event`.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1265-1281`
+  concatenate onto a NULL-seeded variable). **Amended (branch `phoenix/migrate_tt_only`,
+  differential run 2026-10-21, scenario `tt__ticket_interface__change_attributes` step
+  17):** the original text of this clause claimed that a caller-supplied `''` makes the
+  `IS NOT NULL` check TRUE "in both Oracle and PostgreSQL". That misread Oracle: a
+  `VARCHAR2` argument of `''` IS NULL in Oracle (there is no empty string in Oracle's
+  `VARCHAR2`), so `p_change_text_public IS NOT NULL` (line 1305) and
+  `p_change_text_private IS NOT NULL` (line 1309) are FALSE for `''`, the local variable
+  stays NULL, and — when the other text is non-NULL — `add_status_change_event` HIDES the
+  event (`public_event = 0`, `details_public` NULL). Observed live: Oracle
+  `change_notification(t, '', 'x', c)` writes a private event with `details_public` NULL;
+  a literal PostgreSQL `IS NOT NULL` on `''` is TRUE and writes a PUBLIC event whose
+  `details_public` is the bare prefix `'Notification settings changed\n'`. The contract is
+  Oracle's: `''` and `NULL` are the same input for both text parameters; the translation
+  must normalise `''` to NULL at this boundary (`NULLIF(p, '')`), exactly as
+  `change_customer_reference`/`change_partner_reference` already do (S-TICKET-018/022).
+  No `EXCEPTION` block of its own; delegates to `add_status_change_event`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1305-1313`
 
 ### S-TICKET-028
 
@@ -1037,14 +1074,26 @@ plan's SUMMARY.
   `TRUE`) whenever either side is `NULL` in standard three-valued SQL logic — identical
   in Oracle and PostgreSQL, so no translation divergence exists in this specific
   condition. `NVL(p_summary_private, '<empty>')`/`NVL(p_summary_public, '<empty>')`
-  (lines 1311, 1324) ARE Oracle-`NVL`-specific but behave identically to PostgreSQL's
-  `orafce` `NVL` or a native `COALESCE` for a NULL input — no divergence, since neither
-  summary column is ever compared against `''` specifically anywhere in this routine
-  (only against `NULL` and against each other). Resetting
+  (lines 1343, 1356) ARE Oracle-`NVL`-specific but behave identically to PostgreSQL's
+  `orafce` `NVL` or a native `COALESCE` for a NULL input. **Amended (branch
+  `phoenix/migrate_tt_only`, differential run 2026-10-21, scenario
+  `tt__ticket_interface__change_attributes` step 22):** the original text concluded "no
+  divergence, since neither summary column is ever compared against `''`". The COLUMNS are
+  never `''` (Oracle cannot store one), but the PARAMETERS can be passed `''` by a caller,
+  and in Oracle a `VARCHAR2` argument of `''` IS NULL: `change_summary(t, '', '', c)` on a
+  ticket whose summaries are both NULL is a complete NO-OP in Oracle (both conditions at
+  lines 1337-1340 and 1350-1353 see `NULL`/`NULL`, the `NOT (old IS NULL AND new IS
+  NULL)` guard is FALSE). Observed live: PostgreSQL, where `''` is a value, took both
+  branches — wrote two audit events (`'private summary changed to:\n'` and `'public
+  summary changed to:\n'`, `COALESCE('', '<empty>')` being `''`), stored `''` in both
+  columns and reset `summary_relevant_events_count`. The contract is Oracle's: `''` and
+  `NULL` are the same input for `p_summary_private`/`p_summary_public`; the translation
+  must normalise `''` to NULL on entry (`NULLIF(p, '')`) so the change-detection, the
+  `<empty>` text and the stored value all follow the NULL path. Resetting
   `summary_relevant_events_count := 0` happens ONLY on the public-summary-changed path
-  (line 1325), never on the private-summary-changed path — a deliberate asymmetry, not an
+  (line 1357), never on the private-summary-changed path — a deliberate asymmetry, not an
   omission.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1305-1333`
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1337-1365`
 
 ### S-TICKET-030
 
@@ -1711,7 +1760,7 @@ plan's SUMMARY.
 
 ### S-TICKET-064
 
-- **routines:** change_status_event_id_out, change_status, rate_ticket, merge_tickets (and, through `change_status`, every event-triggered status change from `TT.EVENT_INTERFACE`)
+- **routines:** change_status_event_id_out, change_status, expire_status, rate_ticket, merge_tickets (and, through `change_status`, every event-triggered status change from `TT.EVENT_INTERFACE`)
 - **claim:** **The status-change event texts survive NULL caller text (added 2026-10-21
   from the live differential run, scenarios `tt__ticket_interface__rating_flow` and
   `tt__ticket_interface__merge_delete`).** `change_status_event_id_out` builds the public
@@ -1740,6 +1789,32 @@ plan's SUMMARY.
   `IF (p_escalate_after_defer)` suffix (line 454) then appends to a non-NULL string as in Oracle.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-462`, `ddl/src/pkgb/tt_ticket_interface.sql:1803`, `ddl/src/pkgb/tt_ticket_interface.sql:1599`, `ddl/src/pkgb/tt_ticket_interface.sql:1672`, `ddl/src/pkg/tt_ticket_interface.sql:85-94`, `ddl/src/pkgb/tt_event_interface.sql:326
 
+### S-TICKET-065
+
+- **routines:** change_status_event_id_out, change_status, expire_status
+- **claim:** **Three-valued logic in the recoverable-status guard (found live, differential
+  run 2026-10-21, scenario `tt__ticket_interface__status_engine` steps 03 and 07).** Line
+  558: `IF (p_status_id IN (2, 3, 4) AND NOT v_last_public_event_type_id IN (30016))`.
+  `v_last_public_event_type_id` is NULL whenever the ticket has no `last_public_event_id`
+  (line 418 sets it NULL, the lookup at 419-423 runs only for a non-NULL id). `NULL IN
+  (30016)` is NULL, `NOT NULL` is NULL, and a NULL condition is FALSE in PL/SQL — so for a
+  ticket WITHOUT a last public event the `ELSE` branch (line 573) runs and
+  `recoverable_status_id` is reset to NULL even for the transitions the `THEN` branch would
+  record (resolved -> open/hot/acknowledged, non-MCC waiting -> hot, deferred with a future
+  valid-until -> hot). Only a ticket whose last public event exists and is not 30016 gets a
+  recoverable status. Observed live: Oracle left `recoverable_status_id` NULL on a resolved
+  -> open ticket and on a non-MCC waiting -> hot (`expire_status`) ticket, both without a
+  last public event; the translation's `IS DISTINCT FROM 30016` (TRUE for NULL) recorded
+  101 and 11. This is Oracle's contract as it stands — it may well be an unintended effect
+  of the NULL comparison, but it is NOT recorded as a CORRECTION: the translation must
+  reproduce it with the same three-valued expression (`NOT (v IN (30016))`, NULL -> the
+  `ELSE` branch), so that a future, deliberate correction (DEVIATION(ORACLE-BUG) + clause)
+  can be taken knowingly. `tt.ticket.last_public_event_id` is not written by
+  `add_history_event` (confirmed by the `status_lifecycle` scenario on both sides), so
+  tickets without a public event — e.g. created without going through
+  `event_interface.addevent_new` — are reachable.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:418-423`, `ddl/src/pkgb/tt_ticket_interface.sql:558-574`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
@@ -1763,15 +1838,21 @@ plan's SUMMARY.
    actual column (which stores whatever was passed, verbatim, in both engines). Boundary
    normalization decision: `NULLIF(p_x, '')` before the `IS NOT NULL` check (or an
    explicit `p_x IS NOT NULL AND p_x != ''` test) closes the gap.
-2. **`change_notification`'s prefix-only-if-non-NULL pattern (S-TICKET-027) — CORRECTLY
-   handled already, no divergence.** `v_event_details_public`/`_private` are assigned
-   `EVENT_DETAILS_PREFIX || p_change_text_x` ONLY inside an `IF p_change_text_x IS NOT
-   NULL` guard — the variable is left at its declared NULL (never concatenated) when the
-   input is NULL, so there is no `NULL || 'x'`-collapsing-vs-not divergence to translate
-   (unlike `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator
-   pattern, which DOES concatenate onto a NULL-seeded variable across multiple `||`
-   calls). A caller-supplied `''` is never NULL in either engine, so the `IS NOT NULL`
-   check behaves identically for that input too.
+2. **`change_notification`'s prefix-only-if-non-NULL pattern (S-TICKET-027, amended) and
+   `change_summary`'s change detection (S-TICKET-029, amended) — the SAME divergence as
+   finding 1, found live, not by static analysis.** `v_event_details_public`/`_private`
+   are assigned `EVENT_DETAILS_PREFIX || p_change_text_x` ONLY inside an `IF
+   p_change_text_x IS NOT NULL` guard, so there is no `NULL || 'x'` accumulator problem
+   (unlike S-NOTIFY-020). But the original text of this item went on to claim that a
+   caller-supplied `''` "is never NULL in either engine" — wrong for Oracle, where a
+   `VARCHAR2` argument of `''` IS NULL and the guard is FALSE. The differential run of
+   2026-10-21 (`migration/test/diff/scenarios/tt__ticket_interface__change_attributes`,
+   steps 17 and 22) showed Oracle hiding the notification event / skipping the summary
+   change for `''` while a literal PostgreSQL port wrote a public event with a bare prefix
+   / two `'... changed to:\n'` events and stored `''`. Same boundary normalisation as
+   finding 1: `NULLIF(p, '')` before the `IS NOT NULL` checks in `change_notification`
+   and on entry to `change_summary` (where the parameters feed the `!=`/`IS NULL`
+   change-detection, the `NVL(..., '<empty>')` text and the stored value alike).
 3. **`add_status_change_event`'s "hide the event" NULL check (its own inline comment,
    `ddl/src/pkgb/tt_ticket_interface.sql:1676-1678`) is EXPLICITLY flagged by Oracle's own
    author as fragile**: `IF (p_public_change_text IS NULL AND p_private_change_text IS

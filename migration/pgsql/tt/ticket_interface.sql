@@ -777,8 +777,13 @@ BEGIN
 
     -- if the new status is "hot" (3), "acknowledged" (4), "open" (2), then check whether
     -- the current status is recoverable, unless the customer requests to resolve the
-    -- ticket (30016)
-    IF (p_status_id IN (2, 3, 4) AND v_last_public_event_type_id IS DISTINCT FROM 30016) THEN
+    -- ticket (30016).
+    -- S-TICKET-065: Oracle's `NOT v_last_public_event_type_id IN (30016)` is NULL (-> the
+    -- ELSE branch) when the ticket has no last public event; an earlier `IS DISTINCT FROM`
+    -- here was TRUE for NULL and recorded a recoverable status Oracle never records (found
+    -- live, differential scenario tt__ticket_interface__status_engine). Reproduced with the
+    -- same three-valued expression -- NOT a correction (see the clause).
+    IF (p_status_id IN (2, 3, 4) AND NOT (v_last_public_event_type_id IN (30016))) THEN
         -- "resolved" (101) is always recoverable
         IF (v_cur_status = 101) THEN
             UPDATE tt.ticket SET recoverable_status_id = v_cur_status WHERE id = p_ticket_id;
@@ -1133,7 +1138,12 @@ BEGIN
             v_host_label_new := ' <empty>';
     END;
 
-    v_details_public := 'service changed from' || v_host_label_old || v_service_label_old || ' to' || v_host_label_new || v_service_label_new;
+    -- S-TICKET-016 (amended): the two service labels default to NULL on a miss and Oracle's
+    -- || concatenates NULL as '' -- a literal || here turned the whole text NULL (found live,
+    -- differential scenario tt__ticket_interface__change_owner_company, steps 07/08).
+    -- The host labels default to ' <empty>' and need no guard.
+    v_details_public := 'service changed from' || v_host_label_old || COALESCE(v_service_label_old, '')
+                        || ' to' || v_host_label_new || COALESCE(v_service_label_new, '');
 
     -- add a ticket "attribute change event" to the ticket
     INSERT INTO tt.event
@@ -1321,10 +1331,21 @@ AS $fn$
 DECLARE
     v_private_details varchar;
     v_time_difference numeric := 0;
+    v_hours_text varchar;
 BEGIN
     -- time difference is computed in hours (Oracle: 24 * (DATE - DATE) days)
     v_time_difference := round((extract(epoch FROM (p_valid_until - p_last_change)) / 3600)::numeric, 2);
-    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for ' || v_time_difference || ' hours)';
+    -- S-TICKET-021 (amended): Oracle renders round(x, 2) implicitly as the shortest NUMBER
+    -- text -- '2.5', '2', '.33' -- while round(numeric, 2)::text keeps scale 2 ('2.50',
+    -- '2.00', '0.33'); strip trailing zeros / point and the leading zero of a pure fraction
+    -- (found live, differential scenario tt__ticket_interface__status_engine).
+    v_hours_text := v_time_difference::text;
+    IF position('.' IN v_hours_text) > 0 THEN
+        v_hours_text := rtrim(rtrim(v_hours_text, '0'), '.');
+        v_hours_text := regexp_replace(v_hours_text, '^(-?)0\.', '\1.');
+        IF v_hours_text IN ('', '-') THEN v_hours_text := '0'; END IF;
+    END IF;
+    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for ' || v_hours_text || ' hours)';
     -- change the current status to status hot (3)
     CALL tt.ticket_interface_change_status(p_ticket_id, 3, NULL, NULL, v_private_details);
 END;
@@ -1588,9 +1609,13 @@ END;
 $fn$;
 
 -- ------------------------------------------------------------------------------------
--- change_notification (S-TICKET-027, Checklist dimension 1 finding #2 -- CORRECTLY
--- handled already, no divergence: the prefix is only concatenated inside an IS NOT NULL
--- guard, so there is no NULL||'x' collapsing-vs-not divergence to translate).
+-- change_notification (S-TICKET-027 amended, Checklist dimension 1 finding #2). The
+-- prefix is only concatenated inside an IS NOT NULL guard (no NULL||'x' accumulator
+-- problem), but in Oracle a VARCHAR2 argument of '' IS NULL, so the guard is FALSE for ''
+-- and -- with a non-NULL private text -- add_status_change_event HIDES the event. Found
+-- live (differential scenario tt__ticket_interface__change_attributes, step 17): the
+-- literal port wrote a PUBLIC event with the bare prefix. Boundary normalisation
+-- NULLIF(p, '') restores Oracle's contract, as change_customer_reference already does.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.ticket_interface_change_notification(
     p_ticket_id numeric,
@@ -1606,11 +1631,14 @@ DECLARE
     v_event_details_public varchar;
     v_event_details_private varchar;
 BEGIN
-    IF (p_change_text_public IS NOT NULL) THEN
+    -- S-TICKET-027 (amended): '' is NULL for Oracle's VARCHAR2 parameters -- NULLIF keeps
+    -- the guard FALSE for '' so the variable stays NULL (and the event is hidden when only
+    -- the private text is set), exactly as Oracle does.
+    IF (NULLIF(p_change_text_public, '') IS NOT NULL) THEN
         v_event_details_public := EVENT_DETAILS_PREFIX || p_change_text_public;
     END IF;
 
-    IF (p_change_text_private IS NOT NULL) THEN
+    IF (NULLIF(p_change_text_private, '') IS NOT NULL) THEN
         v_event_details_private := EVENT_DETAILS_PREFIX || p_change_text_private;
     END IF;
 
@@ -1636,6 +1664,11 @@ DECLARE
     old_summary_public varchar;
     v_event_id numeric;
     p_summary_rel_events_count numeric;
+    -- S-TICKET-029 (amended): a VARCHAR2 argument of '' IS NULL in Oracle, so the whole
+    -- body (change detection, '<empty>' text, stored value) must see NULL for ''. Found
+    -- live (differential scenario tt__ticket_interface__change_attributes, step 22).
+    v_summary_private varchar := NULLIF(p_summary_private, '');
+    v_summary_public  varchar := NULLIF(p_summary_public, '');
 BEGIN
     -- get the old summary -- S-TICKET-028 (site #41): STRICT, unhandled.
     SELECT summary_private, summary_public, summary_relevant_events_count
@@ -1643,31 +1676,31 @@ BEGIN
     FROM tt.ticket WHERE id = p_ticket_id;
 
     -- S-TICKET-029: standard three-valued !=-with-NULLs logic, identical in both engines.
-    IF ((old_summary_private != p_summary_private OR
+    IF ((old_summary_private != v_summary_private OR
          old_summary_private IS NULL OR
-         p_summary_private IS NULL) AND
-        NOT (old_summary_private IS NULL AND p_summary_private IS NULL)) THEN
+         v_summary_private IS NULL) AND
+        NOT (old_summary_private IS NULL AND v_summary_private IS NULL)) THEN
 
         CALL tt.ticket_interface__add_status_change_event(v_event_id, p_ticket_id, NULL, p_contact_id,
-            'private summary changed to:' || chr(10) || substr(COALESCE(p_summary_private, '<empty>'), 1, 3900), p_zitadel_contact_id);
+            'private summary changed to:' || chr(10) || substr(COALESCE(v_summary_private, '<empty>'), 1, 3900), p_zitadel_contact_id);
 
         UPDATE tt.ticket
-        SET summary_private = p_summary_private
+        SET summary_private = v_summary_private
         WHERE id = p_ticket_id;
     END IF;
 
-    IF ((old_summary_public != p_summary_public OR
+    IF ((old_summary_public != v_summary_public OR
          old_summary_public IS NULL OR
-         p_summary_public IS NULL) AND
-        NOT (old_summary_public IS NULL AND p_summary_public IS NULL)) THEN
+         v_summary_public IS NULL) AND
+        NOT (old_summary_public IS NULL AND v_summary_public IS NULL)) THEN
 
         -- ORACLE BUG (5 positional args against a 6-param signature) -- see file header.
         CALL tt.ticket_interface__add_status_change_event(v_event_id, p_ticket_id,
-            'public summary changed to:' || chr(10) || substr(COALESCE(p_summary_public, '<empty>'), 1, 3900), p_contact_id, p_zitadel_contact_id::varchar);
+            'public summary changed to:' || chr(10) || substr(COALESCE(v_summary_public, '<empty>'), 1, 3900), p_contact_id, p_zitadel_contact_id::varchar);
         p_summary_rel_events_count := 0;
 
         UPDATE tt.ticket
-        SET summary_public = p_summary_public,
+        SET summary_public = v_summary_public,
             summary_relevant_events_count = p_summary_rel_events_count,
             last_summary_update = statement_timestamp()
         WHERE id = p_ticket_id;
