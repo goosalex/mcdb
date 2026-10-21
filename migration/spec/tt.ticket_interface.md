@@ -365,7 +365,10 @@ scope is reduced by this front-matter bookkeeping detail.
   reading the full 11-line body. **There is no FUNCTION/PROCEDURE-COMMIT hazard for this
   routine** — it cannot transitively reach a `COMMIT` because it calls nothing at all
   (S-TICKET-041, closes this plan's own flagged question for this routine — mirrors
-  `TT.EVENT_INTERFACE.ticket_type_for_event_type`'s S-EVENT-034 finding).
+  `TT.EVENT_INTERFACE.ticket_type_for_event_type`'s S-EVENT-034 finding). A NULL
+  `p_ticket_id`/`p_event_id` REMOVES the corresponding placeholder (Oracle `REPLACE` with a
+  NULL replacement string deletes the occurrences) and leaves the rest of the text intact
+  (S-TICKET-037, amended 2026-10-21 after the live differential run).
 
 ### trigger_escalation (PUBLIC)
 
@@ -1190,8 +1193,24 @@ plan's SUMMARY.
   because it calls nothing at all** — no hazard exists for
   `get_next_recent_ticket`'s sibling `FUNCTION` either way (see S-TICKET-046 for the
   full trace of both `FUNCTION`s). Mirrors `TT.EVENT_INTERFACE.ticket_type_for_event_type`'s
-  identical finding (S-EVENT-034 in the sibling spec).
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1647-1657`
+  identical finding (S-EVENT-034 in the sibling spec). **Amended 2026-10-21 (live
+  differential run, scenario `tt__ticket_interface__pure_functions`): NULL-id semantics.**
+  The replacement operands are the NUMBER parameters themselves, implicitly converted
+  (`REPLACE(p_text, '##ticket_id##', p_ticket_id)`,
+  `ddl/src/pkgb/tt_ticket_interface.sql:1685-1686` in the 2026-10-20 export). Oracle's
+  `REPLACE(char, search, NULL)` REMOVES every occurrence of `search` and returns the rest of
+  `char` unchanged, so a NULL `p_event_id` turns `'e=##event_id## t=##ticket_id##'` into
+  `'e= t=<ticket id>'`, a NULL `p_ticket_id` into `'e=<event id> t='`, and a text without
+  placeholders is returned verbatim whatever the ids are (Oracle output 2026-10-21:
+  `e= t=954080`, `e=42 t=`, `nothing to replace`). Only a NULL `p_text` yields NULL. The
+  translation must therefore substitute the empty string for a NULL id
+  (`coalesce(p_id::varchar, '')`) — PostgreSQL's `replace(text, from, NULL)` returns NULL for
+  the WHOLE text, which would also NULL out texts that contain no placeholder at all. Both
+  callers (`add_history_event`'s wrapper in this package, lines 171-172, and
+  `TT.EVENT_INTERFACE.addevent_new`, `ddl/src/pkgb/tt_event_interface.sql:620-621`) pass
+  non-NULL ids today, so the correction changes no in-package call path; it restores the
+  function's own contract for direct callers.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1678-1689`
 
 ### S-TICKET-038
 
