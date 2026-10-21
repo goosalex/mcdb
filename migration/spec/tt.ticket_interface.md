@@ -1815,6 +1815,24 @@ plan's SUMMARY.
   `event_interface.addevent_new` — are reachable.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:418-423`, `ddl/src/pkgb/tt_ticket_interface.sql:558-574`
 
+### S-TICKET-066
+
+- **routines:** expire_status
+- **claim:** The private text `expire_status` hands to `change_status` is
+  `'Status changed to: hot (was ' || p_status_name || ' for ' || round(v_time_difference, 2)
+  || ' hours)'` with `v_time_difference := 24 * (p_valid_until - p_last_change)` (hours as a
+  NUMBER). The number is rendered by Oracle's implicit NUMBER-to-VARCHAR2 conversion inside
+  `||`: the shortest exact form — no trailing zeros and no decimal point for an integral
+  value, no leading zero for `|x| < 1` — so `round(24, 2)` renders `24`, `round(47.5, 2)`
+  renders `47.5`, `round(0.5, 2)` renders `.5`, `round(-0.25, 2)` renders `-.25`,
+  `round(0, 2)` renders `0` (all verified on the live Oracle 23.7 container, 2026-10-21).
+  Observed live through `TT.UTIL.check_ticket_status` (differential scenario
+  `tt__util__check_jobs`): `Status changed to: hot (was waiting for 24 hours)`, `(was
+  deferred for 48 hours)`, `(was waiting for signoff for 12 hours)`, `(was third party for
+  47 hours)`. A translation that renders a `numeric` with a fixed scale (`24.00 hours`) is
+  wrong.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1044-1045`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling

@@ -1338,7 +1338,8 @@ BEGIN
     -- S-TICKET-021 (amended): Oracle renders round(x, 2) implicitly as the shortest NUMBER
     -- text -- '2.5', '2', '.33' -- while round(numeric, 2)::text keeps scale 2 ('2.50',
     -- '2.00', '0.33'); strip trailing zeros / point and the leading zero of a pure fraction
-    -- (found live, differential scenario tt__ticket_interface__status_engine).
+    -- (found live, differential scenarios tt__ticket_interface__status_engine and
+    -- tt__util__check_jobs; the full rendering rule is S-TICKET-066: '24', '47.5', '.5', '-.25', '0').
     v_hours_text := v_time_difference::text;
     IF position('.' IN v_hours_text) > 0 THEN
         v_hours_text := rtrim(rtrim(v_hours_text, '0'), '.');

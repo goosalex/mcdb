@@ -1,0 +1,5 @@
+-06 notify mail local contact,,,,null
++06 notify mail local contact,,,1,null
+-958121,,
++958121,1,
++20001,958121,1,,958104,"sent to onsite.mail@diff.invalid (local contact email notification)\n[OS-958121]connection down\n\nThis is an automatically generated email to inform you that the following event has occurred:\n\nTicket:   958121\nEvent:    connection down\nHost:     diff-ev-host-mail\nDate:     20.10.2026 10:31 CEST\n\nIf you have access to the Open Systems Ticket System, you can view\nthe complete ticket using the following link:\n\nhttps://control.open.ch/mc/ticket/958121\n\n\nOpen Systems Mission Control\n\nE. support@open.ch\nT. +800 00 724 000\n   +41 58 100 11 11\n   1-800-724-2407 (US toll free) \nW. https://control.open.ch",

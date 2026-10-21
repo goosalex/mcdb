@@ -263,7 +263,7 @@ SELECT ok(
     'S-TICKET-016: change_service_host still wrote the new (nonexistent, but caller-supplied) service_id/host_id onto the ticket -- the local handlers only guard the LABEL lookups, not the final UPDATE'
 );
 
--- A-102 (S-TICKET-016 amended): the new-service label defaults to NULL on a miss and Oracle's
+-- A-029 (S-TICKET-016 amended): the new-service label defaults to NULL on a miss and Oracle's
 -- || concatenates NULL as '' -- the audit text ends in ' to <empty>' (old host, old service
 -- label, new host '<empty>', no new service label). Observed live (differential scenario
 -- tt__ticket_interface__change_owner_company, steps 07/08), where a literal port wrote NULL.
@@ -363,7 +363,7 @@ SELECT lives_ok(
     'S-TICKET-027: change_notification succeeds when BOTH text parameters are NULL -- the prefix is only concatenated inside an IS NOT NULL guard, so the local variable stays NULL (not NULL||''x''), correctly avoiding the empty string vs NULL divergence Pitfall 2 warns about'
 );
 
--- A-101 (S-TICKET-027 amended): in Oracle a VARCHAR2 argument of '' IS NULL, so the
+-- A-028 (S-TICKET-027 amended): in Oracle a VARCHAR2 argument of '' IS NULL, so the
 -- IS NOT NULL guard is FALSE for '' and -- with a non-NULL private text -- the event is
 -- HIDDEN by add_status_change_event (public_event = 0, details_public NULL). Observed live
 -- (differential scenario tt__ticket_interface__change_attributes, step 17).
@@ -407,7 +407,7 @@ SELECT is(
     'S-TICKET-029: summary_relevant_events_count was reset to 0 because the PUBLIC summary changed'
 );
 
--- A-101 (S-TICKET-029 amended): a VARCHAR2 argument of '' IS NULL in Oracle. The first
+-- A-028 (S-TICKET-029 amended): a VARCHAR2 argument of '' IS NULL in Oracle. The first
 -- call below therefore clears both summaries (the '<empty>' path); the second is a complete
 -- no-op (both old and new NULL). Observed live (differential scenario
 -- tt__ticket_interface__change_attributes, step 22), where a literal port wrote two
@@ -723,7 +723,7 @@ SELECT lives_ok(
     'S-TICKET-037: replace_id_placeholders substitutes both ##ticket_id## and ##event_id## placeholders with the caller-supplied numeric ids -- pure string substitution, no SELECT, no call to any other routine, no EXCEPTION block'
 );
 
--- TEST-AMENDMENTS.md A-201: NULL-id semantics (S-TICKET-037 amended 2026-10-21 from the
+-- TEST-AMENDMENTS.md A-024: NULL-id semantics (S-TICKET-037 amended 2026-10-21 from the
 -- live Oracle run). Oracle's REPLACE with a NULL replacement string removes the placeholder
 -- and keeps the rest of the text; a text without placeholders is returned verbatim.
 SELECT is(

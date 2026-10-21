@@ -137,10 +137,15 @@ $fn$;
 REVOKE ALL ON FUNCTION tt.osag_notify__get_notification_type_name(numeric) FROM PUBLIC;
 
 -- ------------------------------------------------------------------------------------
--- __compose_local_contact_message (S-NOTIFY-037-adjacent): pure string builder, no
--- SELECT INTO. TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD') has no direct
--- PostgreSQL equivalent (PostgreSQL exposes the abbreviation via to_char(..., 'TZ') on a
--- timestamptz); used here, same observable shape (CET/CEST).
+-- __compose_local_contact_message (S-NOTIFY-037-adjacent, S-NOTIFY-038): pure string
+-- builder, no SELECT INTO. TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD') -- the
+-- CURRENT Zurich abbreviation, CET or CEST -- has no to_char() equivalent: to_char(x, 'TZ')
+-- renders the SESSION zone of a timestamptz and is EMPTY for a timestamp without time zone,
+-- which is exactly what `clock_timestamp() AT TIME ZONE 'Europe/Zurich'` yields (found live:
+-- Oracle '20.10.2026 10:30 CEST', translation '20.10.2026 10:30 ', differential scenario
+-- tt__osag_notify__event_notify, 2026-10-21). pg_timezone_names.abbrev IS the current
+-- abbreviation of a named zone, DST-aware -- used here and at the two sibling sites
+-- (__compose_email_msg, __compose_sms_msg).
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION tt.osag_notify__compose_local_contact_message(
     p_ticket_id numeric,
@@ -157,7 +162,7 @@ BEGIN
            'Event:    ' || p_event_type_name || chr(10) ||
            'Host:     ' || p_host_name || chr(10) ||
            'Date:     ' || to_char(p_eventdate, 'DD.MM.YYYY HH24:MI') || ' ' ||
-           to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ') || chr(10) || chr(10) ||
+           (SELECT tzn.abbrev FROM pg_timezone_names tzn WHERE tzn.name = 'Europe/Zurich') || chr(10) || chr(10) ||
            'If you have access to the Open Systems Ticket System, you can view' || chr(10) ||
            'the complete ticket using the following link:' || chr(10) || chr(10) ||
            'https://control.open.ch/mc/ticket/' || p_ticket_id || chr(10) || chr(10) ||
@@ -201,7 +206,9 @@ DECLARE
     v_email_msg_template_id numeric;
     v_details varchar;
     v_emergency_text varchar := '';
-    v_tz varchar := to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ');
+    -- S-NOTIFY-038: Oracle's TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD'), the
+    -- current CET/CEST (see __compose_local_contact_message's header for why not to_char).
+    v_tz varchar := (SELECT tzn.abbrev FROM pg_timezone_names tzn WHERE tzn.name = 'Europe/Zurich');
 BEGIN
     -- S-NOTIFY-026 (site #14): STRICT, no local handler (Oracle has none). Transparent
     -- "no data found" message-parity shim (matching auth/osag_auth.sql, tt/util.sql):
@@ -330,7 +337,9 @@ DECLARE
     v_max_ticket_subject_size numeric;
     v_ticket_subject tt.ticket.subject%TYPE;
     v_emergency_text varchar := '';
-    v_tz varchar := to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ');
+    -- S-NOTIFY-038: Oracle's TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD'), the
+    -- current CET/CEST (see __compose_local_contact_message's header for why not to_char).
+    v_tz varchar := (SELECT tzn.abbrev FROM pg_timezone_names tzn WHERE tzn.name = 'Europe/Zurich');
 BEGIN
     -- S-NOTIFY-028 (site #16): STRICT, no local handler (Oracle has none). Same
     -- "no data found" message-parity shim as __compose_email_msg's #14/#15 (see there

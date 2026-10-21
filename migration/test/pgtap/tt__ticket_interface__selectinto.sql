@@ -36,7 +36,7 @@ INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_mess
     VALUES (907006, 'pilot si event type', 1, 1, 2);
 
 -- A host with ONE service; the second host2service row below is the point of the
--- S-TICKET-001 assertion (amended 2026-10-21, TEST-AMENDMENTS A-302): Oracle's unique
+-- S-TICKET-001 assertion (amended 2026-10-21, TEST-AMENDMENTS A-027): Oracle's unique
 -- index MSS.IDX_H2S_HOST_UN (ddl/generated/schema.oracle.sql:3700, confirmed live with
 -- ORA-00001) makes a host with two services impossible, so site #2 can never see
 -- TOO_MANY_ROWS. schema-fixes/29 adds the index to the PostgreSQL template.

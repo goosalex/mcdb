@@ -13,7 +13,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(50);
+SELECT plan(54);
 
 -------------------------------------------------------------------------------
 -- Fixtures. Reference rows reused from the template's masterdata (status ids
@@ -67,10 +67,17 @@ INSERT INTO tt.ticket_docs_page (id, ticket_id, page_id, page_version)
 INSERT INTO tt.ticket_rating (id, rating, event_id) VALUES (905023, 5, 905020);
 UPDATE tt.ticket SET customer_ticket_rating_id = 905023 WHERE id = 905017;
 
--- Ticket N (A-202): open, dedicated to S-TICKET-064 -- change_status with NULL caller
+-- Ticket N (A-025): open, dedicated to S-TICKET-064 -- change_status with NULL caller
 -- texts (the rate_ticket / merge_tickets call shape) must still write the status header.
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, host_id, last_status_change_date)
     VALUES (905030, 1, 2, 905001, 905002, 905005, now() - interval '1 hour');
+
+-- Tickets P/Q (A-032): waiting / third party, dedicated to S-TICKET-066 -- the hours in
+-- expire_status's private text are rendered the Oracle way (24.5, .5; never 24.50 or 0.5).
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905031, 1, 11, 905001, 905002, now() - interval '1 hour');
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905032, 1, 12, 905001, 905002, now() - interval '1 hour');
 
 -- Ticket F: no open ticket_flow entry -- the insert-new branch of updateTicketFlow.
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_status_change_date)
@@ -82,7 +89,7 @@ INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_
 INSERT INTO tt.ticket_flow (id, ticket_id, flow_in_date, flow_out_date)
     VALUES (905024, 905019, now() - interval '1 hour', NULL);
 
--- A-103 (S-TICKET-065): two resolved tickets for the recoverable-status guard's
+-- A-030 (S-TICKET-065): two resolved tickets for the recoverable-status guard's
 -- three-valued logic -- H has NO last public event (NULL -> ELSE branch), I has one
 -- (type 905006, not 30016 -> THEN branch).
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
@@ -245,7 +252,7 @@ SELECT is(
     'S-TICKET-021: expire_status left label_id untouched (NULL) -- proof that p_label_id=1 was silently ignored, matching the doc/body disagreement this clause records'
 );
 
--- A-103 (S-TICKET-064, S-TICKET-021 amended): the texts of the status-change event
+-- A-030 (S-TICKET-064, S-TICKET-021 amended): the texts of the status-change event
 -- expire_status triggers. Public: Oracle's || concatenates the NULL public details as ''
 -- (status lines + trailing newline, never NULL). Private: the elapsed hours are rendered
 -- Oracle-style -- the call above uses two DATE-truncated timestamps, so the difference is
@@ -263,7 +270,7 @@ SELECT ok(
     'S-TICKET-021: the elapsed hours in the private text are rendered the Oracle way (no trailing zeros / decimal point)'
 );
 
--- A-103 (S-TICKET-065): recoverable_status_id follows Oracle's three-valued guard --
+-- A-030 (S-TICKET-065): recoverable_status_id follows Oracle's three-valued guard --
 -- NULL last public event -> reset to NULL; a non-30016 last public event -> recorded.
 SELECT lives_ok(
     $$CALL tt.ticket_interface_change_status(905025, 2, 905002, 'reopen without last public event')$$,
@@ -422,7 +429,7 @@ SELECT lives_ok(
 );
 
 -------------------------------------------------------------------------------
--- change_status with NULL caller texts (S-TICKET-064; TEST-AMENDMENTS.md A-202).
+-- change_status with NULL caller texts (S-TICKET-064; TEST-AMENDMENTS.md A-025).
 -- Expected values are Oracle's live output of 2026-10-21: NULL || 'x' = 'x', so the
 -- status header keeps its trailing CHR(10) and the hot reason keeps its CHR(10).
 -------------------------------------------------------------------------------
@@ -453,6 +460,34 @@ SELECT is(
     (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905030 AND e.type_id = 101003),
     'Hot because: customer rating 1' || chr(10),
     'S-TICKET-064: the private text is the hot reason with a trailing newline when p_details_private is NULL -- not NULL'
+);
+
+-------------------------------------------------------------------------------
+-- expire_status hours rendering (S-TICKET-066; TEST-AMENDMENTS.md A-032). Expected
+-- values follow Oracle's implicit NUMBER-to-VARCHAR2 conversion of round(x, 2), verified
+-- live 2026-10-21: no trailing zeros, no leading zero below 1.
+-------------------------------------------------------------------------------
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_expire_status(905031, TIMESTAMP '2026-10-20 10:30:00', TIMESTAMP '2026-10-19 10:00:00', 11, 'waiting', NULL)$$,
+    'S-TICKET-066: expire_status succeeds for a waiting ticket expired 24.5 hours after its last status change'
+);
+
+SELECT is(
+    (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905031 AND e.type_id = 101003),
+    'Status changed to: hot (was waiting for 24.5 hours)',
+    'S-TICKET-066: the hours are rendered without trailing zeros (24.5, not 24.50)'
+);
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_expire_status(905032, TIMESTAMP '2026-10-20 10:30:00', TIMESTAMP '2026-10-20 10:00:00', 12, 'third party', NULL)$$,
+    'S-TICKET-066: expire_status succeeds for a third-party ticket expired half an hour after its last status change'
+);
+
+SELECT is(
+    (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905032 AND e.type_id = 101003),
+    'Status changed to: hot (was third party for .5 hours)',
+    'S-TICKET-066: a value below 1 is rendered without a leading zero (.5, as Oracle does)'
 );
 
 SELECT * FROM finish();

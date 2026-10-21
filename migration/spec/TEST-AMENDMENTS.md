@@ -767,9 +767,9 @@ in `CALL`) -- now a `DO` block with a variable.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
 
-## A-201 — `tt__ticket_interface__changes.sql`: replace_id_placeholders NULL-id assertions (S-TICKET-037)
-## A-301 — `tt__event_interface__spec.sql`: S-EVENT-001 asserted a path Oracle cannot take (two services per host)
-## A-101 — `tt__ticket_interface__changes.sql`: S-TICKET-027/029 empty-string inputs asserted Oracle's `''`≡NULL behaviour
+## A-024 — `tt__ticket_interface__changes.sql`: replace_id_placeholders NULL-id assertions (S-TICKET-037)
+## A-026 — `tt__event_interface__spec.sql`: S-EVENT-001 asserted a path Oracle cannot take (two services per host)
+## A-028 — `tt__ticket_interface__changes.sql`: S-TICKET-027/029 empty-string inputs asserted Oracle's `''`≡NULL behaviour
 
 | | |
 |---|---|
@@ -790,9 +790,9 @@ encode exactly the Oracle outputs; nothing previously asserted changed. They are
 the translation as committed (`replace(text, from, NULL)` is NULL in PostgreSQL) and go GREEN
 with the `coalesce(p_id::varchar, '')` correction in the following translation commit.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-201 three replace_id_placeholders NULL-id assertions from the live Oracle run; test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-024 three replace_id_placeholders NULL-id assertions from the live Oracle run; test-only commit`
 
-## A-202 — `tt__ticket_interface__lifecycle.sql`: change_status NULL-text assertions (S-TICKET-064)
+## A-025 — `tt__ticket_interface__lifecycle.sql`: change_status NULL-text assertions (S-TICKET-064)
 | **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
 | **File** | `migration/test/pgtap/tt__event_interface__spec.sql` |
 | **Assertions affected** | 1 replaced (the S-EVENT-001 `throws_ok` P0003), `plan(20)` unchanged |
@@ -812,9 +812,9 @@ second `host2service` row for one host raises `23505` -- which is RED until
 asserted because the clause itself changed; it does not weaken a test to match a translation
 (the translation is untouched by it).
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-301 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-026 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`
 
-## A-302 — `tt__ticket_interface__selectinto.sql`: S-TICKET-001 asserted the same impossible two-services path
+## A-027 — `tt__ticket_interface__selectinto.sql`: S-TICKET-001 asserted the same impossible two-services path
 | **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
 | **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
 | **Assertions affected** | 1 description corrected (the `change_notification(906014, '', NULL, ...)` `lives_ok`), 9 added; `plan(70)` -> `plan(79)` |
@@ -841,9 +841,9 @@ text, and the second identical call being a no-op (event counts). Nothing previo
 asserted was weakened; the file was RED against the pre-fix translation (5 failures: tests 39, 40, 45, 46, 47) and
 green after the `NULLIF` boundary normalisation landed in the translation commit.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-101 S-TICKET-027/029 empty-string inputs; test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-028 S-TICKET-027/029 empty-string inputs; test-only commit`
 
-## A-102 — `tt__ticket_interface__changes.sql`: S-TICKET-016 audit text with a NULL service label
+## A-029 — `tt__ticket_interface__changes.sql`: S-TICKET-016 audit text with a NULL service label
 
 | | |
 |---|---|
@@ -867,12 +867,12 @@ hot reason on a dedicated fixture ticket and encode Oracle's texts verbatim; not
 previously asserted changed. They are RED against the translation as committed and go GREEN
 with the `coalesce(.., '')` correction in the following translation commit.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-202 five change_status NULL-text assertions and fixture ticket 905030 from the live Oracle run; test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-025 five change_status NULL-text assertions and fixture ticket 905030 from the live Oracle run; test-only commit`
 | **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
 | **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
 | **Assertions affected** | 1 replaced (the S-TICKET-001 `throws_ok` P0003), `plan(20)` unchanged |
 
-Same fact as A-301, same table: the fixture gave host 907003 two `mss.host2service` rows to
+Same fact as A-026, same table: the fixture gave host 907003 two `mss.host2service` rows to
 make `newticket_new`'s site #2 raise `TOO_MANY_ROWS`. Oracle refuses that fixture
 (`MSS.IDX_H2S_HOST_UN`, `ddl/generated/schema.oracle.sql:3700`), and once
 `schema-fixes/29_host2service_unique_fixes.sql` is loaded the second `INSERT` fails on
@@ -883,7 +883,7 @@ same day). The assertion now checks the unique violation (`23505`) on the second
 second service row (907005) stays as a fixture, only its `host2service` mapping moved into
 the `throws_ok`. The translation is untouched by this amendment.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-302 S-TICKET-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible at site #2); test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-027 S-TICKET-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible at site #2); test-only commit`
 | **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
 | **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
 | **Assertions affected** | 0 changed, 1 added; `plan(79)` -> `plan(80)` |
@@ -904,9 +904,11 @@ One `is()` on the 100003 event of ticket 906010 pins the Oracle text
 against the pre-fix translation (have: NULL), green after the `COALESCE(label, '')`
 boundary normalisation landed in the translation commit.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-102 S-TICKET-016 audit text with NULL service label; test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-029 S-TICKET-016 audit text with NULL service label; test-only commit`
 
-## A-103 — `tt__ticket_interface__lifecycle.sql`: S-TICKET-064/065 and the S-TICKET-021 number rendering
+## A-030 — `tt__ticket_interface__lifecycle.sql`: S-TICKET-064/065 and the S-TICKET-021 number rendering
+
+## A-031 — `tt__osag_notify__spec.sql`: Zurich time-zone abbreviation in composed messages (S-NOTIFY-038)
 
 | | |
 |---|---|
@@ -933,4 +935,65 @@ produce), and four on two new resolved fixture tickets re-opened by `change_stat
 without a last public event (recoverable NULL), I with one (recoverable 101). RED against
 the pre-fix translation (3 failures: tests 20, 21, 23), green after the translation commit.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-103 S-TICKET-064/065 and S-TICKET-021 rendering; test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-030 S-TICKET-064/065 and S-TICKET-021 rendering; test-only commit`
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__osag_notify__spec.sql` |
+| **Assertions affected** | 0 changed; 2 added (`plan(10)` -> `plan(12)`) |
+
+The live Oracle-vs-PostgreSQL run of scenario `tt__osag_notify__event_notify` (2026-10-21,
+Oracle 23.7 container `mcdb-ora`) showed the 20003 "sms notification" event text ending in
+`... at 20.10.2026 10:30 CEST - Open Systems Mission Control` on Oracle and in
+`... at 20.10.2026 10:30  - Open Systems Mission Control` (two spaces, empty abbreviation) on
+PostgreSQL. Oracle appends `TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD')` after every
+rendered date (`ddl/src/pkgb/tt_osag_notify.sql:1178, 1183, 1196, 1269, 1272, 1398`); the
+translation used `to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ')`, which is empty
+because `AT TIME ZONE` yields a `timestamp without time zone`. No spec clause named the
+abbreviation; S-NOTIFY-038 was added first, citing the Oracle lines. The two `matches()`
+assertions added here encode Oracle's observed rendering (`CES?T` admits the winter abbreviation);
+nothing previously asserted changed. They are RED against the translation as committed and go
+GREEN with the `pg_timezone_names` lookup in the following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__osag_notify__spec.sql reason:A-031 two S-NOTIFY-038 time-zone abbreviation assertions from the live Oracle run; test-only commit`
+
+## A-032 — `tt__ticket_interface__lifecycle.sql`: expire_status hours rendering (S-TICKET-066)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed; 4 added (`plan(44)` -> `plan(48)`) plus two fixture tickets (905031, 905032) |
+
+The live Oracle-vs-PostgreSQL run of scenario `tt__util__check_jobs` (2026-10-21, Oracle 23.7
+container `mcdb-ora`) showed the private text of every status-expiry event written through
+`TT.UTIL.check_ticket_status` -> `expire_status` as `Status changed to: hot (was waiting for 24
+hours)` on Oracle and `... for 24.00 hours)` on PostgreSQL. Oracle concatenates
+`round(v_time_difference, 2)` with its implicit NUMBER-to-VARCHAR2 conversion
+(`ddl/src/pkgb/tt_ticket_interface.sql:1044-1045`): no trailing zeros, no leading zero below 1
+(`24`, `47.5`, `.5`, verified live); the translation concatenated a `numeric` of scale 2. No spec
+clause named the rendering; S-TICKET-066 was added first. The four assertions added here call
+`expire_status` with fixed timestamps (24.5 h and 0.5 h) on two dedicated fixture tickets and
+encode Oracle's rendering; nothing previously asserted changed. They are RED against the
+translation as committed and go GREEN with the `trim_scale` + leading-zero correction in the
+following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-032 four S-TICKET-066 expire_status hours-rendering assertions and fixture tickets 905031/905032 from the live Oracle run; test-only commit`
+
+## A-023 — merge commits that recount `plan()` after parallel agent branches
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | orchestrator, while merging the four differential-scenario agent branches |
+| **Files** | `migration/test/pgtap/tt__ticket_interface__changes.sql`, `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed; only `SELECT plan(N)` recomputed from the union of both branches' assertions |
+
+Two agents extended the same pgTAP files on parallel branches (A-024/A-025 and A-028..A-030,
+then A-032). Each branch's `plan()` was right for itself; the merge needed the sum. The merge
+commits below therefore touch test files AND the translation (conflict resolution on the
+same `change_status_event_id_out` site, fixed identically by three agents) in one commit --
+the shape provenance_lint forbids. Nothing asserted changed; `plan()` is the only edit, and
+the merged suites run green (`tt.ticket_interface` 203/203 after the last merge).
+
+`commit:3900b1fa689cbfaff330893ef8c45d25d242e2e0 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-023 merge plan() recount (73+10 -> 83), test content from both branches unchanged`
+`commit:3900b1fa689cbfaff330893ef8c45d25d242e2e0 file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-023 merge plan() recount (44+6 -> 50), test content from both branches unchanged`

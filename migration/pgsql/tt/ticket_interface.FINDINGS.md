@@ -528,3 +528,18 @@ Fixed with `coalesce(p_details_public, '')`, and the same for `p_details_private
 `'Hot because: ' || p_hot_reason || chr(10) || p_details_private` branch. Spec: S-TICKET-064
 (new); tests: `tt__ticket_interface__nullconcat.sql` (new, 6 assertions, RED 2/6 before the
 fix). Not a deviation -- the translation now does what Oracle does.
+
+## Live finding (differential harness, 2026-10-21): `expire_status` rendered the hours as `24.00` (S-TICKET-066)
+
+Scenario `tt__util__check_jobs` (Oracle 23.7 container `mcdb-ora`) drove
+`TT.UTIL.check_ticket_status` over four expired tickets. Oracle's private status-change text:
+`Status changed to: hot (was waiting for 24 hours)` (and `48`, `12`, `47`); the translation's:
+`... for 24.00 hours)`. Oracle concatenates `round(v_time_difference, 2)` through its implicit
+NUMBER-to-VARCHAR2 conversion (`ddl/src/pkgb/tt_ticket_interface.sql:1044-1045`) -- shortest
+exact form, verified live: `24`, `47.5`, `.5`, `-.25`, `0`. The translation concatenated the
+`numeric` returned by `round(..., 2)`, which keeps scale 2. Fixed in
+`tt.ticket_interface_expire_status` with `regexp_replace(trim_scale(x)::text, '^(-?)0\.', '\1.')`
+(`trim_scale` removes the trailing zeros, the regexp the leading zero below 1, exactly Oracle's
+rendering for every value listed). Spec clause S-TICKET-066 and test amendment A-032 (four
+assertions: `24.5 hours`, `.5 hours`) were added first. No other `round(...)` is concatenated
+into a text in this package (grep `round(` -> this one site).

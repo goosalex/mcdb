@@ -14,7 +14,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(10);
+SELECT plan(12);
 
 -- Fixture: a ticket + event pair with no host/service/company (all NULL), so the
 -- suppression gate and the company-unit-resolution branch (S-NOTIFY-007) are skipped
@@ -106,6 +106,24 @@ SELECT lives_ok(
 SELECT ok(
     (SELECT count(*) FROM osag.plog_stub_log WHERE message LIKE '%deletion of notifications for ticket%failed%') >= 1,
     'S-NOTIFY-021: delete_ticket_notifications logs via plog.warning when it swallows an internal failure'
+);
+
+-- S-NOTIFY-038 (A-031, TEST-AMENDMENTS.md): every rendered date is followed by the CURRENT
+-- Zurich abbreviation (CET or CEST), never by an empty string. Oracle rendered the fixed
+-- event date 2026-10-20 10:30 as '20.10.2026 10:30 CEST' on the live container
+-- (tt__osag_notify__event_notify differential scenario); the regexp admits CET for a run in
+-- winter. The SMS template 1 is master data on both engines.
+SELECT matches(
+    tt.osag_notify__compose_sms_msg(900103, 'pilot-host', 900102, 'pilot event type',
+                                    TIMESTAMP '2026-10-20 10:30:00', TIMESTAMP '2026-10-21 10:30:00', 'subj', 0::smallint),
+    '^Ticket 900103 - pilot event type on pilot-host at 20\.10\.2026 10:30 CES?T - Open Systems Mission Control$',
+    'S-NOTIFY-038: compose_sms_msg renders the event date followed by the current Zurich abbreviation (CET/CEST)'
+);
+
+SELECT matches(
+    tt.osag_notify__compose_local_contact_message(900103, 'pilot event type', 'pilot-host', TIMESTAMP '2026-10-20 10:30:00'),
+    'Date:     20\.10\.2026 10:30 CES?T\n',
+    'S-NOTIFY-038: compose_local_contact_message renders its Date line with the current Zurich abbreviation (CET/CEST)'
 );
 
 SELECT * FROM finish();

@@ -87,7 +87,7 @@ Every site carries a `-- S-EVENT-0NN (site #N)` clause-ID comment matching the s
   services cannot exist and no `TOO_MANY_ROWS` can reach the `WHEN OTHERS THEN RAISE` arm;
   the arm is kept for every other error. The index was missing from the template
   (`migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it); spec
-  S-EVENT-001 amended, pgTAP assertion re-pointed (TEST-AMENDMENTS A-301).
+  S-EVENT-001 amended, pgTAP assertion re-pointed (TEST-AMENDMENTS A-026).
 - **1 `STRICT + LIMIT 1 (ROWNUM=1 mechanic)` site** (S-EVENT-019) -- Oracle's trailing
   `ROWNUM=1` structurally caps the query at one row before `SELECT INTO` can ever see more
   than one; translated as a trailing `LIMIT 1` (not merely dropped), so PL/pgSQL's own
@@ -229,7 +229,7 @@ EXACT fixture INSERT statements and `CALL`s the pgTAP spec file itself uses (rea
 | S-EVENT-044 `promote_event` (valid id) | `demoted` flips 1->0 | `demoted = 0` | YES |
 | S-EVENT-044 `promote_event` (bad id) | raises, SQLSTATE P0002 | `ERROR: no data found` | YES |
 | S-EVENT-033 `moveevent` (bad new ticket) | swallows, logs "new ticket does not exist" | logged, count >= 1 | YES |
-| S-EVENT-001 `newevent_new` (2-service host) | raises, SQLSTATE P0003 | `ERROR: query returned more than one row` | YES at the time -- superseded 2026-10-21: Oracle refuses the fixture itself (`ORA-00001`, `MSS.IDX_H2S_HOST_UN`); the assertion now checks `23505` on the second `host2service` row (A-301) |
+| S-EVENT-001 `newevent_new` (2-service host) | raises, SQLSTATE P0003 | `ERROR: query returned more than one row` | YES at the time -- superseded 2026-10-21: Oracle refuses the fixture itself (`ORA-00001`, `MSS.IDX_H2S_HOST_UN`); the assertion now checks `23505` on the second `host2service` row (A-026) |
 | S-EVENT-003 `newevent_new` (inactive host) | no ticket created | `count = 0` | YES |
 | S-EVENT-021 `addevent_new` (closed ticket) | raises, message contains "closed" | `ERROR: Ticket with id 900608 is closed/deleted` | YES |
 | S-EVENT-019 `addevent_new` (merged, 2 candidates) | lives (no TOO_MANY_ROWS) | swallowed unrelated forward-ref error, no TOO_MANY_ROWS | YES |

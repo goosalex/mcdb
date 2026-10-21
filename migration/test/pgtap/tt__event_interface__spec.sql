@@ -115,7 +115,7 @@ SELECT ok(
 );
 
 -------------------------------------------------------------------------------
--- S-EVENT-001 (amended 2026-10-21, TEST-AMENDMENTS A-301): newevent_new's host2service
+-- S-EVENT-001 (amended 2026-10-21, TEST-AMENDMENTS A-026): newevent_new's host2service
 -- join can never see TOO_MANY_ROWS -- the Oracle export carries the unique index
 -- MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID) (ddl/generated/schema.oracle.sql:3700),
 -- so a host is mapped to AT MOST one service (confirmed live: ORA-00001 on the second
