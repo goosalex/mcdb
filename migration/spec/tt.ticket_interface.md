@@ -593,16 +593,23 @@ plan's SUMMARY.
   WHERE h.id = p_host_id` (line 86, `HOST_PK` — `TOO_MANY_ROWS` impossible, zero rows
   reachable for a bad `p_host_id`) immediately followed by
   `SELECT h2s.service_id INTO v_mss_service_id FROM mss.host2service h2s WHERE h2s.host_id
-  = p_host_id` (line 89). **`mss.host2service`'s primary key is `(HOST_ID, SERVICE_ID)`**
-  (`ddl/generated/schema.oracle.sql:81`) — `HOST_ID` alone is NOT unique, so a host mapped
-  to more than one service makes THIS site's plain (non-outer-joined) `SELECT INTO`
-  genuinely reachable for `TOO_MANY_ROWS` — the identical structural hazard already
-  documented for the same table in `migration/spec/tt.event_interface.md` (S-EVENT-001)
-  and `migration/spec/tt.osag_notify.md` (S-NOTIFY-003). **`newticket_new` has NO
-  procedure-level `EXCEPTION` block at all** (confirmed reading the full 238-line body,
-  `ddl/src/pkgb/tt_ticket_interface.sql:35-272`), so both a zero-row and a multi-row
-  failure at either site propagate FULLY unhandled to whatever calls `newticket_new`.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:35, 85-91, 272`
+  = p_host_id` (line 89). **Amended 2026-10-21: `TOO_MANY_ROWS` at site #2 is structurally
+  IMPOSSIBLE.** The original text derived a multi-row hazard from `mss.host2service`'s
+  primary key `(HOST_ID, SERVICE_ID)` alone (`ddl/generated/schema.oracle.sql:81`); the same
+  export also carries `CREATE UNIQUE INDEX MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID)`
+  (`ddl/generated/schema.oracle.sql:3700`, created by `changes/changelog-2.archive.sql:1884`),
+  so a host is mapped to AT MOST ONE service — confirmed live against the Oracle container
+  (`ORA-00001: unique constraint (MSS.IDX_H2S_HOST_UN) violated` on a second row, scenario
+  `tt__event_interface__newevent`). Zero rows (a host with no `host2service` row) remains
+  reachable at site #2 and is the hazard that matters. The same correction applies to
+  `migration/spec/tt.event_interface.md` S-EVENT-001 (amended the same day);
+  `migration/spec/tt.osag_notify.md` S-NOTIFY-003 rests on the same assumption and should be
+  re-read. The PostgreSQL template lacked the index (not in the ora2pg output) —
+  `migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it. **`newticket_new`
+  has NO procedure-level `EXCEPTION` block at all** (confirmed reading the full 238-line
+  body, `ddl/src/pkgb/tt_ticket_interface.sql:35-272`), so a zero-row failure at either
+  site propagates FULLY unhandled to whatever calls `newticket_new`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:35, 85-91, 272`, `ddl/generated/schema.oracle.sql:81, 3700`
 
 ### S-TICKET-002
 
