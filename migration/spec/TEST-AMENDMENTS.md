@@ -766,3 +766,26 @@ assertions, and `change_worker` was called with a sub-select as argument (`0A000
 in `CALL`) -- now a `DO` block with a variable.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
+
+## A-201 — `tt__ticket_interface__changes.sql`: replace_id_placeholders NULL-id assertions (S-TICKET-037)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 0 changed; 3 added (`plan(70)` -> `plan(73)`) |
+
+The live Oracle-vs-PostgreSQL run of scenario `tt__ticket_interface__pure_functions`
+(2026-10-21, Oracle 23.7 container `mcdb-ora`) showed `replace_id_placeholders` returning
+NULL on PostgreSQL for every call with a NULL `p_ticket_id` or `p_event_id` — including a
+text with no placeholder at all — where Oracle returns the text with the placeholder removed
+(`e= t=954080`, `e=42 t=`, `nothing to replace`). The spec clause S-TICKET-037 described the
+routine as "pure string substitution" without naming Oracle's `REPLACE(char, search, NULL)`
+semantics (delete the occurrences); it was amended first, citing the Oracle body
+(`ddl/src/pkgb/tt_ticket_interface.sql:1685-1686`). The three `is()` assertions added here
+encode exactly the Oracle outputs; nothing previously asserted changed. They are RED against
+the translation as committed (`replace(text, from, NULL)` is NULL in PostgreSQL) and go GREEN
+with the `coalesce(p_id::varchar, '')` correction in the following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-201 three replace_id_placeholders NULL-id assertions from the live Oracle run; test-only commit`

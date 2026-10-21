@@ -21,7 +21,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(70);
+SELECT plan(73);
 
 -------------------------------------------------------------------------------
 -- Fixtures (906xxx id range, disjoint from lifecycle.sql's 905xxx and the
@@ -644,6 +644,27 @@ SELECT lives_ok(
     $do10$;
     $test10$,
     'S-TICKET-037: replace_id_placeholders substitutes both ##ticket_id## and ##event_id## placeholders with the caller-supplied numeric ids -- pure string substitution, no SELECT, no call to any other routine, no EXCEPTION block'
+);
+
+-- TEST-AMENDMENTS.md A-201: NULL-id semantics (S-TICKET-037 amended 2026-10-21 from the
+-- live Oracle run). Oracle's REPLACE with a NULL replacement string removes the placeholder
+-- and keeps the rest of the text; a text without placeholders is returned verbatim.
+SELECT is(
+    tt.ticket_interface_replace_id_placeholders('e=##event_id## t=##ticket_id##', 954080, NULL),
+    'e= t=954080',
+    'S-TICKET-037: a NULL p_event_id removes the ##event_id## placeholder and leaves the rest of the text intact (Oracle REPLACE with a NULL replacement deletes the occurrences)'
+);
+
+SELECT is(
+    tt.ticket_interface_replace_id_placeholders('e=##event_id## t=##ticket_id##', NULL, 42),
+    'e=42 t=',
+    'S-TICKET-037: a NULL p_ticket_id removes the ##ticket_id## placeholder and leaves the ##event_id## substitution intact'
+);
+
+SELECT is(
+    tt.ticket_interface_replace_id_placeholders('nothing to replace', NULL, NULL),
+    'nothing to replace',
+    'S-TICKET-037: a text without placeholders is returned verbatim even when both ids are NULL (never collapsed to NULL)'
 );
 
 SELECT * FROM finish();
