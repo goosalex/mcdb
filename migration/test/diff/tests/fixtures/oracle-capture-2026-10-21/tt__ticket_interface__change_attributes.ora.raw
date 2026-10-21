@@ -1,0 +1,61 @@
+## probe 1 steps (ok in s, error code for failed steps -- no quotes in labels, PROMPT strips them)
+"STEP","CODE","MSG","S"
+"01 customer_reference CR-1",,,"ok"
+"02 customer_reference NULL",,,"ok"
+"03 customer_reference empty string",,,"ok"
+"04 partner_reference PR-1",,,"ok"
+"05 partner_reference NULL",,,"ok"
+"06 label2 null->1",,,"ok"
+"07 label4 1->3",,,"ok"
+"08 label4 3->null",,,"ok"
+"09 label4 null->4",,,"ok"
+"10 label4 nonexistent label","100","ORA-01403: no data found",
+"11 label2 nonexistent ticket",,,"ok"
+"12 label4 nonexistent ticket","100","ORA-01403: no data found",
+"13 always_visible 1",,,"ok"
+"14 always_visible 0 with zitadel",,,"ok"
+"15 notification pub and priv",,,"ok"
+"16 notification priv only",,,"ok"
+"17 notification empty pub, priv",,,"ok"
+"18 summary private only",,,"ok"
+"19 summary public only",,,"ok"
+"20 summary both NULL",,,"ok"
+"21 summary both NULL again no-op",,,"ok"
+"22 summary both empty string",,,"ok"
+"23 customer_reference nonexistent ticket",,,"ok"
+## probe 2 ticket rows after all steps (references, label, visibility, summaries)
+"ID","CUSTOMER_REFERENCE","PARTNER_REFERENCE","LABEL_ID","ALWAYS_VISIBLE","SUMMARY_PRIVATE","SUMMARY_PUBLIC","SUMMARY_RELEVANT_EVENTS_COUNT","HAS_LAST_SUMMARY_UPDATE"
+952010,,,4,0,,,0,0
+952011,,,2,0,,,0,1
+## probe 3 audit events written (type, visibility, actor, texts; company_id is probed separately)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","CONTACT_ZITADEL_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+952010,100003,1,952002,,"Notification settings changed
+added email","Notification settings changed
+added sms"
+952010,100003,1,952002,,"customer reference changed to <empty>",
+952010,100003,1,952002,,"customer reference changed to <empty>",
+952010,100003,1,952002,,"customer reference changed to CR-1",
+952010,100003,1,952002,,"ticket changed to always visible",
+952010,100003,1,952002,,"ticket changed to not always visible","952777"
+952010,100003,0,952002,,,"Notification settings changed
+empty public"
+952010,100003,0,952002,,,"Notification settings changed
+removed sms"
+952010,100003,0,952002,,,"Ticket label SOC added"
+952010,100003,0,952002,,,"Ticket label changed to Process (was: Dispatch)"
+952010,100003,0,952002,,,"Ticket label removed (was: Process)"
+952010,100003,0,952002,,,"partner reference changed to <empty>"
+952010,100003,0,952002,,,"partner reference changed to PR-1"
+952011,100003,1,952002,,"public summary changed to:
+<empty>",
+952011,100003,1,952002,,"public summary changed to:
+new public",
+952011,100003,0,952002,,,"private summary changed to:
+<empty>"
+952011,100003,0,952002,,,"private summary changed to:
+new private"
+## probe 4 event company_id null or set (S-TICKET-059 correction of the add_status_change_event cust_id bug)
+"TICKET_ID","TYPE_ID","EVENT_COMPANY","N_EVENTS"
+952010,100003,"null",10
+952010,100003,"set",3
+952011,100003,"null",4

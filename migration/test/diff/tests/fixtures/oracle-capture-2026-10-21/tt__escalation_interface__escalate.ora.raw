@@ -1,0 +1,44 @@
+## probe 1 steps (ok in s, error code for failed steps -- no quotes in labels, PROMPT strips them)
+"STEP","CODE","MSG","S"
+"01 os active host status 0",,,"ok"
+"02 os already status 10",,,"ok"
+"03 os pikett failed status 11",,,"ok"
+"04 os no host",,,"ok"
+"05 os inactive host",,,"ok"
+"06 os customer escalation status 20",,,"ok"
+"07 os dangling host id",,,"ok"
+"08 os nonexistent event",,,"ok"
+"11 cust active host status 0",,,"ok"
+"12 cust status 20 blocks",,,"ok"
+"13 cust status 10 blocks",,,"ok"
+"14 cust inactive host",,,"ok"
+"15 cust no host",,,"ok"
+"16 cust nonexistent event",,,"ok"
+"21 nop nonexistent event",,,"ok"
+"31 clear status 20",,,"ok"
+"32 clear status 10 untouched",,,"ok"
+"33 clear nonexistent ticket",,,"ok"
+## probe 2 ticket rows after the calls (escalation status, date flags, addevent_new rollups)
+"ID","SUBJECT","STATUS_ID","ESCALATION_STATUS_ID","LAST_ESCALATION_DATE_STATE","HAS_LAST_PUBLIC_EVENT","SUMMARY_RELEVANT_EVENTS_COUNT","TODO_RELEVANT_EVENTS_COUNT","FAST_RESOLVABLE"
+956711,"os active host status 0",2,10,"set",1,0,0,0
+956712,"os already status 10",2,10,"null",0,0,0,0
+956713,"os pikett failed status 11",2,11,"null",0,0,0,0
+956714,"os no host",2,10,"set",1,0,0,0
+956715,"os inactive host",2,0,"null",0,0,0,0
+956716,"os customer escalation status 20",2,10,"set",1,0,0,0
+956717,"os dangling host id",2,10,"set",1,0,0,0
+956721,"cust active host status 0",2,10,"set",1,0,0,0
+956722,"cust status 20 blocks",2,20,"null",0,0,0,0
+956723,"cust status 10 blocks",2,10,"null",0,0,0,0
+956724,"cust inactive host",2,0,"null",0,0,0,0
+956725,"cust no host",2,10,"set",1,0,0,0
+956731,"clear status 20",2,0,"fixture",0,0,0,0
+956732,"clear status 10 untouched",2,10,"fixture",0,0,0,0
+## probe 3 events written by the routines (fixture events 9568xx excluded)
+"TICKET_ID","TYPE_ID","HOST_ID","COMPANY_ID","PUBLIC_EVENT","CONTACT_ID","PINNED","DETAILS_PUBLIC","DETAILS_PRIVATE"
+956711,60001,956705,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_os. Caused by event 956811"
+956714,60001,,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_os. Caused by event 956814"
+956716,60001,956705,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_os. Caused by event 956816"
+956717,60001,,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_os. Caused by event 956817"
+956721,60001,956705,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_customer. Caused by event 956821"
+956725,60001,,956701,1,,0,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_customer. Caused by event 956825"

@@ -1,0 +1,71 @@
+## probe 1 steps (closed fixture tickets in n, status histogram in s, error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"00 initial",,,0,"hot=1 resolved=4 waiting=12"
+"01 check_resolved_tickets",,,1,"hot=1 resolved=3 waiting=12"
+"02 usvu waiting default 20d",,,1,"hot=1 resolved=3 waiting=12"
+"03 usvu emergency default 4h",,,1,"hot=1 resolved=3 waiting=12"
+"04 usvu third party explicit 10d",,,1,"hot=1 resolved=3 waiting=12"
+"05 usvu waiting explicit 90d over cap",,,1,"hot=1 resolved=3 waiting=12"
+"06 usvu emergency explicit 2d over cap",,,1,"hot=1 resolved=3 waiting=12"
+"07 usvu deferred no-op",,,1,"hot=1 resolved=3 waiting=12"
+"08 usvu open resets to null",,,1,"hot=1 resolved=3 waiting=12"
+"09 usvu waiting explicit past date",,,1,"hot=1 resolved=3 waiting=12"
+"10 usvu nonexistent ticket","100","ORA-01403: no data found",,
+"11 check_ticket_status",,,1,"hot=5 resolved=3 waiting=8"
+"12 check_dnids_tickets_to_resolve",,,1,"hot=4 resolved=6 waiting=8"
+## probe 2 ticket rows (dates as flags and windows, never as absolute values)
+"ID","STATUS_ID","TYPE_ID","HAS_CLOSE_DATE","HAS_VALID_UNTIL","VALID_UNTIL_IN_4H","VALID_UNTIL_IN_10D","VALID_UNTIL_IN_20D","HAS_LAST_DEFERRAL","LAST_DEFERRAL_FUTURE","HAS_LAST_RESOLVED"
+958310,102,1,1,0,0,0,0,0,0,1
+958311,101,1,0,0,0,0,0,0,0,1
+958312,101,1,0,0,0,0,0,0,0,0
+958313,3,1,0,0,0,0,0,0,0,0
+958314,3,1,0,0,0,0,0,0,0,0
+958315,11,1,0,1,0,0,0,0,0,0
+958316,3,1,0,0,0,0,0,0,0,0
+958317,3,1,0,0,0,0,0,0,0,0
+958320,101,5,0,0,0,0,0,0,0,1
+958321,101,5,0,0,0,0,0,0,0,1
+958322,2,5,0,0,0,0,0,0,0,0
+958323,2,1,0,0,0,0,0,0,0,0
+958324,101,5,0,0,0,0,0,0,0,1
+958325,101,5,0,0,0,0,0,0,0,1
+958340,11,1,0,1,0,0,1,0,0,0
+958341,11,1,0,1,1,0,0,0,0,0
+958342,12,1,0,1,0,1,0,1,1,0
+958343,11,1,0,1,0,0,1,1,1,0
+958344,11,1,0,1,1,0,0,1,1,0
+958345,60,1,0,1,0,0,0,0,0,0
+958346,2,1,0,0,0,0,0,1,0,0
+958347,11,1,0,1,0,0,1,1,0,0
+## probe 3 events written by the routines (the fixture events 958330-958335 excluded)
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","DETAILS_PUBLIC","DETAILS_PRIVATE"
+100003,958310,1,"Notification settings changed
+  -deleted email notification for Util Requester
+",
+101102,958310,1,"New status: closed
+Previous status: resolved
+ticket resolved for more than 2 weeks, closing it automatically",
+101003,958313,1,"New status: hot
+Previous status: waiting
+","Status changed to: hot (was waiting for 24 hours)"
+101003,958314,1,"New status: hot
+Previous status: deferred
+","Status changed to: hot (was deferred for 48 hours)"
+101003,958316,1,"New status: hot
+Previous status: waiting for signoff
+","Status changed to: hot (was waiting for signoff for 12 hours)"
+101003,958317,1,"New status: hot
+Previous status: third party
+","Status changed to: hot (was third party for 47 hours)"
+101101,958320,1,"New status: resolved
+Previous status: open
+Automatically resolving ticket.",
+101101,958321,1,"New status: resolved
+Previous status: open
+Automatically resolving ticket.",
+101101,958325,1,"New status: resolved
+Previous status: hot
+Automatically resolving ticket.",
+## probe 4 notifications of the fixture login after the resolved ticket was closed
+"N_LEFT"
+0

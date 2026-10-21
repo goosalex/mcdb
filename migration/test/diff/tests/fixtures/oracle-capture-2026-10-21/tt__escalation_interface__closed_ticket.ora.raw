@@ -1,0 +1,12 @@
+## probe 1 steps (error code of the propagated ticket_closed error -- no quotes in labels)
+"STEP","CODE","MSG","S"
+"01 escalate_os closed ticket","-20980","ORA-20980: Ticket with id 956911 is closed/deleted",
+"02 escalate_customer closed ticket","-20980","ORA-20980: Ticket with id 956912 is closed/deleted",
+## probe 2 the closed tickets after the calls (the pre-error UPDATE survives only on Oracle)
+"ID","SUBJECT","STATUS_ID","ESCALATION_STATUS_ID","HAS_LAST_ESCALATION_DATE"
+956911,"closed ticket escalate_os",102,10,1
+956912,"closed ticket escalate_customer",102,10,1
+## probe 3 no 60001 event is ever written for a closed ticket (addevent_new raised before its INSERT)
+"TICKET_ID","TYPE_ID","N_EVENTS"
+956911,10001,1
+956912,10001,1

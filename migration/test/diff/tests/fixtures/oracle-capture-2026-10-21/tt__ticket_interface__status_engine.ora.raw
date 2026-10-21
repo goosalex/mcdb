@@ -1,0 +1,74 @@
+## probe 1 steps (post-step status, valid-until set/null and OUT event id flag in s; error code for failed steps -- no quotes in labels)
+"STEP","CODE","MSG","S"
+"01 expire waiting 2.5 hours",,,"3 null ev n/a"
+"02 expire waiting 2 hours",,,"3 null ev n/a"
+"03 expire non-mcc 20 minutes",,,"3 null ev n/a"
+"04 open -> deferred escalate",,,"60 set ev set"
+"05 deferred -> hot with reason",,,"3 null ev set"
+"06 open -> resolved",,,"101 null ev set"
+"07 resolved -> open",,,"2 null ev set"
+"08 escalated open -> acknowledged",,,"4 null ev set"
+"09 open -> open no-op",,,"2 null ev null"
+"10 open -> acknowledged by zitadel",,,"4 null ev set"
+"11 nonexistent ticket","100","ORA-01403: no data found",
+"12 expire nonexistent ticket","100","ORA-01403: no data found",
+## probe 2 ticket rows after all steps (escalation, recoverable status, deferral flags, resolved flag, UX start re-anchored flag)
+"ID","STATUS_ID","ESCALATION_STATUS_ID","RECOVERABLE_STATUS_ID","LAST_DEFERRAL_ESCALATED","HAS_VALID_UNTIL","LAST_DEFERRAL_DAY","HAS_LAST_RESOLVED","HAS_LAST_ESCALATION","UX_START_MOVED","HAS_UX_TIMEOUT"
+952310,3,0,,0,0,,0,0,1,1
+952311,3,0,,0,0,,0,0,1,1
+952312,3,0,,0,0,,0,0,1,0
+952313,3,10,,1,0,,0,1,1,1
+952314,2,0,,0,0,,1,0,1,1
+952315,4,0,,0,0,,0,0,0,1
+952316,4,0,,0,0,,0,0,0,1
+## probe 3 events written by the routines (status change, hot non-MCC, escalation start/end; texts compared verbatim)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","CONTACT_ZITADEL_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+952310,101003,1,,,"New status: hot
+Previous status: waiting
+","Status changed to: hot (was waiting for 2.5 hours)"
+952311,101003,1,,,"New status: hot
+Previous status: waiting
+","Status changed to: hot (was waiting for 2 hours)"
+952312,100008,0,,,,"This non-MCC ticket just became hot."
+952312,101003,1,,,"New status: hot
+Previous status: waiting
+","Status changed to: hot (was waiting for .33 hours)"
+952313,60001,1,,,"Starting escalation to Open Systems Mission Control","Event added by tt.handleDeferredTransitions. The ticket had a pending escalation (deferred) and changed its status to status 3."
+952313,101003,1,952302,,"New status: hot
+Previous status: deferred
+back from deferral","Hot because: customer called
+"
+952313,101060,1,952302,,"New status: deferred
+Previous status: open
+deferring, escalation to os when reached.",
+952314,101002,1,952302,,"New status: open
+Previous status: resolved
+reopening",
+952314,101101,1,952302,,"New status: resolved
+Previous status: open
+resolving","private note"
+952315,60102,1,952302,,"Open Systems Mission Control engineer has acknowledged this ticket.
+The escalation process has finished.",
+952315,101004,1,952302,,"New status: acknowledged
+Previous status: open
+acknowledging",
+952316,101004,1,,"952777","New status: acknowledged
+Previous status: open
+ack by zitadel actor",
+## probe 4 ticket_time_statistic rows (presence and which counters are non-zero)
+"TICKET_ID","HAS_OPEN_TIME","HAS_WAITING_TIME","HAS_DEFERRED_TIME","HAS_RESOLVED_TIME"
+952310,0,1,0,0
+952311,0,1,0,0
+952312,0,1,0,0
+952313,1,0,0,0
+952314,1,0,0,1
+952315,1,0,0,0
+952316,1,0,0,0
+## probe 5 ticket_flow rows (open queue entries and closed ones per ticket)
+"TICKET_ID","FLOW_CLOSED","N_ROWS"
+952310,0,1
+952311,0,1
+952313,0,1
+952314,0,1
+952315,0,1
+952316,0,1

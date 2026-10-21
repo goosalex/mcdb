@@ -1,0 +1,89 @@
+## probe 1 steps (ok, or the error code of a failed step)
+"STEP","CODE","MSG","N","S"
+"01 merge SRC into TGT",,,,"ok"
+"02 merge SRC2 into TGT2",,,,"ok"
+"03 merge nonexistent source","100","ORA-01403: no data found",,
+"04 merge into nonexistent target","100","ORA-01403: no data found",,
+"05 delete DEL",,,,"ok"
+"06 delete nonexistent ticket",,,,"ok"
+## probe 2 merged tickets (rating ids are fixture ids; last_public_event_id classified, never selected)
+"ID","STATUS_ID","MERGED_INTO_TICKET_ID","PARTNER_REFERENCE","FAST_RESOLVABLE","RECOVERABLE_STATUS_ID","CUSTOMER_TICKET_RATING_ID","ENGINEER_TICKET_RATING_ID","HAS_CLOSE_DATE","HAS_LAST_RESOLVED","LAST_PUBLIC_EVENT"
+954320,110,954321,"SRC-REF",0,,954331,,1,1,"null"
+954321,3,,"SRC-REF",0,101,954331,954332,0,0,"src new event"
+954322,3,,,0,,954334,,0,0,"null"
+954323,110,954322,,1,,954334,,1,1,"null"
+## probe 3 events of the merged tickets (fixture events re-pointed with org_ticket_id, merge and status events)
+"TYPE_ID","TICKET_ID","ORG_TICKET_ID","PUBLIC_EVENT","COMPANY_ID","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+100004,954320,,1,954301,954302,"ticket 954320 merged with ticket no 954321","954321"
+101110,954320,,1,,954302,"New status: merged
+Previous status: open
+",
+100004,954321,,1,954301,954302,"ticket 954320 merged with ticket no 954321","954321"
+101002,954321,954320,1,,,"SRC event new",
+101002,954321,954320,1,,,"SRC event old",
+101002,954321,,1,,,"TGT event",
+101003,954321,,1,,954302,"New status: hot
+Previous status: resolved
+","Hot because: ticket 954320 merged into this ticket
+"
+100004,954322,,1,954301,954302,"ticket 954323 merged with ticket no 954322","954322"
+101002,954322,954323,0,,,"SRC2 event",
+101002,954322,,0,,,"TGT2 event",
+101003,954322,,1,,954302,"New status: hot
+Previous status: open
+","Hot because: ticket 954323 merged into this ticket
+"
+100004,954323,,1,954301,954302,"ticket 954323 merged with ticket no 954322","954322"
+101110,954323,,1,,954302,"New status: merged
+Previous status: open
+",
+## probe 4 notifications (A duplicate deleted, B kept, D moved)
+"ID","TICKET_ID","LOGIN_ID"
+954351,954321,954310
+954352,954321,954311
+## probe 5 change request and suppressed signature moved to the target
+"TBL","ID","TICKET_ID"
+"change_request",954360,954321
+"suppressed_signature",954370,954321
+## probe 6 time statistics and queue rows written by the two change_status calls per merge
+"TICKET_ID","HAS_OPEN_TIME","HAS_RESOLVED_TIME","OPEN_FLOWS","CLOSED_FLOWS"
+954320,1,0,0,0
+954321,0,1,1,0
+954322,1,0,1,0
+954323,1,0,0,0
+## probe 7 deleteTicket leftovers (every count must be 0; de-referenced rows report their nulled column)
+"TBL","N"
+"OTHER customer rating nulled",1
+"OTHER merged_into nulled",1
+"fw.change",0
+"fw.destination_nat_rule2ticket",0
+"fw.rule2ticket",0
+"fw.source_nat_rule2ticket",0
+"guma2.suppressed_signature",0
+"mc.host_maintenance_history nulled",1
+"mc.isp_link_history nulled",1
+"mc.isp_link_maintenance_history nulled",1
+"mcaudit.record nulled",1
+"mcaudit.record still referencing",0
+"mss.deleted_host2service_window",0
+"mss.installation_project_item nulled",1
+"nids.ticket2rule",0
+"prx.prx_policy_item nulled",1
+"prx.prx_policy_item still referencing",0
+"tt.attachment",0
+"tt.change_request",0
+"tt.cust_maintenance_window",0
+"tt.event",0
+"tt.event_notification",0
+"tt.host2service_window",0
+"tt.maintenance_window",0
+"tt.service_window",0
+"tt.ticket",0
+"tt.ticket2mc_file",0
+"tt.ticket2related_ticket",0
+"tt.ticket_docs_page",0
+"tt.ticket_flow",0
+"tt.ticket_rating",0
+"tt.ticket_request_classification",0
+"tt.ticket_time_statistic",0
+"tt.todo_item",0

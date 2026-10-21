@@ -1,0 +1,44 @@
+## probe 1 steps (id set for rate_ticket, ok otherwise; error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"01 R1 engineer rating 2",,,,"id set"
+"02 R2 customer rating 5",,,,"id set"
+"03 R3 customer rating 1 to hot",,,,"id set"
+"04 R1 engineer rating 4 replaces",,,,"id set"
+"05 nonexistent ticket engineer 2",,,,"id set"
+"06 escalation E",,,,"ok"
+"07 escalation nonexistent ticket",,,,"ok"
+"08 F1 open MCC enters queue",,,,"ok"
+"09 F1 again already queued",,,,"ok"
+"10 F2 type 4 never queued",,,,"ok"
+"11 F3 hot stays prev open 60m",,,,"ok"
+"12 F4 not MCC leaves open 30m",,,,"ok"
+"13 F5 waiting leaves prev open 45m",,,,"ok"
+"14 F6 third party leaves no prev",,,,"ok"
+"15 nonexistent ticket","100","ORA-01403: no data found",,
+## probe 2 rated tickets (rating values resolved through the rating columns of the ticket, ids never selected)
+"ID","STATUS_ID","CUSTOMER_RATING","ENGINEER_RATING","HAS_LAST_PUBLIC_EVENT","HAS_VALID_UNTIL"
+954210,2,,4,0,0
+954211,2,5,,0,0
+954212,3,1,,0,0
+954213,2,,,0,0
+## probe 3 rating rows per rating event
+"EVENT_ID","RATING","N_ROWS"
+954220,2,2
+954220,4,1
+954221,5,1
+954222,1,1
+## probe 4 events written by the routines (escalation 100007, status change to hot 101003)
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","COMPANY_ID","HOST_ID","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+101003,954212,1,,,954202,"New status: hot
+Previous status: open
+",
+100007,954213,1,,,954202,"Explicitly trigger escalation","Escalation triggered by event 954223"
+100007,954099999,1,,,954202,"Explicitly trigger escalation","Escalation triggered by event 954223"
+## probe 5 ticket_flow rows (open_time compared as buckets; both engines measure wall-clock time)
+"TICKET_ID","FLOW_CLOSED","OPEN_TIME_BUCKET","N_ROWS"
+954212,0,"zero",1
+954214,0,"zero",1
+954216,0,"about 3600",1
+954217,1,"about 1800",1
+954218,1,"about 2700",1
+954219,1,"zero",1

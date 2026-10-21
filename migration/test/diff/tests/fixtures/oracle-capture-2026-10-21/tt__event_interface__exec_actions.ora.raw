@@ -1,0 +1,48 @@
+## probe 1 steps (ok in s, error code for failed steps -- no quotes in labels, PROMPT strips them)
+"STEP","CODE","MSG","S"
+"01 action 1 escalate_os, active host, status 0",,,"ok"
+"02 pilot action escalate_customer, status 0",,,"ok"
+"03 pilot action nop, status 20",,,"ok"
+"04 pilot action escalate_isp_outage_to_os",,,"ok"
+"05 pilot action off-allowlist clear_customer_escalation",,,"ok"
+"06 action 2 DBPROP key 139 with host, no value",,,"ok"
+"07 unmapped event type",,,"ok"
+"08 action 1 escalate_os, inactive host",,,"ok"
+"09 action 1 escalate_os, closed ticket",,,"ok"
+"10 action 2 suppressed by service window",,,"ok"
+"11 nonexistent event","100","ORA-01403: no data found",
+## probe 2 fixture tickets after dispatch (escalation status, escalation date flag, status unchanged)
+"ID","SUBJECT","STATUS_ID","ESCALATION_STATUS_ID","HAS_LAST_ESCALATION_DATE","HAS_LAST_PUBLIC_EVENT","SUMMARY_RELEVANT_EVENTS_COUNT","TODO_RELEVANT_EVENTS_COUNT"
+956101,"exec escalate_os",2,10,1,1,0,0
+956102,"exec escalate_customer",2,10,1,1,0,0
+956103,"exec nop",2,20,0,0,0,0
+956104,"exec isp outage original",2,0,0,0,0,0
+956105,"exec off-allowlist",2,0,0,0,0,0
+956106,"exec dbprop",2,0,0,0,0,0
+956107,"exec unmapped",2,0,0,0,0,0
+956108,"exec inactive host",2,0,0,0,0,0
+956109,"exec closed ticket",102,0,0,0,0,0
+956110,"exec suppressed",2,0,0,1,0,0
+## probe 3 events the dispatched routines wrote on the fixture tickets (fixture event types excluded)
+"TICKET_ID","TYPE_ID","HOST_ID","COMPANY_ID","PUBLIC_EVENT","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+956101,60001,956005,956001,1,,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_os. Caused by event 956201"
+956102,60001,956005,956001,1,,"Starting escalation to Open Systems Mission Control","Event added by tt.escalation_interface.escalate_customer. Caused by event 956202"
+956110,60010,956005,956001,1,,"Escalation suppressed for event 956210 due to active service window.","Event added by tt.event_interface.exec_event_type_actions."
+## probe 4 the hidden ISP outage escalation ticket opened by escalate_isp_outage_to_os (S-ESC-019)
+"SUBJECT","TYPE_ID","STATUS_ID","SERVICE_COMPONENT_ID","ESCALATION_STATUS_ID","HOST_IS_NULL","COMPANY_IS_NULL","CONTACT_IS_NULL"
+"Critical ISP Outage escalation",1,1,27,0,1,1,1
+## probe 5 events of the ISP outage escalation ticket (S-ESC-018 texts name the ORIGINAL ticket)
+"TYPE_ID","PUBLIC_EVENT","DETAILS_PUBLIC","DETAILS_PRIVATE","HOST_IS_NULL","COMPANY_IS_NULL"
+30005,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-exec-host
+Company: dfexec1
+Time of original event: 2024-03-05 14:07:09
+Original ticket 956104","To Do:
+https://open-systems.atlassian.net/wiki/x/3xYBAQ
+
+Do not add any further events to this escalation ticket.
+Use the original ticket 956104 for tracking any work!
+This ticket is intentionally hidden from the customer, so do not merge it. ",1,1
+101001,1,"New ticket created",,1,1

@@ -1,0 +1,7 @@
+## probe 1 steps (ok, or the propagated error code; the routine writes no table on Oracle)
+"STEP","CODE","MSG","S"
+"01 test sms",,,"ok"
+"02 test email named","-24247","ORA-24247: network access denied by access control list (ACL)",
+"03 test email anonymous","-24247","ORA-24247: network access denied by access control list (ACL)",
+"04 test fax type no-op",,,"ok"
+"05 nonexistent event type","100","ORA-01403: no data found",

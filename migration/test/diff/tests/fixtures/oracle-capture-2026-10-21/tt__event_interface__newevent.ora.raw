@@ -1,0 +1,87 @@
+## probe 1 steps (event id set for successful calls, error code for failed ones -- no quotes in labels)
+"STEP","CODE","MSG","S"
+"01 new 10004 hardware notification, host, two-line details",,,"event id set"
+"02 new 30002 email from customer, contact without admin role",,,"event id set"
+"03 new 30002 with zitadel contact id",,,"event id set"
+"04 new 50002 comment, no host, company from contact",,,"event id set"
+"05 new 10001 on inactive host is dropped",,,"event id null"
+"06 new 10001 on host without host2service row",,,"event id set"
+"08 new 10001 on nonexistent host","100","ORA-01403: no data found",
+"09 new nonexistent event type","100","ORA-01403: no data found",
+"10 new 10001 appended to recent automatic ticket",,,"event id set"
+"11 new 10003 appended to recent connection-down ticket",,,"event id set"
+"12 new 30002 single-line details, no newline",,,"event id set"
+"13 new 10004 single-line details, no newline",,,"event id set"
+"21 add 50002 public comment",,,"event id set"
+"22 add 50002 private comment",,,"event id set"
+"23 add 50002 notified comment",,,"event id set"
+"24 add 30016 customer requests resolve",,,"event id set"
+"25 add 30002 email from customer makes ticket hot",,,"event id set"
+"26 add 10001 connection down to change ticket",,,"event id set"
+"27 add 30002 to isp outage ticket",,,"event id set"
+"28 add to closed ticket","-20980","ORA-20980: Ticket with id 957105 is closed/deleted",
+"29 add to merged ticket",,,"event id set"
+"30 add to nonexistent ticket",,,"event id null"
+"31 add nonexistent event type",,,"event id null"
+## probe 2 tickets opened by newevent_new (ids are sequence-generated; selected by host/company, ordered by subject)
+"SUBJECT","TYPE_ID","STATUS_ID","CONTACT_ID","COMPANY_ID","HOST_ID","MSS_SERVICE_ID","CONTACT_ZITADEL_ID","SERVICE_CONFIRMED","TYPE_CONFIRMED","FAST_RESOLVABLE","RECOVERABLE_STATUS_ID","SERVICE_COMPONENT_ID","SUMMARY_RELEVANT_EVENTS_COUNT","TODO_RELEVANT_EVENTS_COUNT","HAS_LAST_PUBLIC_EVENT","HAS_UX_TIMEOUT_START"
+"Subject line here",2,1,,957001,957005,957009,,0,0,0,,,1,1,1,1
+"Zitadel subject",2,1,957002,957001,957005,957009,"957000111",0,0,0,,,1,1,1,1
+"comment",1,1,,957001,,,,0,0,0,,,1,1,1,1
+"connection down",1,1,,,957007,,,1,1,1,,,0,0,1,1
+,2,1,,957001,957005,957009,,0,0,0,,,1,1,1,1
+## probe 3 tickets opened by newevent_new whose subject is NULL (S-EVENT-048: single-line details, Oracle SUBSTR length -1)
+"N_NULL_SUBJECT_TICKETS","TYPE_ID"
+1,2
+## probe 4 events of the tickets opened by newevent_new
+"SUBJECT","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","CONTACT_ZITADEL_ID","COMPANY_ID","HOST_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+"Subject line here",30002,1,957002,,957001,957005,"Subject line here
+Body of the mail",
+"Subject line here",101001,1,957002,,957001,957005,"New ticket created",
+"Zitadel subject",30002,1,957002,"957000111",957001,957005,"Zitadel subject
+Body",
+"Zitadel subject",101001,1,957002,"957000111",957001,957005,"New ticket created",
+"comment",50002,1,957003,,957001,,"a comment without host",
+"comment",101001,1,957003,,957001,,"New ticket created",
+"connection down",10001,1,,,,957007,"no service",
+,30002,1,957002,,957001,957005,"single line mail subject",
+,101001,1,957002,,957001,957005,"New ticket created",
+## probe 5 fixture tickets after addevent_new / the append path
+"ID","SUBJECT","TYPE_ID","STATUS_ID","FAST_RESOLVABLE","RECOVERABLE_STATUS_ID","SUMMARY_RELEVANT_EVENTS_COUNT","TODO_RELEVANT_EVENTS_COUNT","HAS_LAST_PUBLIC_EVENT","STATUS_CHANGED_NOW"
+957101,"append target",1,3,0,,0,0,1,1
+957102,"add comments",1,3,1,,3,3,1,1
+957103,"add email from customer",1,3,0,,1,1,1,1
+957104,"add connection down to change",1,2,0,,0,0,1,0
+957105,"add to closed",1,102,0,,0,0,0,0
+957106,"add to merged",1,110,0,,0,0,0,0
+957107,"merge target",1,2,0,,1,1,1,0
+957108,"add email to isp outage",1,3,0,,1,1,1,1
+## probe 6 events written on the fixture tickets (fixture events 9572xx excluded)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","HOST_ID","COMPANY_ID","PINNED","ORG_TICKET_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+957101,10001,1,,957011,957001,0,,"second down",
+957101,10003,1,,957011,957001,0,,"isp outage follows",
+957101,101003,1,,,,,,"New status: hot
+Previous status: open
+","new event added"
+957102,10004,1,,957005,957001,0,,"Disk failure on sda
+more text","private part"
+957102,10004,1,,957005,957001,0,,"single line hardware notification",
+957102,30016,1,957002,957005,957001,0,,"please resolve",
+957102,50002,1,957003,957005,957001,0,,"notified comment",
+957102,50002,0,957003,957005,957001,0,,"private comment",
+957102,50002,1,957003,957005,957001,0,,"public comment","private note"
+957102,101003,1,,,,,,"New status: hot
+Previous status: open
+","new event added"
+957103,30002,1,957002,957005,957001,0,,"customer mail",
+957103,101003,1,957002,,,,,"New status: hot
+Previous status: open
+","new event added"
+957104,10001,1,,957005,957001,0,,"down on change",
+957104,100005,1,,,957001,,,"type changed from change to incident",
+957107,50002,1,957003,957005,957001,0,957106,"on merged",
+957108,30002,1,957002,957005,957001,0,,"customer mail on isp outage",
+957108,100005,1,,,957001,,,"type changed from third party incident to incident",
+957108,101003,1,957002,,,,,"New status: hot
+Previous status: open
+","new event added"

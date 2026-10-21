@@ -1,0 +1,47 @@
+## probe 1 steps (ux day/hour after each successful call in s, error code for failed steps -- no quotes in labels)
+"STEP","CODE","MSG","S"
+"01 deferral_date on deferred ticket",,,"ux null"
+"02 deferral_date on open ticket",,,"ux null"
+"03 deferral_date nonexistent ticket","100","ORA-01403: no data found",
+"04 ux incident not initial",,,"ux 10/14"
+"05 ux incident initial",,,"ux 10/12"
+"06 ux change",,,"ux 10/18"
+"07 ux maintenance window after start",,,"ux 10/16"
+"08 ux maintenance no window",,,"ux 10/18"
+"09 ux third party incident",,,"ux null"
+"10 ux non-mcc",,,"ux null"
+"11 ux waiting status",,,"ux null"
+"12 ux problem",,,"ux 11/2"
+"13 ux purchase order",,,"ux 10/22"
+"14 ux maintenance window before start",,,"ux 10/18"
+"15 ux nonexistent ticket","100","ORA-01403: no data found",
+"16 emergency 1 not new",,,"ux 10/12"
+"17 emergency 0 not new",,,"ux 10/14"
+"18 emergency 1 new ticket",,,"ux 10/11"
+"19 emergency 1 with zitadel",,,"ux 10/12"
+"20 emergency nonexistent ticket","100","ORA-01403: no data found",
+## probe 2 ticket rows after all steps (status, emergency ratchet, deferral dates as day-of-month, final UX timeout)
+"ID","STATUS_ID","EMERGENCY","WAS_EMERGENCY","VALID_UNTIL_DAY","LAST_DEFERRAL_DAY","UX_DAY","UX_HOUR"
+952210,60,0,0,20,20,,
+952211,2,1,1,,,10,11
+952212,2,1,1,,,10,12
+952213,2,0,0,,,10,16
+952214,2,0,0,,,10,18
+952215,2,0,0,,,,
+952216,2,0,0,,,,
+952217,11,0,0,,,,
+952218,2,0,0,,,11,2
+952219,2,0,0,,,10,22
+952221,2,0,0,,,10,18
+## probe 3 events written (the deferral event carries the ticket host; emergency events via add_status_change_event)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","HOST_ID","CONTACT_ZITADEL_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+952210,100003,1,952202,952205,,"moved the deferral",
+952211,100003,1,952202,,,"ticket changed to emergency",
+952211,100003,1,952202,,,"ticket changed to emergency",
+952211,100003,1,952202,,,"ticket changed to non-emergency",
+952212,100003,1,952202,,,"ticket changed to emergency","952777"
+## probe 4 event company_id null or set (S-TICKET-059 correction of the add_status_change_event cust_id bug)
+"TICKET_ID","TYPE_ID","EVENT_COMPANY","N_EVENTS"
+952210,100003,"set",1
+952211,100003,"null",3
+952212,100003,"null",1

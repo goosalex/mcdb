@@ -1,0 +1,38 @@
+## probe 1 steps (ok in s; error code only if something propagated -- these routines swallow)
+"STEP","CODE","MSG","N","S"
+"01 add T1-T2",,,,"ok"
+"02 add T1-T2 again duplicate",,,,"ok"
+"03 add T1-T1 equal ids",,,,"ok"
+"04 add T1-nonexistent",,,,"ok"
+"05 add T1-T3 other company",,,,"ok"
+"06 remove T3-T2 reverse direction",,,,"ok"
+"07 remove T2-T3",,,,"ok"
+"08 add file F1 same company",,,,"ok"
+"09 add file F2 other company",,,,"ok"
+"10 add file F1 nonexistent ticket",,,,"ok"
+"11 add file F1 again duplicate",,,,"ok"
+"12 remove file F3 same company",,,,"ok"
+"13 remove file F4 other company",,,,"ok"
+"14 remove file orphan 954098",,,,"ok"
+"15 remove file F2 no relation",,,,"ok"
+## probe 2 related ticket rows touching the fixture tickets
+"TICKET_ID","RELATED_TICKET_ID"
+954010,954011
+954010,954012
+## probe 3 related file rows of the fixture tickets
+"TICKET_ID","MC_FILE_ID"
+954010,954020
+954010,954098
+## probe 4 relation history events written by the routines
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","COMPANY_ID","HOST_ID","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+100016,954010,0,954001,,954003,,"Related ticket 954011 has been added to the ticket."
+100016,954010,0,954001,,954003,,"Related ticket 954012 has been added to the ticket."
+100018,954010,0,954001,,954003,,"Related file ""diff-f1.txt"" (954020) has been added to the ticket."
+100019,954010,0,954001,,954003,,"Removed file ""diff-f3.txt"" (954024) from the list of related files."
+100019,954010,0,954001,,954003,,"Removed file ""diff-f4.txt"" (954026) from the list of related files."
+100017,954011,0,954001,,954003,,"Removed ticket 954012 from the list of related tickets."
+## probe 5 ticket rows after the private history events (addevent_new side effects)
+"ID","STATUS_ID","FAST_RESOLVABLE","RECOVERABLE_STATUS_ID","SUMMARY_RELEVANT_EVENTS_COUNT","TODO_RELEVANT_EVENTS_COUNT","HAS_LAST_PUBLIC_EVENT"
+954010,2,0,,0,0,0
+954011,2,0,,0,0,0
+954012,2,0,,0,0,0

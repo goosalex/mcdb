@@ -162,8 +162,14 @@ class TestCompose(unittest.TestCase):
             n_pg = pg.count("\n\\echo ## probe ")
             self.assertGreater(n_ora, 0, sdir.name)
             self.assertEqual(n_ora, n_pg, sdir.name)
-            self.assertIn("ROLLBACK;", ora, sdir.name)
-            self.assertIn("ROLLBACK;", pg, sdir.name)
+            if meta.get("COMMITS", "no").lower() == "yes":
+                # a committing scenario runs without a transaction block on PostgreSQL and
+                # ends with its cleanup + COMMIT on Oracle (README, Limitations 1)
+                self.assertNotIn("ROLLBACK;", pg, sdir.name)
+                self.assertIn("cleanup (COMMITS=yes)", ora, sdir.name)
+            else:
+                self.assertIn("ROLLBACK;", ora, sdir.name)
+                self.assertIn("ROLLBACK;", pg, sdir.name)
             self.assertIn("EXIT ROLLBACK", ora, sdir.name)
 
 

@@ -1,0 +1,33 @@
+## probe 1 steps (error code of failed steps, ids set for successful newticket_new -- no quotes in labels, PROMPT strips them)
+"STEP","CODE","MSG","S"
+"01 A signoff zitadel, no contact, 30002",,,"ids set"
+"02 B signoff zitadel, event 101002",,,"ids set"
+"03 C non-signoff zitadel, 30002",,,"ids set"
+"04 D explicit contact + signoff zitadel",,,"ids set"
+"05 E signoff zitadel without login",,,"ids set"
+"06 F1 worker with login",,,"ids set"
+"07 F2 worker without login",,,"ids set"
+"08 F2 change_worker to worker with login",,,"ok"
+## probe 2 ticket rows (ids are sequence-generated and differ per engine; never selected)
+"SUBJECT","TYPE_ID","CONTACT_ID","COMPANY_ID","HOST_ID","WORKER_ID","WORKER_ZITADEL_ID","CONTACT_ZITADEL_ID"
+"signoff A",2,951002,951001,951005,,,"260976466693466175"
+"signoff B",1,,951001,951005,,,"260976466693466175"
+"signoff C",1,,951001,951005,,,"123456789012345678"
+"signoff D",2,951006,951001,951005,,,"260976466693466175"
+"signoff E",2,,951001,951005,,,"249698997185305231"
+"signoff F1",1,,951001,951005,951003,"951000111222333444",
+"signoff F2",1,,951001,951005,951003,"951000111222333444",
+## probe 3 change requests created by the sign-off rule
+"SUBJECT","CHANGE_REQUEST_STATE_ID","REQUESTER_ID","APPROVER_ID","REQUESTER_ZITADEL_ID","APPROVER_ZITADEL_ID"
+"signoff A",3,951002,951002,"260976466693466175","260976466693466175"
+"signoff D",3,951006,951006,"260976466693466175","260976466693466175"
+"signoff E",3,,,"249698997185305231","249698997185305231"
+## probe 4 the first event of every ticket (its contact is the resolved sender or the worker)
+"SUBJECT","TYPE_ID","CONTACT_ID","CONTACT_ZITADEL_ID"
+"signoff A",30002,951002,"260976466693466175"
+"signoff B",101002,,"260976466693466175"
+"signoff C",30002,,"123456789012345678"
+"signoff D",30002,951006,"260976466693466175"
+"signoff E",30002,,"249698997185305231"
+"signoff F1",101002,951003,
+"signoff F2",101002,951004,

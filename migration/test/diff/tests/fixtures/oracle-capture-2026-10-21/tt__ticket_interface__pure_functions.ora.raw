@@ -1,0 +1,28 @@
+## probe 1 steps (next ticket id in n with found/null in s; placeholder results in s)
+"STEP","CODE","MSG","N","S"
+"01 first on host",,,954080,"found"
+"02 after G1 on host",,,954083,"found"
+"03 after G1 resolve age 60s",,,954084,"found"
+"04 after G1 resolve age 3h",,,954083,"found"
+"05 after G1 type 2",,,954084,"found"
+"06 after G5 on host none left",,,,"null"
+"07 host 0 means no host type 12",,,954085,"found"
+"08 host 0 type 1 none",,,,"null"
+"09 other host G7",,,954086,"found"
+"10 host without tickets",,,,"null"
+"11 both placeholders",,,,"Ticket 954080 has event 42"
+"12 no placeholders",,,,"plain text"
+"13 null text",,,,"<null>"
+"14 repeated",,,,"7/7/8"
+"15 null event id",,,,"e= t=954080"
+"16 null ticket id",,,,"e=42 t="
+"17 both ids null no placeholders",,,,"nothing to replace"
+## probe 2 fixture tickets untouched by the two functions
+"ID","TYPE_ID","STATUS_ID","HOST_ID","HAS_LAST_RESOLVED"
+954080,1,2,954075,0
+954081,1,60,954075,0
+954082,1,102,954075,0
+954083,1,101,954075,1
+954084,2,3,954075,0
+954085,12,2,,0
+954086,1,2,954076,0

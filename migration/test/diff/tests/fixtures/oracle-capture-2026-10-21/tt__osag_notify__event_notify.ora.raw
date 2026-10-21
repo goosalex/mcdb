@@ -1,0 +1,36 @@
+## probe 1 steps (customer counter in n and osag counter in s after each notify step, suppressor flag in n, error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"00 initial sms ticket",,,,"null"
+"01 suppressor active window with flag",,,1,
+"02 suppressor active window without flag",,,0,
+"03 suppressor expired window with flag",,,0,
+"04 suppressor unknown host",,,0,
+"05 notify sms local contact",,,1,"null"
+"06 notify mail local contact",,,,"null"
+"07 notify no service",,,,"null"
+"08 notify suppressed",,,,"null"
+"09 notify question not suppressed",,,,"null"
+"10 notify capped automatic early return",,,5,"5"
+"11 notify fourth to fifth limit event",,,5,"null"
+"12 notify nonexistent event",,,1,"null"
+"13 notify nonexistent ticket",,,1,"null"
+## probe 2 ticket notify counters
+"ID","EVENT_NOTIFY_COUNT","EVENT_NOTIFY_COUNT_OSAG"
+958120,1,
+958121,,
+958122,,
+958123,,
+958124,5,5
+958125,5,
+## probe 3 events written by the routines (the fixture events 958130-958136 excluded)
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","CONTACT_ID","PEER_CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+20003,958120,1,,958103,"sent to +41790001003 (local contact sms notification)
+
+
+Ticket 958120 - connection down on diff-ev-host-sms at 20.10.2026 10:30 CEST - Open Systems Mission Control",
+20003,958125,1,,958103,"sent to +41790001003 (local contact sms notification)
+
+
+Ticket 958125 - connection down on diff-ev-host-sms at 20.10.2026 10:36 CEST - Open Systems Mission Control",
+20010,958125,1,,,"notification limit (5) reached
+There will be no more notifications for system events added to this ticket.",

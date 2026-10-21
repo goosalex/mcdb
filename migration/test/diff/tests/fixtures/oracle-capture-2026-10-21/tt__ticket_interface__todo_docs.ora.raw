@@ -1,0 +1,54 @@
+## probe 1 steps (id set for OUT ids, ok otherwise; error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"01 add page",,,,"id set"
+"02 add hot issue page",,,,"id set"
+"03 add page nonexistent ticket",,,,"id set"
+"04 remove fixture page",,,,"ok"
+"05 remove nonexistent page",,,,"ok"
+"06 add public todo",,,,"id set"
+"07 add public done",,,,"id set"
+"08 add private todo",,,,"id set"
+"09 public todo to done",,,,"ok"
+"10 public done to active",,,,"ok"
+"11 private todo to skipped",,,,"ok"
+"12 TD3 bad status id","100","ORA-01403: no data found",,
+"13 nonexistent seq","100","ORA-01403: no data found",,
+"14 clear TD4 without history",,,,"ok"
+"15 clear nonexistent no history",,,,"ok"
+"16 clear nonexistent with history","100","ORA-01403: no data found",,
+"17 clear TD with history",,,,"ok"
+"18 classify TD very precise",,,,"ok"
+"19 classify TD invalid 7 to standard",,,,"ok"
+"20 classify TD2 null to standard",,,,"ok"
+"21 classify nonexistent imprecise",,,,"ok"
+## probe 2 docs pages (ids are sequence-generated and never selected)
+"TICKET_ID","PAGE_ID","PAGE_VERSION","HOT_ISSUE"
+954110,700010,1,0
+954110,700011,2,1
+954099999,700012,1,0
+## probe 3 todo items (ids are sequence-generated and never selected)
+"TICKET_ID","SEQ_NO","DETAILS","TODO_ITEM_STATUS_ID","IS_PUBLIC"
+954112,0,"td3 public step",999,1
+## probe 4 step counters of the fixture tickets
+"ID","STEPS_TOTAL","STEPS_COMPLETED","TODO_RELEVANT_EVENTS_COUNT","SUMMARY_RELEVANT_EVENTS_COUNT","HAS_LAST_PUBLIC_EVENT"
+954110,0,0,0,0,0
+954111,0,0,0,0,0
+954112,1,0,3,0,0
+954113,0,0,4,0,0
+## probe 5 request classifications (one row per ticket; the nonexistent ticket row stays until commit)
+"TICKET_ID","CLASSIFICATION"
+954110,2
+954111,2
+954099997,3
+## probe 6 history events written by the routines
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","COMPANY_ID","HOST_ID","CONTACT_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+100009,954110,0,954101,,954102,,"Docs Page ""Diff Page"" (ID 700010, v1) has been added to the ticket."
+100009,954110,0,954101,,954102,,"Hot issue Docs Page ""Hot Page"" (ID 700011, v2) has been added to the ticket."
+100010,954110,0,954101,,954102,,"Docs Page ""Old Page"" (ID 700001, v3) has been removed from the ticket."
+100013,954110,0,954101,954105,954102,,"Todo list cleared"
+100015,954110,1,954101,954105,954102,"New status of todo item (was: DONE):ACTIVE step two",
+100015,954110,1,954101,954105,954102,"New status of todo item (was: TODO):DONE step one",
+100015,954110,0,954101,954105,954102,,"New status of todo item 3 (was: TODO):SKIPPED private step"
+100021,954110,0,954101,,954102,,"Classified initial request: standard"
+100021,954110,0,954101,,954102,,"Classified initial request: very precise"
+100021,954111,0,954101,,954102,,"Classified initial request: standard"

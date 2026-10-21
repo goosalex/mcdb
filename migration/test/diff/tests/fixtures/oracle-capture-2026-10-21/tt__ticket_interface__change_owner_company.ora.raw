@@ -1,0 +1,50 @@
+## probe 1 steps (ok or event id set in s, error code for failed steps -- no quotes in labels, PROMPT strips them)
+"STEP","CODE","MSG","S"
+"01 owner -> contact of company B",,,"ok"
+"02 owner -> NULL",,,"ok"
+"03 owner zitadel names and ids",,,"ok"
+"04 owner nonexistent contact","100","ORA-01403: no data found",
+"05 owner nonexistent ticket",,,"ok"
+"06 service_host full -> svc b host b",,,"ok"
+"07 service_host bare -> svc a host a",,,"ok"
+"08 service_host full -> nonexistent both",,,"ok"
+"09 service_host nonexistent ticket","100","ORA-01403: no data found",
+"10 component 1 -> 5",,,"event id set"
+"11 component null -> 2",,,"event id set"
+"12 component 2 -> nonexistent",,,"event id set"
+"13 component nonexistent ticket","100","ORA-01403: no data found",
+"14 type 1 -> 2",,,"event id set"
+"15 type nonexistent","100","ORA-01403: no data found",
+"16 type nonexistent ticket","100","ORA-01403: no data found",
+"17 company A -> B with notifications",,,"ok"
+"18 company bare -> nonexistent company",,,"ok"
+"19 company nonexistent ticket","100","ORA-01403: no data found",
+## probe 2 ticket rows after all steps (relations and the UX timeout computed from the fixed 10:00 start)
+"ID","TYPE_ID","COMPANY_ID","CONTACT_ID","CONTACT_ZITADEL_ID","HOST_ID","MSS_SERVICE_ID","SERVICE_COMPONENT_ID","UX_DAY","UX_HOUR"
+952110,2,952101,,"952777",952999999,952999999,5,10,18
+952111,1,952999999,,,,,952999999,10,14
+952112,1,952102,,,,,,,
+## probe 3 audit events written (every routine here resolves the company itself; details compared verbatim)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","COMPANY_ID","CONTACT_ID","CONTACT_ZITADEL_ID","DETAILS_PUBLIC","DETAILS_PRIVATE"
+952110,100003,1,952101,952103,,"service changed from diff-owner-host-a (Security Gateway [952108]) to diff-owner-host-b (Security Gateway [952109])",
+952110,100003,1,952101,952103,,"service changed from diff-owner-host-b (Security Gateway [952109]) to <empty>",
+952110,100003,1,952101,952103,,"service component changed","service component changed from Service Delivery Platform (sdp) to Firewall (firewall)"
+952110,100003,1,952102,952103,,"ticket owner changed to <empty>",
+952110,100003,1,952102,952103,,"ticket owner changed to Diff NewOwner",
+952110,100003,1,,952103,,"ticket owner changed to Zita Del",
+952110,100005,1,952101,952103,,"type changed from incident to change",
+952111,100003,1,952101,952103,,"service changed from <empty> to diff-owner-host-a (Security Gateway [952108])",
+952111,100003,1,952101,952103,,"service component changed","service component changed from <empty> () to WAN Encryption and Routing (wan)"
+952111,100003,1,952101,952103,,"service component changed","service component changed from WAN Encryption and Routing (wan) to <empty> ()"
+952111,100003,0,952999999,952103,,,"company changed to <empty>
+old company: dfowna
+old assigned host: diff-owner-host-a"
+952112,100003,0,952102,952103,,,"company changed to dfownb
+old company: dfowna
+old assigned host: diff-owner-host-a"
+## probe 4 event notifications after change_company (customer login row deleted, OSAG login row moved, other ticket untouched)
+"ID","LOGIN_ID","TICKET_ID","COMPANY_ID"
+952131,952121,952112,952102
+## probe 5 ticket_flow rows created by change_type (updateTicketFlow)
+"TICKET_ID","N_ROWS"
+952110,1

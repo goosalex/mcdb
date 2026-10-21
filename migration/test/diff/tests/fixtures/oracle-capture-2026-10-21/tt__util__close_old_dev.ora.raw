@@ -1,0 +1,12 @@
+## probe 1 steps
+"STEP","CODE","MSG","S"
+"01 close_old_dev_tickets",,,"ok"
+## probe 2 dev instance condition as the routine evaluates it (S-UTIL-011; PostgreSQL twin in probe.pg.sql)
+"IS_DEV"
+0
+## probe 3 fixture tickets untouched (eligible 958400 keeps its status on a non-dev instance; 958402 is closed, not open: deferred check C_TICKET_2)
+"ID","STATUS_ID","HANDLED_BY_MCC","OLDER_THAN_30D","HAS_CLOSE_DATE"
+958400,3,1,1,0
+958401,3,0,1,0
+958402,102,1,1,0
+## probe 4 no event written for the fixture tickets

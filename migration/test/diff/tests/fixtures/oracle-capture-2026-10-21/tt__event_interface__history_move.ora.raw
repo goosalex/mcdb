@@ -1,0 +1,28 @@
+## probe 1 steps (ok / event id set for successful calls, error code for failed ones -- no quotes in labels)
+"STEP","CODE","MSG","S"
+"01 history event public with contact",,,"event id set"
+"02 history event private without contact",,,"event id set"
+"03 history event on nonexistent ticket",,,"event id set"
+"11 demote existing event",,,"ok"
+"12 demote nonexistent event","100","ORA-01403: no data found",
+"13 promote existing event",,,"ok"
+"14 promote nonexistent event","100","ORA-01403: no data found",
+"31 move decoy event not on old ticket",,,"ok"
+"32 move event from old to new ticket",,,"ok"
+"33 move nonexistent event",,,"ok"
+"34 move to nonexistent new ticket",,,"ok"
+"35 move with NULL event id",,,"ok"
+## probe 2 history events written by add_history_event (ids are sequence-generated; selected by text)
+"TICKET_ID","TYPE_ID","PUBLIC_EVENT","CONTACT_ID","HOST_ID","COMPANY_ID","DETAILS_PUBLIC","DETAILS_PRIVATE","DEMOTED"
+957312,101001,1,957302,957305,957301,"history text","history private",0
+957999,101001,1,957302,957305,957301,"orphan history",,0
+957312,101001,0,,957305,957301,"private history",,0
+## probe 3 fixture events after demote / promote / moveevent (ticket_id is what moveevent changes)
+"ID","TICKET_ID","TYPE_ID","DEMOTED","DETAILS_PUBLIC"
+957321,957312,101001,0,"event to move"
+957322,957312,101001,0,"sibling that must stay"
+957323,957312,101001,0,"decoy event on another ticket"
+957324,957312,50002,0,"demote me"
+## probe 4 event counts per fixture ticket after the moves
+"TICKET_ID","N_EVENTS"
+957312,6

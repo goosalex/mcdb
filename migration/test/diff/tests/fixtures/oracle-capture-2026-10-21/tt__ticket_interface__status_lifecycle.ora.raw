@@ -1,4 +1,3 @@
--- SYNTHETIC capture (tests/pg2synthetic.py) -- not produced by Oracle --
 ## probe 1 steps (post-step status in n, valid-until set/null in s; error code for failed steps)
 "STEP","CODE","MSG","N","S"
 "00 initial",,,2,"null"
@@ -7,8 +6,8 @@
 "03 hot->waiting",,,11,"set"
 "04 waiting->closed",,,102,"null"
 "05 change_subject",,,102,"null"
-"06 nonexistent ticket","-1403","query returned no rows",,
-"07 change_subject nonexistent","-1403","query returned no rows",,
+"06 nonexistent ticket","100","ORA-01403: no data found",,
+"07 change_subject nonexistent","100","ORA-01403: no data found",,
 ## probe 2 ticket row
 "ID","TYPE_ID","STATUS_ID","SUBJECT","RECOVERABLE_STATUS_ID","ESCALATION_STATUS_ID","HANDLED_BY_MCC","HAS_LAST_STATUS_CHANGE","HAS_VALID_UNTIL","HAS_LAST_RESOLVED","HAS_LAST_PUBLIC_EVENT"
 950010,1,102,"changed subject",,0,1,1,0,0,0

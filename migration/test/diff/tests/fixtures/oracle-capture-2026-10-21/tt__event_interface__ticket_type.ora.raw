@@ -1,0 +1,31 @@
+## probe 1 ticket type per event type
+"STEP","CODE","MSG","N"
+"event_type 10001",,,1
+"event_type 10002",,,1
+"event_type 10003",,,4
+"event_type 10004",,,1
+"event_type 10019",,,4
+"event_type 101002",,,1
+"event_type 10101",,,1
+"event_type 10102",,,4
+"event_type 10103",,,1
+"event_type 10109",,,1
+"event_type 10110",,,4
+"event_type 10111",,,1
+"event_type 10501",,,1
+"event_type 10602",,,1
+"event_type 20001",,,1
+"event_type 30001",,,1
+"event_type 30002",,,2
+"event_type 30003",,,1
+"event_type 30008",,,1
+"event_type 30009",,,2
+"event_type 30010",,,1
+"event_type 30024",,,1
+"event_type 30025",,,1
+"event_type 40001",,,1
+"event_type 50001",,,1
+"event_type 50011",,,1
+"event_type 60104",,,1
+"event_type 999999999",,,1
+"event_type NULL",,,1

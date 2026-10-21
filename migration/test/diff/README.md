@@ -24,8 +24,8 @@ migration/test/diff/
 │       └── known.diff             optional: an accepted, documented difference
 ├── tests/
 │   ├── test_normalize.py          unit tests for every normalisation rule + the composer
-│   ├── pg2synthetic.py            re-dresses a psql capture in SQL*Plus shape (self-test only)
-│   └── fixtures/synthetic-ora-capture/   SYNTHETIC captures for the harness self-test
+│   └── fixtures/oracle-capture-2026-10-21/   REAL Oracle captures of every scenario (live run
+│                                            2026-10-21, oracle.env from the live preflight) for offline replay
 ├── .work/                 (gitignored) per-scenario ora.sql/ora.raw/pg.sql/pg.raw/*.norm/diff.txt
 └── captures/              (gitignored) suggested place for --ora-capture / --pg-capture output
 ```
@@ -129,11 +129,11 @@ bash migration/test/diff/run-diff.sh --all --ora-capture migration/test/diff/cap
 # one scenario, verbose work files kept
 bash migration/test/diff/run-diff.sh --scenario tt__ticket_interface__status_lifecycle --keep
 
-# offline: PostgreSQL side against a captured Oracle run
-bash migration/test/diff/run-diff.sh --all --ora-from migration/test/diff/captures/2026-10-21
+# offline: PostgreSQL side against the committed real Oracle capture (no Oracle needed)
+bash migration/test/diff/run-diff.sh --all --ora-from migration/test/diff/tests/fixtures/oracle-capture-2026-10-21
 
-# harness self-test (synthetic capture, see Falsifiability)
-bash migration/test/diff/run-diff.sh --all --ora-from migration/test/diff/tests/fixtures/synthetic-ora-capture
+# refresh that capture from a live run (commit the result when the Oracle side changed)
+bash migration/test/diff/run-diff.sh --all --ora-capture migration/test/diff/tests/fixtures/oracle-capture-2026-10-21
 python3 -m unittest discover -s migration/test/diff/tests -v
 ```
 
@@ -195,8 +195,10 @@ call is schema-qualified, so the caller's identity does not change what they do.
 4. **Messages are not compared** by default (R7); the code is the contract. `COMPARE_MSG=yes`
    compares them verbatim after R2 -- expect differences for engine-generated texts.
 5. **The replay mode compares against whatever the capture contains.** A capture is only
-   Oracle evidence if `oracle.env` in it was written by the live preflight. The
-   `tests/fixtures/synthetic-ora-capture/` files are NOT (see below).
+   Oracle evidence if `oracle.env` in it was written by the live preflight; the committed
+   `tests/fixtures/oracle-capture-2026-10-21/` is (Oracle 23.7.0.25.01, UTC, all packages
+   VALID). It reflects the Oracle container's state of 2026-10-21 -- refresh it after an
+   Oracle-side change (new export, new changesets) and commit the new capture.
 6. **`derive_pg_call.sh` is a helper, not a translator.** It applies
    `migration/mapping/client-rename.sed` exactly as that file's header prescribes (`sed -E
    -f`), prefixes `CALL` to procedures listed in `client-rename-map.csv`, converts the
@@ -211,78 +213,29 @@ call is schema-qualified, so the caller's identity does not change what they do.
 ## Falsifiability
 
 A green result is only meaningful because the harness has been seen rejecting a wrong
-answer. Two things were done on 2026-10-20, while **no Oracle container was running**
-(the owner was rebuilding `mcdb-ora` on this box; `docker ps` was re-checked throughout
-and the container was `Exited` every time -- so nothing below is Oracle evidence).
+answer. Before the Oracle container existed (2026-10-20) this was argued with SYNTHETIC
+captures (PostgreSQL output re-dressed in SQL*Plus shape); the first live runs on
+2026-10-21 superseded that argument with real evidence, and the synthetic fixtures were
+removed:
 
-### 1. Replay self-test against a SYNTHETIC capture
-
-`tests/fixtures/synthetic-ora-capture/` contains, clearly labelled in `oracle.env` and in
-each file's first line:
-
-* `mss__osag_ip__pure.ora.raw`, `tt__event_interface__ticket_type.ora.raw`,
-  `tt__ticket_interface__status_lifecycle.ora.raw`: the **PostgreSQL** captures re-dressed
-  in SQL*Plus shape by `tests/pg2synthetic.py` (upper-case quoted header, quoted strings,
-  bare numbers, BINARY row order, Oracle-style `-1403` codes). They prove only that the
-  pipeline handles the SQL*Plus format and reports PASS when the sides agree -- they say
-  nothing about Oracle.
-* `mss__osag_ip__oracle_bugs.ora.raw`: **hand-derived** from the Oracle source
-  (`ddl/src/pkgb/mss_osag_ip.sql`, the arithmetic of the lines cited by spec clauses
-  S-IP-008/009/014/020/023). This is what the differential run is expected to show for the
-  documented `DEVIATION(ORACLE-BUG)` inputs; the scenario's `known.diff` was frozen from
-  it. The first live run confirms or corrects both files -- a mismatch is reported as
-  `DIFF`, never hidden.
-
-```
-$ bash migration/test/diff/run-diff.sh --all --ora-from migration/test/diff/tests/fixtures/synthetic-ora-capture --no-install
-run-diff.sh: Oracle side replayed from migration/test/diff/tests/fixtures/synthetic-ora-capture
-run-diff.sh: replayed capture's oracle.env:
-    ORA_VERSION=SYNTHETIC -- this capture was NOT produced by an Oracle database
-    ...
-SCENARIO                                         | ORACLE  | PROBES | RESULT
--------------------------------------------------+---------+--------+------------
-mss__osag_ip__oracle_bugs                        | replay  | 1      | KNOWN
-mss__osag_ip__pure                               | replay  | 1      | PASS
-tt__event_interface__ticket_type                 | replay  | 1      | PASS
-tt__ticket_interface__status_lifecycle           | replay  | 5      | PASS
-
-TOTAL: 4 scenarios, 4 pass/known, 0 diff/error, 0 without Oracle data (oracle: replay)
-exit=0
-```
-
-### 2. A deliberate difference is caught
-
-`tt__ticket_interface__status_lifecycle/call.pg.sql` was mutated so that step 01 changes
-the status to 4 (acknowledged) instead of 3 (hot), and the replay above was repeated:
-
-```
-=== tt__ticket_interface__status_lifecycle  (ORA_USER=system, COMMITS=no) ===
---- DIFF: tt__ticket_interface__status_lifecycle (- oracle, + postgresql) ---
-@@ -1,7 +1,7 @@
- ## probe 1 steps (post-step status in n, valid-until set/null in s; error code for failed steps)
- step,code,msg,n,s
- 00 initial,,,2,null
--01 open->hot,,,3,null
-+01 open->hot,,,4,null
- 02 hot->hot no-op,,,3,null
-@@ -14,7 +14,8 @@
- ## probe 3 events written by the routines (the fixture event 950011 excluded)
- type_id,ticket_id,public_event,company_id,contact_id,details_public,details_private
--101003,950010,1,,950002,New status: hot\nPrevious status: open\nmoved to hot,
-+101003,950010,1,,950002,New status: hot\nPrevious status: acknowledged\nsame status again,
-+101004,950010,1,,950002,New status: acknowledged\nPrevious status: open\nmoved to hot,
-
-mss__osag_ip__oracle_bugs                        | replay  | 1      | KNOWN
-mss__osag_ip__pure                               | replay  | 1      | PASS
-tt__event_interface__ticket_type                 | replay  | 1      | PASS
-tt__ticket_interface__status_lifecycle           | replay  | 5      | DIFF
-TOTAL: 4 scenarios, 3 pass/known, 1 diff/error, 0 without Oracle data (oracle: replay)
-exit=1
-```
-
-The mutation was reverted and the clean run (exit 0) repeated. The `PASS` rows above are
-PostgreSQL-vs-PostgreSQL by construction; the `KNOWN` row is PostgreSQL-vs-hand-traced
-Oracle. **The real Oracle run has not happened yet.**
+* **The harness found real differences.** Driven live against `mcdb-ora`, the scenarios
+  reported DIFF for behaviour the specs had misread from the PL/SQL source and the
+  pgTAP suites therefore could not catch: Oracle's `'x' || NULL = 'x'` (status-change event
+  texts S-TICKET-064, `change_service_host` S-TICKET-016, `replace_id_placeholders`
+  S-TICKET-037), Oracle's `'' IS NULL` (S-TICKET-027/029), `SUBSTR(x, 1, INSTR(x, CHR(10)) - 1)`
+  on single-line text (S-EVENT-048 -- events were silently lost), implicit NUMBER rendering
+  (`24`, `.5`; S-TICKET-021/066), the empty Zurich time-zone abbreviation (S-NOTIFY-038),
+  and two fixtures Oracle refuses outright (`MSS.IDX_H2S_HOST_UN`, S-EVENT-001/S-TICKET-001/
+  S-HW-006). Each was fixed spec-first and re-run to PASS; `git log --grep "found live"`
+  lists them.
+* **Known differences are frozen, not hidden.** Deliberate corrections of Oracle bugs
+  (`DEVIATION(ORACLE-BUG)`), the dynamic-dispatch allowlist (S-EVENT-038), the mail path
+  (Oracle `UTL_SMTP` -> ORA-24247 in the container vs the PostgreSQL outbox) and the
+  callee-DML rollback asymmetry are `known.diff` files; `STALE-KNOWN` fails the run the
+  moment the sides agree again.
+* **Replay is checkable.** `tests/fixtures/oracle-capture-2026-10-21/` is the real capture
+  of the 25-scenario live run (25 PASS/KNOWN). Replaying it must give the same table; a
+  translation change that alters observable behaviour shows up as DIFF without Oracle.
 
 ## How to run the Oracle side (when `mcdb-ora` is up)
 

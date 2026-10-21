@@ -1,0 +1,76 @@
+## probe 1 steps (ok for every call -- the routine swallows its own lookup failures, S-ESC-016)
+"STEP","CODE","MSG","S"
+"01 ticket host and ticket company",,,"ok"
+"02 event host, service company without short",,,"ok"
+"03 event company wins",,,"ok"
+"04 no host on event or ticket",,,"ok"
+"05 nonexistent event",,,"ok"
+## probe 2 the escalation tickets opened (one per successful lookup; told apart by their 30005 text)
+"TYPE_ID","STATUS_ID","SERVICE_COMPONENT_ID","ESCALATION_STATUS_ID","HOST_IS_NULL","COMPANY_IS_NULL","CONTACT_IS_NULL","INCIDENT_REPORT"
+1,1,27,0,1,1,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-active
+Company: dfisp1
+Time of original event: 2024-03-05 14:07:11
+Original ticket 957511"
+1,1,27,0,1,1,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-active
+Company: dfisp2
+Time of original event: 2024-03-05 14:07:09
+Original ticket 957511"
+1,1,27,0,1,1,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-noshort
+Company: 
+Time of original event: 2024-03-05 14:07:10
+Original ticket 957512"
+## probe 3 all events of the escalation tickets (S-ESC-018 public/private texts, 101001 history event)
+"TYPE_ID","PUBLIC_EVENT","DETAILS_PUBLIC","DETAILS_PRIVATE","HOST_IS_NULL","COMPANY_IS_NULL","CONTACT_IS_NULL"
+30005,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-active
+Company: dfisp1
+Time of original event: 2024-03-05 14:07:11
+Original ticket 957511","To Do:
+https://open-systems.atlassian.net/wiki/x/3xYBAQ
+
+Do not add any further events to this escalation ticket.
+Use the original ticket 957511 for tracking any work!
+This ticket is intentionally hidden from the customer, so do not merge it. ",1,1,1
+30005,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-active
+Company: dfisp2
+Time of original event: 2024-03-05 14:07:09
+Original ticket 957511","To Do:
+https://open-systems.atlassian.net/wiki/x/3xYBAQ
+
+Do not add any further events to this escalation ticket.
+Use the original ticket 957511 for tracking any work!
+This ticket is intentionally hidden from the customer, so do not merge it. ",1,1,1
+30005,1,"Critical ISP Outage escalation
+
+Critical ISP Outage escalation
+Host: diff-isp-noshort
+Company: 
+Time of original event: 2024-03-05 14:07:10
+Original ticket 957512","To Do:
+https://open-systems.atlassian.net/wiki/x/3xYBAQ
+
+Do not add any further events to this escalation ticket.
+Use the original ticket 957512 for tracking any work!
+This ticket is intentionally hidden from the customer, so do not merge it. ",1,1,1
+101001,1,"New ticket created",,1,1,1
+101001,1,"New ticket created",,1,1,1
+101001,1,"New ticket created",,1,1,1
+## probe 4 the original tickets are untouched (S-ESC-019)
+"ID","TYPE_ID","STATUS_ID","ESCALATION_STATUS_ID","ESCALATION_DATE_IS_NULL","N_EVENTS"
+957511,4,2,0,1,2
+957512,4,2,0,1,1
+957513,4,2,0,1,1

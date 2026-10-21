@@ -1,0 +1,40 @@
+## probe 1 steps (surviving fixture notifications in n after each step, error code for failed steps)
+"STEP","CODE","MSG","N","S"
+"00 initial",,,7,"ok"
+"01 delete_notifications_for_login alpha",,,4,"ok"
+"02 delete_ticket_notifications ticket A all logins",,,2,"ok"
+"03 delete_ticket_notifications ticket C osag",,,1,"ok"
+"04 delete_ticket_notifications ticket D bad type swallowed",,,1,"ok"
+"05 delete_ticket_notifications nonexistent ticket",,,1,"ok"
+"06 delete_notifications_for_login nonexistent login",,,1,"ok"
+"07 delete_ticket_notifications ticket B beta no rows",,,1,"ok"
+"08 add_notification_event public",,,1,"ok"
+"09 add_notification_event private",,,1,"ok"
+"10 add_notification_event null type id","-1400","ORA-01400: cannot insert NULL into (""TT"".""EVENT"".""TYPE_ID"")",,
+## probe 2 surviving event_notification rows of the fixture logins
+"ID","LOGIN_ID","EVENT_NOTIFICATION_TYPE_ID","TICKET_ID"
+958036,958011,958999,958023
+## probe 3 events written by the routines (100003 via change_notification, 20001/20003 via add_notification_event)
+"TYPE_ID","TICKET_ID","PUBLIC_EVENT","CONTACT_ID","PEER_CONTACT_ID","COMPANY_ID","DETAILS_PUBLIC","DETAILS_PRIVATE","HAS_EVENTDATE"
+100003,958020,1,,,,"Notification settings changed
+  -deleted email notification for Alpha Cust
+because the user was deleted",,1
+100003,958020,1,,,,"Notification settings changed
+  -deleted email notification for Beta Cust
+","Notification settings changed
+  -deleted SMS notification for Osag Staff
+",1
+20001,958021,1,958002,958003,,"dfn public text",,1
+20003,958021,0,958002,,,,"dfn private text",1
+100003,958021,1,,,,"Notification settings changed
+  -deleted SMS notification for Alpha Cust
+because the user was deleted",,1
+100003,958022,1,,,,"Notification settings changed
+  -deleted email notification for Osag Staff
+",,1
+## probe 4 ticket notify counters untouched (no listener matched for the 100003 events)
+"ID","EVENT_NOTIFY_COUNT","EVENT_NOTIFY_COUNT_OSAG"
+958020,,
+958021,,
+958022,,
+958023,,
