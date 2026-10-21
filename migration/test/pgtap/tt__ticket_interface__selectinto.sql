@@ -35,29 +35,29 @@ INSERT INTO stop.contact (id, lastname, firstname, short, company_id) VALUES (90
 INSERT INTO tt.event_type (id, name, source, sms_message_template_id, email_message_template_id)
     VALUES (907006, 'pilot si event type', 1, 1, 2);
 
--- Host mapped to TWO services -- site #2's TOO_MANY_ROWS fixture (the identical
--- mss.host2service PK-is-(host_id,service_id)-not-host_id-alone hazard already
--- documented for the same table in tt.event_interface.md/tt.osag_notify.md).
+-- A host with ONE service; the second host2service row below is the point of the
+-- S-TICKET-001 assertion (amended 2026-10-21, TEST-AMENDMENTS A-302): Oracle's unique
+-- index MSS.IDX_H2S_HOST_UN (ddl/generated/schema.oracle.sql:3700, confirmed live with
+-- ORA-00001) makes a host with two services impossible, so site #2 can never see
+-- TOO_MANY_ROWS. schema-fixes/29 adds the index to the PostgreSQL template.
 INSERT INTO mss.host (id, name, operating_system_id, service_company_id, author)
     VALUES (907003, 'pilot-si-multisvc-host', 2, 907001, 'pilot');
 INSERT INTO mss.service (id, service_type_id, company_id, service_level_id, name) VALUES (907004, 6, 907001, 1, 'pilot-si-svc-a');
 INSERT INTO mss.service (id, service_type_id, company_id, service_level_id, name) VALUES (907005, 6, 907001, 1, 'pilot-si-svc-b');
 INSERT INTO mss.host2service (host_id, service_id) VALUES (907003, 907004);
-INSERT INTO mss.host2service (host_id, service_id) VALUES (907003, 907005);
 
 -------------------------------------------------------------------------------
--- Site #2 (S-TICKET-001): newticket_new's mss.host2service lookup is a plain
--- (non-outer-joined) SELECT INTO against a table whose primary key spans both
--- host_id and service_id, NOT unique on host_id alone -- a host mapped to 2+ services
--- makes TOO_MANY_ROWS genuinely reachable here, distinct from every OTHER
--- newticket_new hazard already covered (all zero-row) in lifecycle.sql.
+-- Site #2 (S-TICKET-001, amended): the schema fact behind the clause -- a second
+-- mss.host2service row for one host is refused (23505), exactly as Oracle refuses it
+-- (ORA-00001, MSS.IDX_H2S_HOST_UN). newticket_new's plain SELECT INTO at site #2 is
+-- therefore a zero-row hazard only (covered in tt__ticket_interface__lifecycle.sql).
 -------------------------------------------------------------------------------
 
 SELECT throws_ok(
-    $$CALL tt.ticket_interface_newticket_new(NULL, NULL, 1, 'pilot subj', 907006, 907003, 'pub', 'priv')$$,
-    'P0003',
+    $$INSERT INTO mss.host2service (host_id, service_id) VALUES (907003, 907005)$$,
+    '23505',
     NULL,
-    'S-TICKET-001: newticket_new propagates TOO_MANY_ROWS unhandled at site #2 (mss.host2service lookup) for a host mapped to more than one service -- the ONE multi-row hazard in this routine, distinct from every zero-row hazard already covered in tt__ticket_interface__lifecycle.sql'
+    'S-TICKET-001: a second mss.host2service row for one host is refused by the unique index idx_h2s_host_un (Oracle MSS.IDX_H2S_HOST_UN) -- TOO_MANY_ROWS at site #2 is structurally impossible, as amended'
 );
 
 -------------------------------------------------------------------------------

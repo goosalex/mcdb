@@ -792,3 +792,25 @@ asserted because the clause itself changed; it does not weaken a test to match a
 (the translation is untouched by it).
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-301 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`
+
+## A-302 — `tt__ticket_interface__selectinto.sql`: S-TICKET-001 asserted the same impossible two-services path
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
+| **Assertions affected** | 1 replaced (the S-TICKET-001 `throws_ok` P0003), `plan(20)` unchanged |
+
+Same fact as A-301, same table: the fixture gave host 907003 two `mss.host2service` rows to
+make `newticket_new`'s site #2 raise `TOO_MANY_ROWS`. Oracle refuses that fixture
+(`MSS.IDX_H2S_HOST_UN`, `ddl/generated/schema.oracle.sql:3700`), and once
+`schema-fixes/29_host2service_unique_fixes.sql` is loaded the second `INSERT` fails on
+PostgreSQL too -- the whole file aborted at line 46 ("planned 20 tests but ran 0") during
+`run-tests.sh --package tt.ticket_interface` on a database carrying fix 29. Spec
+S-TICKET-001 was amended first (commit `spec(tt.ticket_interface): S-TICKET-001 amended ...`,
+same day). The assertion now checks the unique violation (`23505`) on the second row; the
+second service row (907005) stays as a fixture, only its `host2service` mapping moved into
+the `throws_ok`. The translation is untouched by this amendment.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-302 S-TICKET-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible at site #2); test-only commit`
