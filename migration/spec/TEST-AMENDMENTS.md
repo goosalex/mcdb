@@ -743,3 +743,20 @@ asserted (the reason text, and that the contact check passed first) is unchanged
 sibling "contact message NOT logged" count-0 assertion is untouched.
 
 `commit:7c15c784339fabecd30a207246933e3aa2a9d6e0 file:migration/test/pgtap/osixinfo__osag_hardware__spec.sql reason:A-021 S-HW-004 reason text pinned via throws_like instead of the transactional plog stub table, test-only commit`
+
+## A-018 — `tt__ticket_interface__signoff.sql`: two auth.login fixtures need distinct `login` names
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__signoff.sql` |
+| **Assertions affected** | 0 changed; 2 fixture rows gain a `login` value |
+
+The two `auth.login` fixture rows (908610, 908611) were inserted without a `login` value;
+`u_login_login_company_nocase` treats two NULL logins in the same company as duplicates,
+so the second INSERT failed and every assertion of the file died with it (0/22 -- not a
+RED proof of anything). Both rows now carry distinct logins (`sgn-servicenow`,
+`sgn-worker`). Nothing asserted changes.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-018 fixture login names, test-only commit`

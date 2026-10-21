@@ -28,8 +28,8 @@ INSERT INTO stop.contact (id, lastname, firstname, short, company_id) VALUES (90
 INSERT INTO stop.contact (id, lastname, firstname, short, company_id) VALUES (908606, 'Explicit', 'Contact', 'sgnex1', 908601);
 INSERT INTO mss.host (id, name, operating_system_id, service_company_id, author) VALUES (908605, 'signoff-host', 2, 908601, 'signoff');
 -- the login behind one of the eight sign-off Zitadel IDs, and a worker with a login
-INSERT INTO auth.login (id, contact_id, company_id, oidc_zitadel_id) VALUES (908610, 908602, 908601, '260976466693466175');
-INSERT INTO auth.login (id, contact_id, company_id, oidc_zitadel_id) VALUES (908611, 908603, 908601, '908600111222333444');
+INSERT INTO auth.login (id, login, contact_id, company_id, oidc_zitadel_id) VALUES (908610, 'sgn-servicenow', 908602, 908601, '260976466693466175');
+INSERT INTO auth.login (id, login, contact_id, company_id, oidc_zitadel_id) VALUES (908611, 'sgn-worker', 908603, 908601, '908600111222333444');
 
 -------------------------------------------------------------------------------
 -- A: sign-off Zitadel sender, no p_contact_id, event type 30002 (S-TICKET-061/062)
