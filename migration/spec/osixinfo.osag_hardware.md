@@ -169,11 +169,19 @@ Private helper (body only): `dump_to_hw_history(p_host_id, p_old_hardware_id)`, 
   = company.id INNER JOIN mss.host2service ON host.id = host2service.host_id INNER JOIN
   mss.service ON host2service.service_id = service.id INNER JOIN mss.service_type ON
   service.service_type_id = service_type.id WHERE host.id = p_host_id` (lines 53-60).
-  `mss.host2service`'s primary key is `(host_id, service_id)`: a host with NO service
-  raises `NO_DATA_FOUND`, a host with TWO OR MORE services raises `TOO_MANY_ROWS` —
-  neither is handled in `dump_to_hw_history` or `replace_hardware`; `TOO_MANY_ROWS` is
-  handled NOWHERE in the package and propagates out of both public entry points
-  (PostgreSQL SQLSTATE `P0003`). `stop.company.short` (nullable) and
+  A host with NO service raises `NO_DATA_FOUND`, handled neither in `dump_to_hw_history`
+  nor in `replace_hardware`. **`TOO_MANY_ROWS` is structurally IMPOSSIBLE here (amended
+  2026-10-21).** This clause originally derived a two-services case from
+  `mss.host2service`'s primary key `(host_id, service_id)` alone; the export also carries
+  `CREATE UNIQUE INDEX MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID)`
+  (`ddl/generated/schema.oracle.sql:3700`), so a host is mapped to AT MOST ONE service and
+  this join returns at most one row. Confirmed live against the Oracle container on
+  2026-10-21 (differential scenario `tt__event_interface__newevent`: a second
+  `mss.host2service` row for one host is refused with `ORA-00001 (MSS.IDX_H2S_HOST_UN)`).
+  The PostgreSQL template lacked the index (not in the ora2pg output);
+  `migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it, so PostgreSQL
+  refuses the second row exactly as Oracle does (`23505`). The absence of any
+  `TOO_MANY_ROWS` handler in the package is therefore moot for this site. `stop.company.short` (nullable) and
   `mss.service_type.internal_code` (nullable) are copied as read.
 - **source:** `ddl/src/pkgb/osixinfo_osag_hardware.sql:52-60`
 
