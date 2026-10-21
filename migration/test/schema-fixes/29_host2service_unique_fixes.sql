@@ -1,0 +1,25 @@
+-- migration/test/schema-fixes/29_host2service_unique_fixes.sql
+--
+-- The Oracle export carries a UNIQUE index on MSS.HOST2SERVICE(HOST_ID):
+--
+--   ddl/generated/schema.oracle.sql:3700
+--     CREATE UNIQUE INDEX MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID);
+--
+-- created by changes/changelog-2.archive.sql:1884 AFTER the ora2pg export that
+-- ddl/migrated/ is frozen from (ddl/migrated/tables/tables.pg.sql has the PK and
+-- h2s_service_id_idx only). A host therefore has AT MOST ONE service in Oracle; several
+-- TT routines rely on it implicitly: TT.EVENT_INTERFACE.newevent_new's
+-- `SELECT h.service_company_id, h2s.service_id INTO ... FROM mss.host h, mss.host2service h2s`
+-- (S-EVENT-001, amended 2026-10-21 -- TOO_MANY_ROWS is structurally impossible, not
+-- "reachable" as first specified), TT.OSAG_NOTIFY.event_notify's outer join on host2service,
+-- TT.TICKET_INTERFACE.newticket_new's service lookup.
+--
+-- Found live by the differential scenario migration/test/diff/scenarios/tt__event_interface__newevent
+-- (2026-10-21): its fixture gave one host two services; Oracle refused the second row with
+-- ORA-00001 (MSS.IDX_H2S_HOST_UN), PostgreSQL accepted it and newevent_new raised P0003.
+--
+-- Additive, idempotent, applied AFTER the base ddl/migrated load (D-P7: ddl/ is read-only).
+-- Ledger entry: migration/test/SCHEMA-FIXES.md, fix #13. Index name kept as in Oracle
+-- (lower-cased, like every ora2pg-emitted index name).
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_h2s_host_un ON mss.host2service (host_id);
