@@ -176,7 +176,9 @@ call is schema-qualified, so the caller's identity does not change what they do.
 ## Limitations (read before trusting a result)
 
 1. **Oracle is left untouched only by ROLLBACK.** Everything runs in one transaction that
-   is rolled back; the GTT is dropped afterwards. What survives on Oracle regardless:
+   is rolled back; the GTT `diff_probe` is truncated but its (empty, session-private) definition
+   is left in the connecting user's schema -- dropping it raced concurrent runs of the same
+   Oracle user (ORA-00942 mid-run), so one definition per user stays behind. What survives on Oracle regardless:
    rows written through `OSAG.OSAG_PLOG`'s `PRAGMA AUTONOMOUS_TRANSACTION` (every TT
    routine calls `plog.AuditUsage`), and anything a routine does through autonomous
    transactions or external calls (mail). Scenarios with `COMMITS=yes` (a routine that

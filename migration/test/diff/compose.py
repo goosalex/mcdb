@@ -99,7 +99,10 @@ ROLLBACK;
 
 ORA_DROP_PROBE = """\
 TRUNCATE TABLE diff_probe;
-DROP TABLE diff_probe;
+-- The GTT definition is deliberately NOT dropped: it is one object per Oracle user, its ROWS are
+-- session-private, and dropping it here pulled it from under a concurrent run of another
+-- scenario connected as the same user (ORA-00942 mid-run, seen 2026-10-21 with several agents
+-- running as SYSTEM). The empty definition is the one artifact a run leaves behind on Oracle.
 EXIT ROLLBACK
 """
 
