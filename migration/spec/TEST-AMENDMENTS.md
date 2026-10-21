@@ -998,3 +998,5 @@ the merged suites run green (`tt.ticket_interface` 203/203 after the last merge)
 `commit:3900b1fa689cbfaff330893ef8c45d25d242e2e0 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-023 merge plan() recount (73+10 -> 83), test content from both branches unchanged`
 `commit:3900b1fa689cbfaff330893ef8c45d25d242e2e0 file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-023 merge plan() recount (44+6 -> 50), test content from both branches unchanged`
 `commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-023 merge plan() recount (50+4 -> 54) and S-TICKET-065->066 renumbering of six descriptions, assertions unchanged`
+`commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-023 ledger-id renumbering in comments only (A-201->A-024, A-101/A-102->A-028/A-029), assertions unchanged`
+`commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-023 ledger-id renumbering in comments only (A-302->A-027), assertions unchanged`
