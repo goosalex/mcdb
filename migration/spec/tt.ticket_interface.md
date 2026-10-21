@@ -816,8 +816,22 @@ plan's SUMMARY.
   `TICKET_PK`), so `TOO_MANY_ROWS` is structurally impossible at all four; zero rows is
   reachable at each independently (orphaned/absent service or host references), and each
   is caught LOCALLY — none of the four can ever reach an outer handler because this
-  routine has none (S-TICKET-015).
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:782-832`
+  routine has none (S-TICKET-015). **Amended (branch `phoenix/migrate_tt_only`,
+  differential run 2026-10-21, scenario `tt__ticket_interface__change_owner_company`
+  steps 07/08):** the two service-label defaults are `NULL`, and line 865 concatenates
+  them unconditionally: `'service changed from' || v_host_label_old || v_service_label_old
+  || ' to' || v_host_label_new || v_service_label_new`. In Oracle `||` treats a NULL
+  operand as the empty string, so a ticket without a service yields `'service changed from
+  <empty> to diff-host (Security Gateway [952108])'` and a nonexistent new service yields
+  `'... to <empty>'`. Observed live: a literal PostgreSQL `||` propagates the NULL and the
+  whole `details_public` of the 100003 event became NULL. The contract is Oracle's text;
+  the translation must concatenate the two NULL-defaulting labels as `''`
+  (`COALESCE(v_service_label_old, '')`, `COALESCE(v_service_label_new, '')`) — the two
+  host labels default to `' <empty>'` and need nothing. This corrects Checklist §1's
+  remark that these defaults "are Oracle string LITERALS ... not caller input subject to
+  collapsing": true for `'<empty>'`, but the `NULL` default IS subject to the `||`
+  divergence.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:814-865`
 
 ### S-TICKET-017
 
