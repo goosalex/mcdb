@@ -79,13 +79,15 @@ Every site carries a `-- S-EVENT-0NN (site #N)` clause-ID comment matching the s
 - **5 `STRICT + local handler` sites** (S-EVENT-001 NO_DATA_FOUND arm, S-EVENT-008,
   S-EVENT-019, S-EVENT-033 all 3 arms, S-EVENT-036 both arms) -- local Oracle handlers
   reproduced exactly.
-- **1 `STRICT + local handler, TOO_MANY_ROWS re-raises then propagates unhandled` site**
-  (S-EVENT-001) -- `mss.host2service`'s PK spans `(host_id, service_id)`, not unique on
-  `host_id` alone; `newevent_new` has no procedure-level `EXCEPTION` block, so a re-raised
-  `TOO_MANY_ROWS` (native PL/pgSQL SQLSTATE `P0003`) propagates to `newevent_new`'s own
-  caller. Confirmed live: inserting two `mss.host2service` rows for one host and calling
-  `newevent_new` raises `P0003` ("query returned more than one row") exactly as the spec
-  requires.
+- **1 `STRICT + local handler, WHEN OTHERS re-raises` site** (S-EVENT-001). **Corrected
+  2026-10-21 by the live differential run:** the earlier text here ("TOO_MANY_ROWS
+  re-raises then propagates unhandled ... confirmed live") was confirmed against
+  PostgreSQL only. Oracle has `CREATE UNIQUE INDEX MSS.IDX_H2S_HOST_UN ON
+  MSS.HOST2SERVICE(HOST_ID)` (`ddl/generated/schema.oracle.sql:3700`), so a host with two
+  services cannot exist and no `TOO_MANY_ROWS` can reach the `WHEN OTHERS THEN RAISE` arm;
+  the arm is kept for every other error. The index was missing from the template
+  (`migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it); spec
+  S-EVENT-001 amended, pgTAP assertion re-pointed (TEST-AMENDMENTS A-301).
 - **1 `STRICT + LIMIT 1 (ROWNUM=1 mechanic)` site** (S-EVENT-019) -- Oracle's trailing
   `ROWNUM=1` structurally caps the query at one row before `SELECT INTO` can ever see more
   than one; translated as a trailing `LIMIT 1` (not merely dropped), so PL/pgSQL's own
@@ -227,7 +229,7 @@ EXACT fixture INSERT statements and `CALL`s the pgTAP spec file itself uses (rea
 | S-EVENT-044 `promote_event` (valid id) | `demoted` flips 1->0 | `demoted = 0` | YES |
 | S-EVENT-044 `promote_event` (bad id) | raises, SQLSTATE P0002 | `ERROR: no data found` | YES |
 | S-EVENT-033 `moveevent` (bad new ticket) | swallows, logs "new ticket does not exist" | logged, count >= 1 | YES |
-| S-EVENT-001 `newevent_new` (2-service host) | raises, SQLSTATE P0003 | `ERROR: query returned more than one row` | YES |
+| S-EVENT-001 `newevent_new` (2-service host) | raises, SQLSTATE P0003 | `ERROR: query returned more than one row` | YES at the time -- superseded 2026-10-21: Oracle refuses the fixture itself (`ORA-00001`, `MSS.IDX_H2S_HOST_UN`); the assertion now checks `23505` on the second `host2service` row (A-301) |
 | S-EVENT-003 `newevent_new` (inactive host) | no ticket created | `count = 0` | YES |
 | S-EVENT-021 `addevent_new` (closed ticket) | raises, message contains "closed" | `ERROR: Ticket with id 900608 is closed/deleted` | YES |
 | S-EVENT-019 `addevent_new` (merged, 2 candidates) | lives (no TOO_MANY_ROWS) | swallowed unrelated forward-ref error, no TOO_MANY_ROWS | YES |
@@ -331,6 +333,37 @@ depgraph gap, `moveevent`'s acknowledged bug). This plan's own new findings (the
 `contact_zitadel_id` schema gap, the `auth.permission`/`auth.mv_service_access` dead-code
 discovery, and the pgTAP cascading-abort defect) are recorded above, not in the spec itself
 (out of this plan's scope to amend the spec).
+
+## Live differential findings (2026-10-21, migration/test/diff)
+
+Scenarios `tt__event_interface__exec_actions`, `tt__event_interface__newevent` and the
+`tt__escalation_interface__*` scenarios ran against the Oracle container. Translation
+defects found and fixed in this file:
+
+| Site | Oracle (observed) | Translation before | Fix | Spec |
+|------|-------------------|--------------------|-----|------|
+| `newevent_new` subject for 30002/30009/40002/10014/10002 with single-line details | ticket created with `subject = NULL` (`SUBSTR(x, 1, -1)` is NULL) | `22011 negative substring length not allowed`, propagated to the caller | `NULLIF(substr(.., GREATEST(strpos(..) - 1, 0)), '')` | S-EVENT-048 |
+| `newevent_new` / `addevent_new` alerting-log `v_msg_firstline` (10004 etc.) with single-line details | log line with empty msgshort, event written | `newevent_new`: 22011 propagated; `addevent_new`: 22011 swallowed by the outer handler AFTER `p_event_id` was assigned -- event silently LOST | same | S-EVENT-048 |
+| `newevent_new` `eventSubject := SUBSTR(details, 1, 95 - length(subject))` | NULL for a negative length | would raise 22011 (no current event type name is that long) | same | S-EVENT-048 |
+
+Found in a cycle partner and fixed there: `tt.ticket_interface_change_status_event_id_out`
+nulled the status-change event's `details_public` whenever this package passed a NULL
+`p_details_public` (`change_status(..., NULL, 'new event added')` at Oracle lines 326 and
+707) -- see `ticket_interface.FINDINGS.md` / S-TICKET-064.
+
+Schema gaps found: `mss.v_host_key_value` and its materialized views (DBPROP dispatch,
+`schema-fixes/28_dbprop_mviews_fixes.sql`), the unique index on
+`mss.host2service(host_id)` (`schema-fixes/29_host2service_unique_fixes.sql`).
+
+Confirmed agreeing live (no change needed): the S-EVENT-038 dispatch to all four
+`TT.ESCALATION_INTERFACE` routines, the S-EVENT-039 suppressed-escalation 60010 event, the
+closed-ticket dispatch (both engines roll back the failing dynamic `CALL` as a whole --
+the XCUT-05 transaction-scope delta does NOT appear on this path, only on a static PL/SQL
+call with a handling caller), the append-to-recent-ticket path, the S-EVENT-001
+NO_DATA_FOUND arm, S-EVENT-002/003/005 error codes, addevent_new's rollups, type changes,
+merged-ticket recursion and the swallowed nonexistent-ticket/-type errors. The only
+accepted difference is the S-EVENT-038 allowlist refusal (`known.diff` of
+`tt__event_interface__exec_actions`).
 
 ## Deviations from Oracle
 

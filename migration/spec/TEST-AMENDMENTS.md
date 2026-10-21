@@ -768,6 +768,7 @@ in `CALL`) -- now a `DO` block with a variable.
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
 
 ## A-201 — `tt__ticket_interface__changes.sql`: replace_id_placeholders NULL-id assertions (S-TICKET-037)
+## A-301 — `tt__event_interface__spec.sql`: S-EVENT-001 asserted a path Oracle cannot take (two services per host)
 
 | | |
 |---|---|
@@ -791,6 +792,28 @@ with the `coalesce(p_id::varchar, '')` correction in the following translation c
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-201 three replace_id_placeholders NULL-id assertions from the live Oracle run; test-only commit`
 
 ## A-202 — `tt__ticket_interface__lifecycle.sql`: change_status NULL-text assertions (S-TICKET-064)
+| **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
+| **File** | `migration/test/pgtap/tt__event_interface__spec.sql` |
+| **Assertions affected** | 1 replaced (the S-EVENT-001 `throws_ok` P0003), `plan(20)` unchanged |
+
+The live Oracle run of scenario `tt__event_interface__newevent` refused the fixture that gave
+one host two `mss.host2service` rows: `ORA-00001: unique constraint (MSS.IDX_H2S_HOST_UN)
+violated`. The index is in the export (`ddl/generated/schema.oracle.sql:3700`, created by
+`changes/changelog-2.archive.sql:1884`) but not in the ora2pg output, so the PostgreSQL
+template accepted the second row and the old assertion ("newevent_new propagates
+TOO_MANY_ROWS unhandled for a host mapped to two services", P0003) was green for a
+situation that cannot exist in Oracle. Spec S-EVENT-001 was amended first (commit
+`spec(tt.event_interface): S-EVENT-001 amended ...`, same day): TOO_MANY_ROWS is
+structurally impossible. The test now asserts the schema fact the clause rests on -- the
+second `host2service` row for one host raises `23505` -- which is RED until
+`migration/test/schema-fixes/29_host2service_unique_fixes.sql` is in the template. The
+`WHEN OTHERS THEN RAISE` arm of the translation is unchanged. This amendment changes WHAT is
+asserted because the clause itself changed; it does not weaken a test to match a translation
+(the translation is untouched by it).
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-301 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`
+
+## A-302 — `tt__ticket_interface__selectinto.sql`: S-TICKET-001 asserted the same impossible two-services path
 
 | | |
 |---|---|
@@ -815,3 +838,19 @@ previously asserted changed. They are RED against the translation as committed a
 with the `coalesce(.., '')` correction in the following translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-202 five change_status NULL-text assertions and fixture ticket 905030 from the live Oracle run; test-only commit`
+| **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__selectinto.sql` |
+| **Assertions affected** | 1 replaced (the S-TICKET-001 `throws_ok` P0003), `plan(20)` unchanged |
+
+Same fact as A-301, same table: the fixture gave host 907003 two `mss.host2service` rows to
+make `newticket_new`'s site #2 raise `TOO_MANY_ROWS`. Oracle refuses that fixture
+(`MSS.IDX_H2S_HOST_UN`, `ddl/generated/schema.oracle.sql:3700`), and once
+`schema-fixes/29_host2service_unique_fixes.sql` is loaded the second `INSERT` fails on
+PostgreSQL too -- the whole file aborted at line 46 ("planned 20 tests but ran 0") during
+`run-tests.sh --package tt.ticket_interface` on a database carrying fix 29. Spec
+S-TICKET-001 was amended first (commit `spec(tt.ticket_interface): S-TICKET-001 amended ...`,
+same day). The assertion now checks the unique violation (`23505`) on the second row; the
+second service row (907005) stays as a fixture, only its `host2service` mapping moved into
+the `throws_ok`. The translation is untouched by this amendment.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-302 S-TICKET-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible at site #2); test-only commit`

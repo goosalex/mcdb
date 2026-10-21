@@ -668,6 +668,9 @@ BEGIN
     -- CHR(10)); PostgreSQL's 'x' || NULL is NULL and would erase the whole public text.
     -- coalesce(.., '') at the two caller-text sites restores Oracle's result.
     dets_pub := 'New status: ' || status_name || chr(10) || 'Previous status: ' || v_cur_status_name;
+    -- S-TICKET-064 (Pitfall 2): p_details_public is NULL for every event-triggered status
+    -- change (TT.EVENT_INTERFACE passes NULL, 'new event added'); Oracle's || keeps the two
+    -- status lines plus the line break, PostgreSQL's || would null the whole text.
     dets_pub := dets_pub || chr(10) || coalesce(p_details_public, '');
 
     IF (p_escalate_after_defer) THEN

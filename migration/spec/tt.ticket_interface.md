@@ -596,16 +596,23 @@ plan's SUMMARY.
   WHERE h.id = p_host_id` (line 86, `HOST_PK` — `TOO_MANY_ROWS` impossible, zero rows
   reachable for a bad `p_host_id`) immediately followed by
   `SELECT h2s.service_id INTO v_mss_service_id FROM mss.host2service h2s WHERE h2s.host_id
-  = p_host_id` (line 89). **`mss.host2service`'s primary key is `(HOST_ID, SERVICE_ID)`**
-  (`ddl/generated/schema.oracle.sql:81`) — `HOST_ID` alone is NOT unique, so a host mapped
-  to more than one service makes THIS site's plain (non-outer-joined) `SELECT INTO`
-  genuinely reachable for `TOO_MANY_ROWS` — the identical structural hazard already
-  documented for the same table in `migration/spec/tt.event_interface.md` (S-EVENT-001)
-  and `migration/spec/tt.osag_notify.md` (S-NOTIFY-003). **`newticket_new` has NO
-  procedure-level `EXCEPTION` block at all** (confirmed reading the full 238-line body,
-  `ddl/src/pkgb/tt_ticket_interface.sql:35-272`), so both a zero-row and a multi-row
-  failure at either site propagate FULLY unhandled to whatever calls `newticket_new`.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:35, 85-91, 272`
+  = p_host_id` (line 89). **Amended 2026-10-21: `TOO_MANY_ROWS` at site #2 is structurally
+  IMPOSSIBLE.** The original text derived a multi-row hazard from `mss.host2service`'s
+  primary key `(HOST_ID, SERVICE_ID)` alone (`ddl/generated/schema.oracle.sql:81`); the same
+  export also carries `CREATE UNIQUE INDEX MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID)`
+  (`ddl/generated/schema.oracle.sql:3700`, created by `changes/changelog-2.archive.sql:1884`),
+  so a host is mapped to AT MOST ONE service — confirmed live against the Oracle container
+  (`ORA-00001: unique constraint (MSS.IDX_H2S_HOST_UN) violated` on a second row, scenario
+  `tt__event_interface__newevent`). Zero rows (a host with no `host2service` row) remains
+  reachable at site #2 and is the hazard that matters. The same correction applies to
+  `migration/spec/tt.event_interface.md` S-EVENT-001 (amended the same day);
+  `migration/spec/tt.osag_notify.md` S-NOTIFY-003 rests on the same assumption and should be
+  re-read. The PostgreSQL template lacked the index (not in the ora2pg output) —
+  `migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it. **`newticket_new`
+  has NO procedure-level `EXCEPTION` block at all** (confirmed reading the full 238-line
+  body, `ddl/src/pkgb/tt_ticket_interface.sql:35-272`), so a zero-row failure at either
+  site propagates FULLY unhandled to whatever calls `newticket_new`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:35, 85-91, 272`, `ddl/generated/schema.oracle.sql:81, 3700`
 
 ### S-TICKET-002
 
@@ -1704,7 +1711,7 @@ plan's SUMMARY.
 
 ### S-TICKET-064
 
-- **routines:** change_status_event_id_out, change_status, rate_ticket, merge_tickets
+- **routines:** change_status_event_id_out, change_status, rate_ticket, merge_tickets (and, through `change_status`, every event-triggered status change from `TT.EVENT_INTERFACE`)
 - **claim:** **The status-change event texts survive NULL caller text (added 2026-10-21
   from the live differential run, scenarios `tt__ticket_interface__rating_flow` and
   `tt__ticket_interface__merge_delete`).** `change_status_event_id_out` builds the public
@@ -1724,8 +1731,14 @@ plan's SUMMARY.
   A text passed by the caller is appended after that newline exactly as before. The
   translation must `coalesce` the two caller texts to `''` at those two sites; nothing else
   in the two texts can be NULL (both status names come from STRICT `tt.status` lookups,
-  S-TICKET-009).
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-462`, `ddl/src/pkgb/tt_ticket_interface.sql:1803`, `ddl/src/pkgb/tt_ticket_interface.sql:1599`, `ddl/src/pkgb/tt_ticket_interface.sql:1672`, `ddl/src/pkg/tt_ticket_interface.sql:85-94`
+  S-TICKET-009). The same NULL public text arrives from `TT.EVENT_INTERFACE.newevent_new`
+  (`tt_event_interface.sql:326`) and `addevent_new` (line 707), which call
+  `change_status(<ticket>, 3, <contact>, NULL, 'new event added', ...)`: a literal port writes
+  `details_public = NULL` for every status change triggered by an incoming event, i.e. the
+  "New status / Previous status" audit line disappears from the ticket history (observed live
+  for both routines on 2026-10-21, scenario `tt__event_interface__newevent`). The
+  `IF (p_escalate_after_defer)` suffix (line 454) then appends to a non-NULL string as in Oracle.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-462`, `ddl/src/pkgb/tt_ticket_interface.sql:1803`, `ddl/src/pkgb/tt_ticket_interface.sql:1599`, `ddl/src/pkgb/tt_ticket_interface.sql:1672`, `ddl/src/pkg/tt_ticket_interface.sql:85-94`, `ddl/src/pkgb/tt_event_interface.sql:326
 
 ## Checklist
 
