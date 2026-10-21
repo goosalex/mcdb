@@ -262,3 +262,19 @@ unblocks `auth.osag_auth`'s tests.
 - `provenance_lint.sh`: passes. No file under `migration/test/` was modified by this
   session (verified via `git diff --name-only` against the merge-base with the spec's
   commit — empty).
+
+## Live finding (differential harness, 2026-10-21): empty Zurich abbreviation in composed messages (S-NOTIFY-038)
+
+Scenario `tt__osag_notify__event_notify` (Oracle 23.7 container `mcdb-ora`) compared the
+20003 "sms notification" event written through the local-contact path. Oracle:
+`Ticket 958120 - connection down on diff-ev-host-sms at 20.10.2026 10:30 CEST - Open Systems
+Mission Control`; translation: `... at 20.10.2026 10:30  - ...` (empty abbreviation). Oracle
+appends `TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD')` -- the CURRENT Zurich
+abbreviation -- after every rendered date (body lines 1178, 1183, 1196, 1269, 1272, 1398). The
+translation's `to_char(clock_timestamp() AT TIME ZONE 'Europe/Zurich', 'TZ')` is empty: `AT TIME
+ZONE` on a timestamptz yields a `timestamp without time zone`, and `TZ` renders nothing for that
+type (its header comment claimed "same observable shape (CET/CEST)" -- it was never checked
+against a live value). Fixed at the three sites (`__compose_local_contact_message`,
+`__compose_email_msg`, `__compose_sms_msg`) with `(SELECT abbrev FROM pg_timezone_names WHERE
+name = 'Europe/Zurich')`, the DST-aware current abbreviation of the named zone. Spec clause
+S-NOTIFY-038 and test amendment A-401 (two `matches()` assertions, `CES?T`) were added first.
