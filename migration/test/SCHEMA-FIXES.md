@@ -116,3 +116,12 @@ references. Only `worker_zitadel_id` is used by TT PL/SQL, so only it is fixed h
 proper fix is to regenerate the ora2pg output from the Oracle container into a NEW
 directory (Phase 5); `ddl/migrated/` stays the frozen artifact of record.
 
+## DBPROP lookup view (`schema-fixes/28_dbprop_mviews_fixes.sql`)
+
+Found by the differential scenario `migration/test/diff/scenarios/tt__event_interface__exec_actions`
+(live Oracle run, 2026-10-21). Same ledger columns as above.
+
+| # | Object | Error observed | Fix applied | Root cause | Phase 5 action |
+|---|--------|-----------------|--------------|------------|-----------------|
+| 12 | `mss.v_host_key_value` (view) on `mss.mv_value_host_default` on `mss.mv_value_host` (materialized views) | `42P01 relation "mss.v_host_key_value" does not exist` raised by `mss.osag_dbprop_get_string_by_host_key_id` -- reached from `tt.event_interface_exec_event_type_actions` for every `tt.event_action` with a `procedure_key_id` (master-data actions 2/3/4: connection-down, ISP-outage, customer-id-notification escalations) when the event has a host. Oracle returns NULL and logs "no procedure executed"; PostgreSQL raised out of `exec_event_type_actions` (the lookup is outside its swallowing block). | `28_dbprop_mviews_fixes.sql`: the two materialized views copied verbatim from `ddl/migrated/mviews/mss.sql` (`CREATE MATERIALIZED VIEW IF NOT EXISTS`, their four indexes), plus the view translated from `ddl/generated/schema.oracle.sql` (`decode` -> `CASE`). All base tables (`mss.host2service`, `mss.service`, `mss.value`, `mss.key`, `mss.interface`, `vpn.vpn_member`, `vpn.partition`) exist in `mcdb_tmpl`. Idempotent. | `build-template.sh` loads `ddl/migrated/tables` + constraints only; `ddl/migrated/mviews/` is documented above as "not loaded", and the view itself is only in the Liquibase changelog (commented out in the ora2pg file). | Decide how the two MVs are refreshed on PostgreSQL (Oracle: `REFRESH FAST ON COMMIT`; here nothing refreshes them -- pg_cron job, or plain views). Inside the harness both engines see no fixture rows through the MVs (never committed / never refreshed), so the differential result is unaffected by that decision. |
+
