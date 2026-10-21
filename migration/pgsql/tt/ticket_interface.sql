@@ -338,6 +338,8 @@ DECLARE
     v_ticket_type_id numeric;
     v_create_cr numeric;
     v_cr_id numeric;
+    v_sign_off_sender numeric := 0;   -- S-TICKET-061 (2026-10-20 export)
+    v_sender_contact_id numeric;      -- S-TICKET-061: p_contact_id, or the sign-off sender's contact
 BEGIN
     v_ticket_type_id := p_ticket_type_id;
 
@@ -362,11 +364,30 @@ BEGIN
         SELECT h2s.service_id INTO STRICT v_mss_service_id FROM mss.host2service h2s WHERE h2s.host_id = p_host_id;
     END IF;
 
+    -- S-TICKET-061 (2026-10-20 export): ServiceNow sign-off senders come through the tickets
+    -- API with their Zitadel user ID only; resolve their legacy contact from auth.login and
+    -- use it wherever the old body used p_contact_id. An explicit p_contact_id always wins.
+    -- Oracle compares the NUMBER against string literals (implicit TO_CHAR); same here.
+    v_sign_off_sender := 0;
+    IF (p_event_type_id = 30002
+        AND p_zitadel_contact_id::text IN ('260976466693466175', '260976421227212858', '260976444195221562',
+                                            '249698997185305231', '250130937734526554', '250130921494181466',
+                                            '296895704029212305', '389858629131441574')) THEN
+        v_sign_off_sender := 1;
+    END IF;
+    v_sender_contact_id := p_contact_id;
+    IF (v_sender_contact_id IS NULL AND v_sign_off_sender = 1) THEN
+        -- S-TICKET-061 (site #78): an aggregate -- exactly one row, NULL when no login matches.
+        SELECT MAX(l.contact_id) INTO v_sender_contact_id
+        FROM auth.login l
+        WHERE l.oidc_zitadel_id = p_zitadel_contact_id::text;
+    END IF;
+
     -- if a contact id is given we select the company_id from the contact table -- this
     -- overrides the company selection from the service id
-    -- S-TICKET-002 (site #3): STRICT, unhandled.
-    IF (p_contact_id IS NOT NULL) THEN
-        SELECT company_id INTO STRICT v_company_id FROM stop.contact WHERE contact.id = p_contact_id;
+    -- S-TICKET-002 (site #3): STRICT, unhandled. Reads the RESOLVED sender (S-TICKET-061).
+    IF (v_sender_contact_id IS NOT NULL) THEN
+        SELECT company_id INTO STRICT v_company_id FROM stop.contact WHERE contact.id = v_sender_contact_id;
     END IF;
 
     -- for company wide tickets check if the given contact is a company wide admin and
@@ -374,13 +395,13 @@ BEGIN
     -- Schema gap (mirrors event_interface.sql's newevent_new precedent): auth.permission
     -- does not exist anywhere in ddl/migrated -- ported verbatim per spec, Rule 4
     -- (architectural, not mechanical). See ticket_interface.FINDINGS.md.
-    v_contact_id := p_contact_id;
-    IF (p_host_id IS NULL AND p_contact_id IS NOT NULL) THEN
+    v_contact_id := v_sender_contact_id;
+    IF (p_host_id IS NULL AND v_sender_contact_id IS NOT NULL) THEN
         -- S-TICKET-003 (site #4): COUNT aggregate, no STRICT concern.
         SELECT count(*) INTO v_count
         FROM auth.permission p, auth.login l
         WHERE p.login_id = l.id
-          AND l.contact_id = p_contact_id
+          AND l.contact_id = v_sender_contact_id
           AND p.role_id = 2
           AND p.company_unit_id IS NULL
           AND p.user_unit_id IS NULL
@@ -434,18 +455,25 @@ BEGIN
 
     -- find out if we need to create a change request inside the newly created ticket as
     -- well (used for ServiceNOW ticketing integration).
+    -- S-TICKET-062 (2026-10-20 export): the legacy sign-off contacts are matched against
+    -- the RESOLVED sender, or the sender is a sign-off Zitadel user (v_sign_off_sender).
     v_create_cr := 0;
-    IF (p_event_type_id = 30002 AND p_contact_id IS NOT NULL AND p_contact_id IN (224019, 1150408, 235692, 371508, 458818, 430183, 430181, 3598, 796216)) THEN
+    IF (p_event_type_id = 30002
+        AND (v_sender_contact_id IN (224019, 1150408, 235692, 371508, 458818, 430183, 430181, 3598, 796216)
+             OR v_sign_off_sender = 1)) THEN
         v_create_cr := 1;
         v_ticket_type_id := 2;
     END IF;
 
     -- open a new ticket for this event
     INSERT INTO tt.ticket (id, type_id, contact_id, worker_id, company_id, host_id, subject, last_status_change_date,
-                           mss_service_id, service_confirmed, type_confirmed, fast_resolvable, service_component_id, contact_zitadel_id)
+                           mss_service_id, service_confirmed, type_confirmed, fast_resolvable, service_component_id, contact_zitadel_id,
+                           worker_zitadel_id)
     VALUES (p_ticket_id, v_ticket_type_id, v_contact_id, p_worker_id, v_company_id, p_host_id,
             substr(p_subject, 1, 100), statement_timestamp(), v_mss_service_id, v_confirmed, v_confirmed,
-            v_fast_resolvable, p_service_component_id, p_zitadel_contact_id::varchar);
+            v_fast_resolvable, p_service_component_id, p_zitadel_contact_id::varchar,
+            -- S-TICKET-063: scalar subquery -- NULL without a login, 21000 if the contact owns several
+            (SELECT l.oidc_zitadel_id FROM auth.login l WHERE l.contact_id = p_worker_id));
 
     -- set ux timeout -- ux_timeout_start is a naive `timestamp` column in the migrated
     -- schema (no naive-timestamp target left for Oracle's from_tz() attach, matching
@@ -453,11 +481,11 @@ BEGIN
     UPDATE tt.ticket SET ux_timeout_start = open_date WHERE id = p_ticket_id;
     CALL tt.ticket_interface_update_ux_timeout_for_ticket(p_ticket_id, TRUE);
 
-    -- determine contact for event
+    -- determine contact for event (S-TICKET-061: the resolved sender, not p_contact_id)
     IF (p_worker_id IS NOT NULL) THEN
         v_contact_id := p_worker_id;
-    ELSIF (p_contact_id IS NOT NULL) THEN
-        v_contact_id := p_contact_id;
+    ELSIF (v_sender_contact_id IS NOT NULL) THEN
+        v_contact_id := v_sender_contact_id;
     ELSE
         v_contact_id := NULL;
     END IF;
@@ -958,8 +986,11 @@ BEGIN
     END;
 
     -- set the worker id for the ticket to the new worker_id
+    -- S-TICKET-063 (2026-10-20 export): the worker's Zitadel ID travels with it (NULL when the
+    -- new worker could not be resolved or has no login; 21000 if the contact owns several).
     UPDATE tt.ticket
-    SET worker_id = v_worker_id
+    SET worker_id = v_worker_id,
+        worker_zitadel_id = (SELECT l.oidc_zitadel_id FROM auth.login l WHERE l.contact_id = v_worker_id)
     WHERE ticket.id = p_ticket_id;
 
     -- set the handled by mcc flag for the ticket to the new p_handled_by_mcc
