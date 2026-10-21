@@ -766,3 +766,36 @@ assertions, and `change_worker` was called with a sub-select as argument (`0A000
 in `CALL`) -- now a `DO` block with a variable.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
+
+## A-101 — `tt__ticket_interface__changes.sql`: S-TICKET-027/029 empty-string inputs asserted Oracle's `''`≡NULL behaviour
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 1 description corrected (the `change_notification(906014, '', NULL, ...)` `lives_ok`), 9 added; `plan(70)` -> `plan(79)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__change_attributes` (steps 17 and 22): Oracle hid the notification event / skipped the summary change for `''`, PostgreSQL did not |
+| **Spec amended first** | S-TICKET-027, S-TICKET-029 and Checklist §1 item 2 in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The original `lives_ok` described the `''` public text as "the prefix IS applied here ...
+Oracle's own correct, non-divergent behavior" -- a misreading of Oracle, where a `VARCHAR2`
+argument of `''` IS NULL (`ddl/src/pkgb/tt_ticket_interface.sql:1305`: `IF
+(p_change_text_public IS NOT NULL)` is FALSE for `''`). The test only asserted that the
+call lives, so it could not detect the translation writing a PUBLIC event with a bare
+prefix where Oracle writes a HIDDEN one. `change_summary` had no `''` case at all
+(`ddl/src/pkgb/tt_ticket_interface.sql:1337-1353`: both change-detection conditions see
+NULL for `''`).
+
+### The amendment
+
+The `''` notification call now passes a non-NULL private text and is followed by two `is()`
+assertions (event hidden, `details_public` NULL). Seven assertions were added for
+`change_summary(906014, '', '', ...)`: both summaries stored as NULL, the `<empty>` audit
+text, and the second identical call being a no-op (event counts). Nothing previously
+asserted was weakened; the file was RED against the pre-fix translation (5 failures: tests 39, 40, 45, 46, 47) and
+green after the `NULLIF` boundary normalisation landed in the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-101 S-TICKET-027/029 empty-string inputs; test-only commit`
