@@ -766,3 +766,29 @@ assertions, and `change_worker` was called with a sub-select as argument (`0A000
 in `CALL`) -- now a `DO` block with a variable.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
+
+## A-301 — `tt__event_interface__spec.sql`: S-EVENT-001 asserted a path Oracle cannot take (two services per host)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (TT.EVENT_INTERFACE / TT.ESCALATION_INTERFACE); touches NO translation file |
+| **File** | `migration/test/pgtap/tt__event_interface__spec.sql` |
+| **Assertions affected** | 1 replaced (the S-EVENT-001 `throws_ok` P0003), `plan(20)` unchanged |
+
+The live Oracle run of scenario `tt__event_interface__newevent` refused the fixture that gave
+one host two `mss.host2service` rows: `ORA-00001: unique constraint (MSS.IDX_H2S_HOST_UN)
+violated`. The index is in the export (`ddl/generated/schema.oracle.sql:3700`, created by
+`changes/changelog-2.archive.sql:1884`) but not in the ora2pg output, so the PostgreSQL
+template accepted the second row and the old assertion ("newevent_new propagates
+TOO_MANY_ROWS unhandled for a host mapped to two services", P0003) was green for a
+situation that cannot exist in Oracle. Spec S-EVENT-001 was amended first (commit
+`spec(tt.event_interface): S-EVENT-001 amended ...`, same day): TOO_MANY_ROWS is
+structurally impossible. The test now asserts the schema fact the clause rests on -- the
+second `host2service` row for one host raises `23505` -- which is RED until
+`migration/test/schema-fixes/29_host2service_unique_fixes.sql` is in the template. The
+`WHEN OTHERS THEN RAISE` arm of the translation is unchanged. This amendment changes WHAT is
+asserted because the clause itself changed; it does not weaken a test to match a translation
+(the translation is untouched by it).
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__event_interface__spec.sql reason:A-301 S-EVENT-001 re-pointed at the unique-index fact (TOO_MANY_ROWS impossible); test-only commit`

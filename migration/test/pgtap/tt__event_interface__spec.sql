@@ -115,24 +115,25 @@ SELECT ok(
 );
 
 -------------------------------------------------------------------------------
--- S-EVENT-001: newevent_new's host2service join -- TOO_MANY_ROWS is structurally
--- reachable (mss.host2service's primary key spans host_id and service_id together,
--- not unique on host_id alone) and, unlike the local NO_DATA_FOUND arm, is caught only
--- by `WHEN OTHERS THEN RAISE` -- newevent_new has NO outer handler of its own, so it
--- propagates fully unhandled.
+-- S-EVENT-001 (amended 2026-10-21, TEST-AMENDMENTS A-301): newevent_new's host2service
+-- join can never see TOO_MANY_ROWS -- the Oracle export carries the unique index
+-- MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID) (ddl/generated/schema.oracle.sql:3700),
+-- so a host is mapped to AT MOST one service (confirmed live: ORA-00001 on the second
+-- row). The schema fact that makes the clause's verdict true is asserted here: the
+-- second row for one host must be refused on PostgreSQL too (schema-fixes/29). The
+-- `WHEN OTHERS THEN RAISE` arm stays in the translation for every other error.
 -------------------------------------------------------------------------------
 
 INSERT INTO stop.company (id, name, short) VALUES (900603, 'Pilot Co', 'pilotco3');
 INSERT INTO mss.host (id, name, operating_system_id, service_company_id, author, active)
     VALUES (900604, 'pilot-multi-service-host', 2, 900603, 'pilot', 1);
 INSERT INTO mss.host2service (host_id, service_id) VALUES (900604, 900605);
-INSERT INTO mss.host2service (host_id, service_id) VALUES (900604, 900606);
 
 SELECT throws_ok(
-    $$CALL tt.event_interface_newevent_new(NULL, 101001, 900604, 'evt details')$$,
-    'P0003',
+    $$INSERT INTO mss.host2service (host_id, service_id) VALUES (900604, 900606)$$,
+    '23505',
     NULL,
-    'S-EVENT-001: newevent_new propagates TOO_MANY_ROWS unhandled for a host mapped to two services (WHEN OTHERS THEN RAISE re-raises; no outer net exists)'
+    'S-EVENT-001: a second mss.host2service row for one host is refused by the unique index idx_h2s_host_un (Oracle MSS.IDX_H2S_HOST_UN) -- TOO_MANY_ROWS at site #1 is structurally impossible, as amended'
 );
 
 -------------------------------------------------------------------------------
