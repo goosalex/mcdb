@@ -1683,6 +1683,29 @@ plan's SUMMARY.
   added by `migration/test/schema-fixes/27_oct2026_export_fixes.sql`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:204-221`, `ddl/src/pkgb/tt_ticket_interface.sql:731-736`
 
+### S-TICKET-064
+
+- **routines:** change_status_event_id_out, change_status
+- **claim:** **NULL-tolerant concatenation of the caller's texts into the status-change
+  event (added 2026-10-21 from a live differential run; Pitfall 2, Checklist dimension 1
+  missed it).** The status-change event's public text is built as `dets_pub := 'New
+  status: ' || status_name || CHR(10) || 'Previous status: ' || v_cur_status_name;
+  dets_pub := dets_pub || CHR(10) || p_details_public;` (lines 450-451) and, for a hot
+  reason, the private text as `v_details_private := 'Hot because: ' || p_hot_reason ||
+  CHR(10) || p_details_private` (line 457). `p_details_public` and `p_details_private`
+  are frequently NULL: `TT.EVENT_INTERFACE.newevent_new` (line 326) and `addevent_new`
+  (line 707) call `change_status(<ticket>, 3, <contact>, NULL, 'new event added', ...)`
+  with a NULL public text. Oracle's `||` treats NULL as `''`, so the event's
+  `details_public` is `'New status: hot' || CHR(10) || 'Previous status: open' || CHR(10)`
+  (trailing line break, observed live for both routines on 2026-10-21) and the private
+  text ends after the line break. PostgreSQL's `||` yields NULL for the whole expression,
+  so a literal port writes `details_public = NULL` for every status change triggered by
+  an incoming event — the "New status / Previous status" audit line disappears from the
+  ticket history. The translation must concatenate with Oracle semantics at both sites
+  (`concat()` or `COALESCE(p_x, '')`); the `IF (p_escalate_after_defer)` suffix (line 454)
+  then appends to a non-NULL string as in Oracle.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-461`, `ddl/src/pkgb/tt_event_interface.sql:326, 707`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
