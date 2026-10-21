@@ -1702,6 +1702,31 @@ plan's SUMMARY.
   added by `migration/test/schema-fixes/27_oct2026_export_fixes.sql`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:204-221`, `ddl/src/pkgb/tt_ticket_interface.sql:731-736`
 
+### S-TICKET-064
+
+- **routines:** change_status_event_id_out, change_status, rate_ticket, merge_tickets
+- **claim:** **The status-change event texts survive NULL caller text (added 2026-10-21
+  from the live differential run, scenarios `tt__ticket_interface__rating_flow` and
+  `tt__ticket_interface__merge_delete`).** `change_status_event_id_out` builds the public
+  text as `dets_pub := 'New status: ' || status_name || CHR(10) || 'Previous status: ' ||
+  v_cur_status_name; dets_pub := dets_pub || CHR(10) || p_details_public`
+  (`ddl/src/pkgb/tt_ticket_interface.sql:450-451`) and, for a hot reason on status 3, the
+  private text as `'Hot because: ' || p_hot_reason || CHR(10) || p_details_private` (line
+  460; otherwise `v_details_private := p_details_private`, line 462). `p_details_private`
+  defaults to NULL (`ddl/src/pkg/tt_ticket_interface.sql:89`), `p_details_public` has no
+  default, and BOTH are passed as NULL by `rate_ticket`'s bad-rating path
+  (`ticket_interface.change_status(p_ticket_id, 3, p_contact_id, NULL, NULL, ...)`, line
+  1803) and by both `merge_tickets` calls (lines 1599 and 1672 — the second with a
+  non-NULL `p_hot_reason`). Oracle's `||` treats NULL as the empty string, so the event
+  rows read (live, 2026-10-21) `details_public = 'New status: hot' || CHR(10) || 'Previous
+  status: open' || CHR(10)` (trailing newline, nothing after it) and, for the merge target,
+  `details_private = 'Hot because: ticket <src> merged into this ticket' || CHR(10)`.
+  A text passed by the caller is appended after that newline exactly as before. The
+  translation must `coalesce` the two caller texts to `''` at those two sites; nothing else
+  in the two texts can be NULL (both status names come from STRICT `tt.status` lookups,
+  S-TICKET-009).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-462`, `ddl/src/pkgb/tt_ticket_interface.sql:1803`, `ddl/src/pkgb/tt_ticket_interface.sql:1599`, `ddl/src/pkgb/tt_ticket_interface.sql:1672`, `ddl/src/pkg/tt_ticket_interface.sql:85-94`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
@@ -1746,8 +1771,27 @@ plan's SUMMARY.
    either a real string or `NULL`) — recorded as a live caveat for Phase 4 if a future
    caller ever changes that.
 
+4. **`change_status_event_id_out`'s status-change texts (S-TICKET-064, added 2026-10-21
+   after the live differential run) — a genuine divergence the original review MISSED.**
+   `dets_pub := dets_pub || CHR(10) || p_details_public`
+   (`ddl/src/pkgb/tt_ticket_interface.sql:451`) and `v_details_private := 'Hot because: '
+   || p_hot_reason || CHR(10) || p_details_private` (line 460) concatenate CALLER text that
+   may be NULL (`p_details_public VARCHAR2` has no default, `p_details_private VARCHAR2
+   DEFAULT NULL`, `ddl/src/pkg/tt_ticket_interface.sql:85-94`) and IS passed as NULL
+   explicitly by `rate_ticket` (line 1803) and twice by `merge_tickets` (lines 1599,
+   1672). Oracle's `NULL || 'x' = 'x'` keeps the status header; PostgreSQL's `'x' || NULL`
+   is NULL and erases the whole public text (observed live: `details_public` empty for every
+   status-change event written through those two callers). Boundary normalization:
+   `coalesce(p_details_public, '')` / `coalesce(p_details_private, '')` at exactly those two
+   sites. The closing paragraph below therefore no longer claims that every other `||` site
+   is harmless — the Oracle-side rule of thumb is "any `||` whose operand can be a NULL
+   PARAMETER needs the `coalesce`"; the two sites named here are the only ones in this
+   package where a caller-supplied NULL reaches a `||` unguarded (`change_notification`'s
+   and `change_summary`'s texts are guarded, finding 2 above and S-TICKET-029).
+
 Every other `IS NULL`/`IS NOT NULL`/`||` site in the package body (the `change_*` family's
-audit-string builders, `merge_tickets`' partner-reference/rating/event merge logic,
+audit-string builders other than the two sites of finding 4, `merge_tickets`'
+partner-reference/rating/event merge logic,
 `change_summary`'s `NVL(..., '<empty>')` calls) was reviewed and found to be either (a) a
 numeric/id comparison with no `''`-collapsing relevance (`v_company_id IS NULL`,
 `v_old_label_id IS NULL`, etc.), or (b) a `VARCHAR2` comparison against a value never
