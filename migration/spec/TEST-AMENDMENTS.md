@@ -826,3 +826,32 @@ against the pre-fix translation (have: NULL), green after the `COALESCE(label, '
 boundary normalisation landed in the translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-102 S-TICKET-016 audit text with NULL service label; test-only commit`
+
+## A-103 — `tt__ticket_interface__lifecycle.sql`: S-TICKET-064/065 and the S-TICKET-021 number rendering
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed, 6 added (+ 2 fixture tickets 905025/905026, 1 event 905027); `plan(39)` -> `plan(45)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__status_engine`: NULL `details_public` on the three expiry events and NULL `details_private` on the hot-with-reason event (S-TICKET-064), `2.50`/`2.00`/`0.33` hours where Oracle prints `2.5`/`2`/`.33` (S-TICKET-021), `recoverable_status_id` 101/11 where Oracle leaves NULL on tickets without a last public event (S-TICKET-065) |
+| **Spec amended first** | S-TICKET-064 and S-TICKET-065 added, S-TICKET-021 amended, in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The suite asserted only the status/label effects of `expire_status`, never the texts of the
+event it writes, and nothing about `recoverable_status_id`. The `IS DISTINCT FROM 30016`
+in the translation silently inverted Oracle's `NOT NULL IN (30016)` (NULL -> ELSE branch,
+`ddl/src/pkgb/tt_ticket_interface.sql:558-574`), and two `||` sites plus the implicit
+NUMBER->VARCHAR2 rendering (lines 451, 460, 1046) diverged unobserved.
+
+### The amendment
+
+Two assertions on ticket 905019's 101003 event (public text = status lines + newline;
+private text's hours rendered `0`/`24`, the two values the existing DATE-truncated call can
+produce), and four on two new resolved fixture tickets re-opened by `change_status` -- H
+without a last public event (recoverable NULL), I with one (recoverable 101). RED against
+the pre-fix translation (3 failures: tests 20, 21, 23), green after the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-103 S-TICKET-064/065 and S-TICKET-021 rendering; test-only commit`
