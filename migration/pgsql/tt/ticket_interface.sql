@@ -1321,7 +1321,13 @@ DECLARE
 BEGIN
     -- time difference is computed in hours (Oracle: 24 * (DATE - DATE) days)
     v_time_difference := round((extract(epoch FROM (p_valid_until - p_last_change)) / 3600)::numeric, 2);
-    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for ' || v_time_difference || ' hours)';
+    -- S-TICKET-065: Oracle concatenates the NUMBER with its implicit conversion -- shortest
+    -- exact form: '24', '47.5', '.5', '-.25', '0'. A numeric of scale 2 would print '24.00'
+    -- (found live: Oracle 'for 24 hours', translation 'for 24.00 hours', differential
+    -- scenario tt__util__check_jobs, 2026-10-21). trim_scale drops the trailing zeros, the
+    -- regexp drops the leading zero of |x| < 1 the way Oracle's TO_CHAR does.
+    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for '
+        || regexp_replace(trim_scale(v_time_difference)::text, '^(-?)0\.', '\1.') || ' hours)';
     -- change the current status to status hot (3)
     CALL tt.ticket_interface_change_status(p_ticket_id, 3, NULL, NULL, v_private_details);
 END;

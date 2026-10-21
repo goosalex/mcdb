@@ -515,3 +515,18 @@ untouched after `expire_status(..., p_label_id => 1)`) remain the pinned behavio
 | **Spec** | S-TICKET-045 (amended), S-TICKET-060 (new), commit `f3b1e24`. |
 | **Tests** | `tt__ticket_interface__corrections.sql` tests 1-7, commit `b8c18dd`, ledger A-013; RED before the fix: 2, 3, 4, 7. The locked `changes.sql` fixture 906028 was always labelled "same-company" but had no `mc_file_release` row -- added (A-014), plus two label-only edits (A-014/A-018 -- A-015 was renumbered at merge). |
 | **Residual risk** | A relation whose file has NO release row at all (release withdrawn after attachment) can no longer be detached through this routine; Oracle allowed it. Flagged in the spec's Assumptions as an open operational question. |
+
+## Live finding (differential harness, 2026-10-21): `expire_status` rendered the hours as `24.00` (S-TICKET-065)
+
+Scenario `tt__util__check_jobs` (Oracle 23.7 container `mcdb-ora`) drove
+`TT.UTIL.check_ticket_status` over four expired tickets. Oracle's private status-change text:
+`Status changed to: hot (was waiting for 24 hours)` (and `48`, `12`, `47`); the translation's:
+`... for 24.00 hours)`. Oracle concatenates `round(v_time_difference, 2)` through its implicit
+NUMBER-to-VARCHAR2 conversion (`ddl/src/pkgb/tt_ticket_interface.sql:1044-1045`) -- shortest
+exact form, verified live: `24`, `47.5`, `.5`, `-.25`, `0`. The translation concatenated the
+`numeric` returned by `round(..., 2)`, which keeps scale 2. Fixed in
+`tt.ticket_interface_expire_status` with `regexp_replace(trim_scale(x)::text, '^(-?)0\.', '\1.')`
+(`trim_scale` removes the trailing zeros, the regexp the leading zero below 1, exactly Oracle's
+rendering for every value listed). Spec clause S-TICKET-065 and test amendment A-402 (four
+assertions: `24.5 hours`, `.5 hours`) were added first. No other `round(...)` is concatenated
+into a text in this package (grep `round(` -> this one site).
