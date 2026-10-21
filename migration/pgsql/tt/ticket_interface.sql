@@ -662,8 +662,12 @@ BEGIN
     SELECT name INTO STRICT status_name FROM tt.status WHERE id = p_status_id;
     SELECT name INTO STRICT v_cur_status_name FROM tt.status WHERE id = v_cur_status;
 
+    -- S-TICKET-064: Oracle's || concatenates NULL details as '' -- the public text is the
+    -- two status lines plus a trailing newline when p_details_public is NULL (always the
+    -- case for expire_status); a literal || made it NULL (found live, differential scenario
+    -- tt__ticket_interface__status_engine).
     dets_pub := 'New status: ' || status_name || chr(10) || 'Previous status: ' || v_cur_status_name;
-    dets_pub := dets_pub || chr(10) || p_details_public;
+    dets_pub := dets_pub || chr(10) || COALESCE(p_details_public, '');
 
     IF (p_escalate_after_defer) THEN
         dets_pub := dets_pub || ', escalation to os when reached.';
@@ -671,8 +675,8 @@ BEGIN
 
     -- status id 3 is hot
     IF (p_hot_reason IS NOT NULL AND p_status_id = 3) THEN
-        -- hot status is currently private
-        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || p_details_private;
+        -- hot status is currently private -- S-TICKET-064: NULL private details concatenate as ''
+        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || COALESCE(p_details_private, '');
     ELSE
         v_details_private := p_details_private;
     END IF;
@@ -768,8 +772,13 @@ BEGIN
 
     -- if the new status is "hot" (3), "acknowledged" (4), "open" (2), then check whether
     -- the current status is recoverable, unless the customer requests to resolve the
-    -- ticket (30016)
-    IF (p_status_id IN (2, 3, 4) AND v_last_public_event_type_id IS DISTINCT FROM 30016) THEN
+    -- ticket (30016).
+    -- S-TICKET-065: Oracle's `NOT v_last_public_event_type_id IN (30016)` is NULL (-> the
+    -- ELSE branch) when the ticket has no last public event; an earlier `IS DISTINCT FROM`
+    -- here was TRUE for NULL and recorded a recoverable status Oracle never records (found
+    -- live, differential scenario tt__ticket_interface__status_engine). Reproduced with the
+    -- same three-valued expression -- NOT a correction (see the clause).
+    IF (p_status_id IN (2, 3, 4) AND NOT (v_last_public_event_type_id IN (30016))) THEN
         -- "resolved" (101) is always recoverable
         IF (v_cur_status = 101) THEN
             UPDATE tt.ticket SET recoverable_status_id = v_cur_status WHERE id = p_ticket_id;
@@ -1317,10 +1326,21 @@ AS $fn$
 DECLARE
     v_private_details varchar;
     v_time_difference numeric := 0;
+    v_hours_text varchar;
 BEGIN
     -- time difference is computed in hours (Oracle: 24 * (DATE - DATE) days)
     v_time_difference := round((extract(epoch FROM (p_valid_until - p_last_change)) / 3600)::numeric, 2);
-    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for ' || v_time_difference || ' hours)';
+    -- S-TICKET-021 (amended): Oracle renders round(x, 2) implicitly as the shortest NUMBER
+    -- text -- '2.5', '2', '.33' -- while round(numeric, 2)::text keeps scale 2 ('2.50',
+    -- '2.00', '0.33'); strip trailing zeros / point and the leading zero of a pure fraction
+    -- (found live, differential scenario tt__ticket_interface__status_engine).
+    v_hours_text := v_time_difference::text;
+    IF position('.' IN v_hours_text) > 0 THEN
+        v_hours_text := rtrim(rtrim(v_hours_text, '0'), '.');
+        v_hours_text := regexp_replace(v_hours_text, '^(-?)0\.', '\1.');
+        IF v_hours_text IN ('', '-') THEN v_hours_text := '0'; END IF;
+    END IF;
+    v_private_details := 'Status changed to: hot (was ' || p_status_name || ' for ' || v_hours_text || ' hours)';
     -- change the current status to status hot (3)
     CALL tt.ticket_interface_change_status(p_ticket_id, 3, NULL, NULL, v_private_details);
 END;
