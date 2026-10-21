@@ -1124,7 +1124,12 @@ BEGIN
             v_host_label_new := ' <empty>';
     END;
 
-    v_details_public := 'service changed from' || v_host_label_old || v_service_label_old || ' to' || v_host_label_new || v_service_label_new;
+    -- S-TICKET-016 (amended): the two service labels default to NULL on a miss and Oracle's
+    -- || concatenates NULL as '' -- a literal || here turned the whole text NULL (found live,
+    -- differential scenario tt__ticket_interface__change_owner_company, steps 07/08).
+    -- The host labels default to ' <empty>' and need no guard.
+    v_details_public := 'service changed from' || v_host_label_old || COALESCE(v_service_label_old, '')
+                        || ' to' || v_host_label_new || COALESCE(v_service_label_new, '');
 
     -- add a ticket "attribute change event" to the ticket
     INSERT INTO tt.event
