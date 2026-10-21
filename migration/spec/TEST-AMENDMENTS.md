@@ -789,3 +789,29 @@ the translation as committed (`replace(text, from, NULL)` is NULL in PostgreSQL)
 with the `coalesce(p_id::varchar, '')` correction in the following translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-201 three replace_id_placeholders NULL-id assertions from the live Oracle run; test-only commit`
+
+## A-202 — `tt__ticket_interface__lifecycle.sql`: change_status NULL-text assertions (S-TICKET-064)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed; 5 added (`plan(39)` -> `plan(44)`) plus one fixture ticket (905030) |
+
+The live Oracle-vs-PostgreSQL runs of scenarios `tt__ticket_interface__rating_flow` and
+`tt__ticket_interface__merge_delete` (2026-10-21, Oracle 23.7 container `mcdb-ora`) showed
+every status-change event written through `rate_ticket`'s bad-rating path and through
+`merge_tickets` with `details_public = NULL` (and the merge target's `details_private =
+NULL`) on PostgreSQL, where Oracle writes `'New status: hot' || CHR(10) || 'Previous status:
+open' || CHR(10)` and `'Hot because: ticket <src> merged into this ticket' || CHR(10)`. The
+cause is `dets_pub || CHR(10) || p_details_public` / `... || CHR(10) || p_details_private`
+with the NULL defaults (`ddl/src/pkgb/tt_ticket_interface.sql:451, 460`): Oracle's `||`
+treats NULL as `''`, PostgreSQL's returns NULL. The spec's Checklist §1 had reviewed those
+`||` sites as harmless; it was amended first (finding 4 and the new clause S-TICKET-064).
+The five assertions added here call `change_status` with the default NULL texts and with a
+hot reason on a dedicated fixture ticket and encode Oracle's texts verbatim; nothing
+previously asserted changed. They are RED against the translation as committed and go GREEN
+with the `coalesce(.., '')` correction in the following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-202 five change_status NULL-text assertions and fixture ticket 905030 from the live Oracle run; test-only commit`

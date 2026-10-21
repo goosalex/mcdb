@@ -13,7 +13,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(39);
+SELECT plan(44);
 
 -------------------------------------------------------------------------------
 -- Fixtures. Reference rows reused from the template's masterdata (status ids
@@ -66,6 +66,11 @@ INSERT INTO tt.ticket_docs_page (id, ticket_id, page_id, page_version)
     VALUES (905022, 905017, 700001, 1);
 INSERT INTO tt.ticket_rating (id, rating, event_id) VALUES (905023, 5, 905020);
 UPDATE tt.ticket SET customer_ticket_rating_id = 905023 WHERE id = 905017;
+
+-- Ticket N (A-202): open, dedicated to S-TICKET-064 -- change_status with NULL caller
+-- texts (the rate_ticket / merge_tickets call shape) must still write the status header.
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, host_id, last_status_change_date)
+    VALUES (905030, 1, 2, 905001, 905002, 905005, now() - interval '1 hour');
 
 -- Ticket F: no open ticket_flow entry -- the insert-new branch of updateTicketFlow.
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_status_change_date)
@@ -362,6 +367,40 @@ SELECT ok(
 SELECT lives_ok(
     $$SELECT tt.ticket_interface_get_next_recent_ticket(0, NULL, NULL, NULL)$$,
     'S-TICKET-033: get_next_recent_ticket never raises to its caller (whole-function WHEN OTHERS logs and RETURNs NULL) even in a boundary case with no matching open ticket'
+);
+
+-------------------------------------------------------------------------------
+-- change_status with NULL caller texts (S-TICKET-064; TEST-AMENDMENTS.md A-202).
+-- Expected values are Oracle's live output of 2026-10-21: NULL || 'x' = 'x', so the
+-- status header keeps its trailing CHR(10) and the hot reason keeps its CHR(10).
+-------------------------------------------------------------------------------
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_status(905030, 11, 905002, NULL)$$,
+    'S-TICKET-064: change_status with a NULL p_details_public and the default NULL p_details_private succeeds (open -> waiting)'
+);
+
+SELECT is(
+    (SELECT e.details_public FROM tt.event e WHERE e.ticket_id = 905030 AND e.type_id = 101011),
+    'New status: waiting' || chr(10) || 'Previous status: open' || chr(10),
+    'S-TICKET-064: the public status-change text is the status header with a trailing newline when p_details_public is NULL -- not NULL'
+);
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_change_status(905030, 3, 905002, NULL, NULL, NULL, NULL, NULL, 'customer rating 1')$$,
+    'S-TICKET-064: change_status to hot with a hot reason and NULL texts succeeds (the rate_ticket / merge_tickets call shape)'
+);
+
+SELECT is(
+    (SELECT e.details_public FROM tt.event e WHERE e.ticket_id = 905030 AND e.type_id = 101003),
+    'New status: hot' || chr(10) || 'Previous status: waiting' || chr(10),
+    'S-TICKET-064: the public text of the hot status-change event is the status header with a trailing newline when p_details_public is NULL'
+);
+
+SELECT is(
+    (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905030 AND e.type_id = 101003),
+    'Hot because: customer rating 1' || chr(10),
+    'S-TICKET-064: the private text is the hot reason with a trailing newline when p_details_private is NULL -- not NULL'
 );
 
 SELECT * FROM finish();
