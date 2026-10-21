@@ -663,7 +663,10 @@ BEGIN
     SELECT name INTO STRICT v_cur_status_name FROM tt.status WHERE id = v_cur_status;
 
     dets_pub := 'New status: ' || status_name || chr(10) || 'Previous status: ' || v_cur_status_name;
-    dets_pub := dets_pub || chr(10) || p_details_public;
+    -- S-TICKET-064 (Pitfall 2): p_details_public is NULL for every event-triggered status
+    -- change (TT.EVENT_INTERFACE passes NULL, 'new event added'); Oracle's || keeps the two
+    -- status lines plus the line break, PostgreSQL's || would null the whole text.
+    dets_pub := dets_pub || chr(10) || coalesce(p_details_public, '');
 
     IF (p_escalate_after_defer) THEN
         dets_pub := dets_pub || ', escalation to os when reached.';
@@ -671,8 +674,9 @@ BEGIN
 
     -- status id 3 is hot
     IF (p_hot_reason IS NOT NULL AND p_status_id = 3) THEN
-        -- hot status is currently private
-        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || p_details_private;
+        -- hot status is currently private (S-TICKET-064: same NULL-as-empty rule for
+        -- p_details_private; p_hot_reason is NOT NULL in this branch)
+        v_details_private := 'Hot because: ' || p_hot_reason || chr(10) || coalesce(p_details_private, '');
     ELSE
         v_details_private := p_details_private;
     END IF;

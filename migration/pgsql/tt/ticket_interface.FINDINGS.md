@@ -515,3 +515,16 @@ untouched after `expire_status(..., p_label_id => 1)`) remain the pinned behavio
 | **Spec** | S-TICKET-045 (amended), S-TICKET-060 (new), commit `f3b1e24`. |
 | **Tests** | `tt__ticket_interface__corrections.sql` tests 1-7, commit `b8c18dd`, ledger A-013; RED before the fix: 2, 3, 4, 7. The locked `changes.sql` fixture 906028 was always labelled "same-company" but had no `mc_file_release` row -- added (A-014), plus two label-only edits (A-014/A-018 -- A-015 was renumbered at merge). |
 | **Residual risk** | A relation whose file has NO release row at all (release withdrawn after attachment) can no longer be detached through this routine; Oracle allowed it. Flagged in the spec's Assumptions as an open operational question. |
+
+## Live differential finding (2026-10-21) -- S-TICKET-064, NULL concatenation in change_status_event_id_out
+
+Found by `migration/test/diff/scenarios/tt__event_interface__newevent` (TT.EVENT_INTERFACE's
+`newevent_new`/`addevent_new` call `change_status(<ticket>, 3, <contact>, NULL, 'new event
+added')`). Oracle wrote the 101003 event with `details_public = 'New status: hot' || CHR(10)
+|| 'Previous status: open' || CHR(10)`; the translation wrote NULL, because
+`dets_pub := dets_pub || chr(10) || p_details_public` nulls the whole text in PostgreSQL
+(Pitfall 2 -- the Checklist dimension 1 review of this spec had not listed this site).
+Fixed with `coalesce(p_details_public, '')`, and the same for `p_details_private` in the
+`'Hot because: ' || p_hot_reason || chr(10) || p_details_private` branch. Spec: S-TICKET-064
+(new); tests: `tt__ticket_interface__nullconcat.sql` (new, 6 assertions, RED 2/6 before the
+fix). Not a deviation -- the translation now does what Oracle does.
