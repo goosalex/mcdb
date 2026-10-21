@@ -633,7 +633,10 @@ BEGIN
         IF (v_details_public IS NOT NULL AND p_type_id IN (
             10007, 10006, 10005, 10004, 10014, 10002, 10013, 10009, 10021, 10008, 10030
         )) THEN
-            v_msg_firstline := substr(v_details_public, 1, strpos(v_details_public, chr(10)) - 1);
+            -- S-EVENT-048: no newline -> Oracle SUBSTR(x, 1, -1) is NULL. A raw substr()
+            -- raised 22011 here, which the outer handler swallowed AFTER p_event_id was
+            -- assigned -- the event was silently lost (observed live 2026-10-21).
+            v_msg_firstline := NULLIF(substr(v_details_public, 1, GREATEST(strpos(v_details_public, chr(10)) - 1, 0)), '');
             IF (v_company_id IS NOT NULL) THEN
                 v_scope_info := v_scope_info || ' company_id=' || v_company_id;
             END IF;
@@ -1054,15 +1057,21 @@ BEGIN
         FROM tt.event_type
         WHERE id = p_type_id;
 
+        -- S-EVENT-048: Oracle's SUBSTR returns NULL for a length < 1 -- here INSTR = 0 (no
+        -- newline in the details) gives length -1 and the ticket gets a NULL subject.
+        -- pg_catalog.substr raises 22011 for a negative length instead; GREATEST(.., 0)
+        -- + NULLIF reproduce Oracle's NULL (observed live 2026-10-21).
         IF (p_type_id = 30002 OR p_type_id = 30009 OR p_type_id = 40002 OR p_type_id = 10014 OR p_type_id = 10002) THEN
             subject := substr(v_details_public, 1, 100);
-            subject := substr(subject, 1, strpos(subject, chr(10)) - 1);
+            subject := NULLIF(substr(subject, 1, GREATEST(strpos(subject, chr(10)) - 1, 0)), '');
         ELSIF p_type_id = 10004 OR p_type_id = 10005 OR
               p_type_id = 10006 OR p_type_id = 10007 OR
               p_type_id = 10008 OR p_type_id = 10009 OR
               p_type_id = 10020 OR
               p_type_id = 10021 THEN
-            event_subject := substr(v_details_public, 1, 95 - length(subject));
+            -- S-EVENT-048: same rule for the computed length (NULL if the type name is
+            -- 95 characters or longer -- not the case for any current event type).
+            event_subject := NULLIF(substr(v_details_public, 1, GREATEST(95 - length(subject), 0)), '');
             IF (strpos(event_subject, chr(10)) > 0) THEN
                 event_subject := substr(event_subject, 1, strpos(event_subject, chr(10)) - 1);
             ELSIF (length(event_subject) = (95 - length(subject))) THEN
@@ -1132,7 +1141,9 @@ BEGIN
         IF (v_details_public IS NOT NULL AND p_type_id IN (
             10007, 10006, 10005, 10004, 10014, 10002, 10013, 10009, 10021, 10008, 10030
         )) THEN
-            v_msg_firstline := substr(v_details_public, 1, strpos(v_details_public, chr(10)) - 1);
+            -- S-EVENT-048: no newline -> Oracle SUBSTR(x, 1, -1) is NULL, the log line
+            -- carries an empty msgshort; never an error.
+            v_msg_firstline := NULLIF(substr(v_details_public, 1, GREATEST(strpos(v_details_public, chr(10)) - 1, 0)), '');
             IF (v_company_id IS NOT NULL) THEN
                 v_scope_info := v_scope_info || ' company_id=' || v_company_id;
             END IF;
