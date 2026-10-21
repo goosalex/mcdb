@@ -1579,9 +1579,13 @@ END;
 $fn$;
 
 -- ------------------------------------------------------------------------------------
--- change_notification (S-TICKET-027, Checklist dimension 1 finding #2 -- CORRECTLY
--- handled already, no divergence: the prefix is only concatenated inside an IS NOT NULL
--- guard, so there is no NULL||'x' collapsing-vs-not divergence to translate).
+-- change_notification (S-TICKET-027 amended, Checklist dimension 1 finding #2). The
+-- prefix is only concatenated inside an IS NOT NULL guard (no NULL||'x' accumulator
+-- problem), but in Oracle a VARCHAR2 argument of '' IS NULL, so the guard is FALSE for ''
+-- and -- with a non-NULL private text -- add_status_change_event HIDES the event. Found
+-- live (differential scenario tt__ticket_interface__change_attributes, step 17): the
+-- literal port wrote a PUBLIC event with the bare prefix. Boundary normalisation
+-- NULLIF(p, '') restores Oracle's contract, as change_customer_reference already does.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE tt.ticket_interface_change_notification(
     p_ticket_id numeric,
@@ -1597,11 +1601,14 @@ DECLARE
     v_event_details_public varchar;
     v_event_details_private varchar;
 BEGIN
-    IF (p_change_text_public IS NOT NULL) THEN
+    -- S-TICKET-027 (amended): '' is NULL for Oracle's VARCHAR2 parameters -- NULLIF keeps
+    -- the guard FALSE for '' so the variable stays NULL (and the event is hidden when only
+    -- the private text is set), exactly as Oracle does.
+    IF (NULLIF(p_change_text_public, '') IS NOT NULL) THEN
         v_event_details_public := EVENT_DETAILS_PREFIX || p_change_text_public;
     END IF;
 
-    IF (p_change_text_private IS NOT NULL) THEN
+    IF (NULLIF(p_change_text_private, '') IS NOT NULL) THEN
         v_event_details_private := EVENT_DETAILS_PREFIX || p_change_text_private;
     END IF;
 
@@ -1627,6 +1634,11 @@ DECLARE
     old_summary_public varchar;
     v_event_id numeric;
     p_summary_rel_events_count numeric;
+    -- S-TICKET-029 (amended): a VARCHAR2 argument of '' IS NULL in Oracle, so the whole
+    -- body (change detection, '<empty>' text, stored value) must see NULL for ''. Found
+    -- live (differential scenario tt__ticket_interface__change_attributes, step 22).
+    v_summary_private varchar := NULLIF(p_summary_private, '');
+    v_summary_public  varchar := NULLIF(p_summary_public, '');
 BEGIN
     -- get the old summary -- S-TICKET-028 (site #41): STRICT, unhandled.
     SELECT summary_private, summary_public, summary_relevant_events_count
@@ -1634,31 +1646,31 @@ BEGIN
     FROM tt.ticket WHERE id = p_ticket_id;
 
     -- S-TICKET-029: standard three-valued !=-with-NULLs logic, identical in both engines.
-    IF ((old_summary_private != p_summary_private OR
+    IF ((old_summary_private != v_summary_private OR
          old_summary_private IS NULL OR
-         p_summary_private IS NULL) AND
-        NOT (old_summary_private IS NULL AND p_summary_private IS NULL)) THEN
+         v_summary_private IS NULL) AND
+        NOT (old_summary_private IS NULL AND v_summary_private IS NULL)) THEN
 
         CALL tt.ticket_interface__add_status_change_event(v_event_id, p_ticket_id, NULL, p_contact_id,
-            'private summary changed to:' || chr(10) || substr(COALESCE(p_summary_private, '<empty>'), 1, 3900), p_zitadel_contact_id);
+            'private summary changed to:' || chr(10) || substr(COALESCE(v_summary_private, '<empty>'), 1, 3900), p_zitadel_contact_id);
 
         UPDATE tt.ticket
-        SET summary_private = p_summary_private
+        SET summary_private = v_summary_private
         WHERE id = p_ticket_id;
     END IF;
 
-    IF ((old_summary_public != p_summary_public OR
+    IF ((old_summary_public != v_summary_public OR
          old_summary_public IS NULL OR
-         p_summary_public IS NULL) AND
-        NOT (old_summary_public IS NULL AND p_summary_public IS NULL)) THEN
+         v_summary_public IS NULL) AND
+        NOT (old_summary_public IS NULL AND v_summary_public IS NULL)) THEN
 
         -- ORACLE BUG (5 positional args against a 6-param signature) -- see file header.
         CALL tt.ticket_interface__add_status_change_event(v_event_id, p_ticket_id,
-            'public summary changed to:' || chr(10) || substr(COALESCE(p_summary_public, '<empty>'), 1, 3900), p_contact_id, p_zitadel_contact_id::varchar);
+            'public summary changed to:' || chr(10) || substr(COALESCE(v_summary_public, '<empty>'), 1, 3900), p_contact_id, p_zitadel_contact_id::varchar);
         p_summary_rel_events_count := 0;
 
         UPDATE tt.ticket
-        SET summary_public = p_summary_public,
+        SET summary_public = v_summary_public,
             summary_relevant_events_count = p_summary_rel_events_count,
             last_summary_update = statement_timestamp()
         WHERE id = p_ticket_id;
