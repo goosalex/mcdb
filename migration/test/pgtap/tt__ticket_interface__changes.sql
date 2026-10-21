@@ -21,7 +21,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(79);
+SELECT plan(80);
 
 -------------------------------------------------------------------------------
 -- Fixtures (906xxx id range, disjoint from lifecycle.sql's 905xxx and the
@@ -261,6 +261,17 @@ SELECT ok(
     (SELECT mss_service_id FROM tt.ticket WHERE id = 906010) IS NOT NULL
         AND (SELECT host_id FROM tt.ticket WHERE id = 906010) IS NOT NULL,
     'S-TICKET-016: change_service_host still wrote the new (nonexistent, but caller-supplied) service_id/host_id onto the ticket -- the local handlers only guard the LABEL lookups, not the final UPDATE'
+);
+
+-- A-102 (S-TICKET-016 amended): the new-service label defaults to NULL on a miss and Oracle's
+-- || concatenates NULL as '' -- the audit text ends in ' to <empty>' (old host, old service
+-- label, new host '<empty>', no new service label). Observed live (differential scenario
+-- tt__ticket_interface__change_owner_company, steps 07/08), where a literal port wrote NULL.
+SELECT is(
+    (SELECT details_public::text FROM tt.event
+      WHERE ticket_id = 906010 AND type_id = 100003 AND details_public LIKE 'service changed from%'),
+    'service changed from pilot-ti-host-old (Security Gateway [906006]) to <empty>',
+    'S-TICKET-016: the audit text of change_service_host with a nonexistent service and host is Oracle''s concatenation with the NULL service label as empty string, not NULL'
 );
 
 -------------------------------------------------------------------------------

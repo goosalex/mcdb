@@ -799,3 +799,30 @@ asserted was weakened; the file was RED against the pre-fix translation (5 failu
 green after the `NULLIF` boundary normalisation landed in the translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-101 S-TICKET-027/029 empty-string inputs; test-only commit`
+
+## A-102 — `tt__ticket_interface__changes.sql`: S-TICKET-016 audit text with a NULL service label
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (change_* family), on `phoenix/migrate_tt_only`; touches NO translation file |
+| **File** | `migration/test/pgtap/tt__ticket_interface__changes.sql` |
+| **Assertions affected** | 0 changed, 1 added; `plan(79)` -> `plan(80)` |
+| **Surfaced by** | live differential run `tt__ticket_interface__change_owner_company` (steps 07 and 08): Oracle wrote `'service changed from <empty> to diff-owner-host-a (Security Gateway [952108])'` / `'... to <empty>'`, PostgreSQL wrote a NULL `details_public` |
+| **Spec amended first** | S-TICKET-016 in `migration/spec/tt.ticket_interface.md` (commit preceding this one) |
+
+### The defect
+
+The suite proved that `change_service_host` survives nonexistent service/host ids and
+still writes the ids, but never looked at the audit text. `ddl/src/pkgb/tt_ticket_interface.sql:865`
+concatenates the two service labels that default to `NULL` on a miss; Oracle's `||`
+treats NULL as `''`, PostgreSQL's propagates it -- the whole `details_public` became NULL.
+
+### The amendment
+
+One `is()` on the 100003 event of ticket 906010 pins the Oracle text
+`'service changed from pilot-ti-host-old (Security Gateway [906006]) to <empty>'`. RED
+against the pre-fix translation (have: NULL), green after the `COALESCE(label, '')`
+boundary normalisation landed in the translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-102 S-TICKET-016 audit text with NULL service label; test-only commit`
