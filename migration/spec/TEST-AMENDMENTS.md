@@ -744,19 +744,25 @@ sibling "contact message NOT logged" count-0 assertion is untouched.
 
 `commit:7c15c784339fabecd30a207246933e3aa2a9d6e0 file:migration/test/pgtap/osixinfo__osag_hardware__spec.sql reason:A-021 S-HW-004 reason text pinned via throws_like instead of the transactional plog stub table, test-only commit`
 
-## A-019 — `tt__ticket_interface__signoff.sql`: two auth.login fixtures need distinct `login` names
+## A-022 — `tt__ticket_interface__signoff.sql`: two auth.login fixtures need distinct `login` names
 
 | | |
 |---|---|
 | **Date** | 2026-10-21 |
 | **Amended by** | orchestrator (touches NO translation file) |
 | **File** | `migration/test/pgtap/tt__ticket_interface__signoff.sql` |
-| **Assertions affected** | 0 changed; 2 fixture rows gain a `login` value |
+| **Assertions affected** | 0 changed; fixtures and call notation only |
 
-The two `auth.login` fixture rows (908610, 908611) were inserted without a `login` value;
-`u_login_login_company_nocase` treats two NULL logins in the same company as duplicates,
-so the second INSERT failed and every assertion of the file died with it (0/22 -- not a
-RED proof of anything). Both rows now carry distinct logins (`sgn-servicenow`,
-`sgn-worker`). Nothing asserted changes.
+Three fixture/call defects surfaced while proving the file RED, none changing what is
+asserted: (1) the two `auth.login` rows (908610, 908611) had no `login` value and
+`u_login_login_company_nocase` treats two NULL logins in one company as duplicates -- they
+now carry `sgn-servicenow` / `sgn-worker`; (2) the `CALL`s passed every optional argument
+positionally, and a positional `statement_timestamp()` (timestamptz) does not resolve
+against the `timestamp` parameter `p_eventdate` (42883) -- trailing optional arguments
+are now passed by name and the defaults used; (3) the fixture host had no
+`mss.host2service` row, so site #2 (STRICT) raised `P0002` before any clause under test
+was reached -- an `mss.service` + `mss.host2service` pair was added; (4) `plan(22)` for 25
+assertions, and `change_worker` was called with a sub-select as argument (`0A000`, not allowed
+in `CALL`) -- now a `DO` block with a variable.
 
-`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-019 fixture login names, test-only commit`
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__signoff.sql reason:A-022 fixture login names, named-notation calls, host2service row; test-only commit`
