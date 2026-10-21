@@ -3,32 +3,38 @@
 -- SQLCODE) instead of aborting the block. Results: numeric in n, string in s; for the
 -- IPv6 pair the left half goes to n and the right half (as text) to s.
 DECLARE
+    -- SQLCODE/SQLERRM may not appear inside a SQL statement (ORA-00984); pass them as arguments.
+    PROCEDURE log_err(p_step VARCHAR2, p_code NUMBER, p_msg VARCHAR2) IS
+    BEGIN
+        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(p_code), SUBSTR(p_msg, 1, 4000));
+    END;
+
     PROCEDURE t_ip2num(p_step VARCHAR2, p_in VARCHAR2) IS
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.ip2num(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_num2ip(p_step VARCHAR2, p_in NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, s) VALUES (p_step, mss.osag_ip.num2ip(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_getnet(p_step VARCHAR2, p_ip NUMBER, p_mask NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.getnet(p_ip, p_mask));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_getbcast(p_step VARCHAR2, p_ip NUMBER, p_mask NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.getbcast(p_ip, p_mask));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_ipv6(p_step VARCHAR2, p_in VARCHAR2) IS
@@ -36,14 +42,14 @@ DECLARE
         INSERT INTO diff_probe (step, n, s)
         VALUES (p_step, mss.osag_ip.ipv6left(p_in), TO_CHAR(mss.osag_ip.ipv6right(p_in)));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_num2ipv6(p_step VARCHAR2, p_left NUMBER, p_right NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, s) VALUES (p_step, mss.osag_ip.num2ipv6(p_left, p_right));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 BEGIN
     -- ip2num: well-formed (S-IP-004), NULL/'' (S-IP-003), too few dots (S-IP-005),

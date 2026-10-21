@@ -93,7 +93,8 @@ NOISE_RE = re.compile(
 # sqlstate-map.md: 'OS' + last three digits.
 # ---------------------------------------------------------------------------
 ORA_TO_CANON: dict[int, str] = {
-    1403: "P0002",        # NO_DATA_FOUND
+    1403: "P0002",        # NO_DATA_FOUND (ORA-01403)
+    100: "P0002",         # NO_DATA_FOUND as SQLCODE returns it in a handler (+100, ANSI)
     1422: "P0003",        # TOO_MANY_ROWS
     1: "23505",           # DUP_VAL_ON_INDEX
     1400: "23502",        # cannot insert NULL

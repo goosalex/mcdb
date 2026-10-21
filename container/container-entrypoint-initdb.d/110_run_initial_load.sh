@@ -214,7 +214,7 @@ while true; do
     echo "Liquibase update succeeded (${SKIPPED} post-tag changeset(s) already covered by the master-data snapshot)"
     break
   fi
-  FAILED=$(grep -oE 'Migration failed for changeset [^ ]+' "${OF}" | tail -1 | sed 's/Migration failed for changeset //; s/:$//')
+  FAILED=$(grep -oE 'Migration failed for changeset [^ ]+' "${OF}" | tail -1 | sed 's/Migration failed for changeset //; s/:$//' || true)
   if [ -n "${FAILED}" ] && grep -q 'ORA-00001' "${OF}" && [ "${SKIPPED}" -lt "${MAX_SKIPS}" ]; then
     echo "CONTAINER: changeset ${FAILED} collides with master data already present (ORA-00001) -- marking it as ran"
     echo "${FAILED}" >>"${SCRIPTPATH}/output/changesets_covered_by_masterdata.txt"
@@ -233,11 +233,16 @@ done
 # would collide: use loadUpdateData (update-or-insert on the primary key) wherever the
 # table has a primary key, plain loadData otherwise. Generated only now because the primary
 # keys can only be read once the tables exist.
+# One changeset per table with failOnError="false": a table whose snapshot cannot be
+# applied (e.g. a value the CSV loader cannot represent, such as a string literally named
+# "null") is reported below instead of aborting the whole build. Those tables keep the
+# rows the post-tag changesets seeded.
 OF2="${SCRIPTPATH}/initial_changelog_post.xml"
-echo "${XML_HEADER/1::masterData/2::masterDataPostTag}" >"${OF2}"
+echo "${XML_HEADER}" | sed '$d' >"${OF2}"
 if [ -s "${DEFERRED}" ]; then
   while IFS='|' read -r f schemaname tablenameUC xmlname; do
-    PK=$(sqlplus -s / as sysdba <<EOF_PK | sed 's/[[:space:]]*$//' | grep -v '^$'
+    echo "<changeSet author=\"osdb\" id=\"post::${schemaname}.${tablenameUC}\" failOnError=\"false\">" >>"${OF2}"
+    PK=$( { sqlplus -s / as sysdba <<EOF_PK | sed 's/[[:space:]]*$//' | grep -v '^$'; } || true
 set heading off feedback off pagesize 0 linesize 300 trimout on
 ALTER SESSION SET CONTAINER=${CONTAINER_NAME};
 select listagg(c.column_name, ',') within group (order by c.position)
@@ -245,7 +250,7 @@ select listagg(c.column_name, ',') within group (order by c.position)
  where k.constraint_type = 'P' and k.owner = '${schemaname}' and k.table_name = '${tablenameUC}';
 exit
 EOF_PK
-)
+    ) || true
     if [ -n "${PK}" ]; then
       TAG="loadUpdateData"; ATTR=" primaryKey=\"${PK}\""
     else
@@ -260,12 +265,47 @@ EOF_PK
     else
       echo "<${TAG} file=\"${f}\" schemaName=\"${schemaname}\" tableName=\"${tablenameUC}\"${ATTR}/>" >>"${OF2}"
     fi
+    echo "</changeSet>" >>"${OF2}"
   done <"${DEFERRED}"
 fi
-echo "$XML_FOOTER" >>"${OF2}"
+echo "</databaseChangeLog>" >>"${OF2}"
 OF="${SCRIPTPATH}/output/lqb_update_post.log"
-echo -e "\nCONTAINER: running liquibase update for post-tag master data ($(grep -c . "${DEFERRED}") table(s))"
+echo -e "\nCONTAINER: running liquibase update for post-tag master data ($(grep -c . "${DEFERRED}" || true) table(s))"
 "${LIQUIBASE_HOME}"/liquibase --defaultsFile "${SCRIPTPATH}/changes/liquibase-container.properties" --search-path="${SCRIPTPATH},${SCRIPTPATH}/changes,${SCRIPTPATH}/ddl,${SCRIPTPATH}/mappingdata" --changelog-file "initial_changelog_post.xml" --log-level=INFO --log-file="${OF}" update || exit 1
+if grep -q "failOnError was false" "${OF}"; then
+  echo -e "\nCONTAINER: WARNING -- post-tag master data NOT applied for these tables (rows seeded by the changesets are kept):"
+  grep -B1 -A3 "failOnError was false" "${OF}" | grep -oE "post::[A-Z_#\$]+\.[A-Z_#\$]+|ORA-[0-9]+: .*" | sort -u | sed 's/^/  /'
+  grep -oE "post::[A-Z_#\$]+\.[A-Z_#\$]+" "${OF}" | sort -u >"${SCRIPTPATH}/output/masterdata_post_not_applied.txt" || true
+fi
+
+# ---- recompile project PL/SQL owned by SYS ----------------------------------------------
+# ddl/src/global/recompile_all.sql compiles the application schemas and recompile.sql's
+# invalid-object precondition excludes owner SYS, so the project's SYS-owned PL/SQL
+# (ddl/src/proc/sys_*.sql, ddl/src/pkg/sys_*.sql) can stay INVALID from compile-order
+# effects alone. test.sh counts every invalid object, so recompile what is invalid in SYS.
+echo -e "\nCONTAINER: recompiling invalid SYS-owned PL/SQL objects"
+sqlplus -s / as sysdba <<EOF_SYS
+set serveroutput on feedback off
+ALTER SESSION SET CONTAINER=${CONTAINER_NAME};
+begin
+  for o in (select object_name, object_type from dba_objects
+             where owner = 'SYS' and status = 'INVALID'
+               and object_type in ('PROCEDURE','FUNCTION','PACKAGE','PACKAGE BODY','TRIGGER','VIEW')) loop
+    begin
+      if o.object_type = 'PACKAGE BODY' then
+        execute immediate 'alter package sys."' || o.object_name || '" compile body';
+      else
+        execute immediate 'alter ' || o.object_type || ' sys."' || o.object_name || '" compile';
+      end if;
+      dbms_output.put_line('  recompiled SYS.' || o.object_name || ' (' || o.object_type || ')');
+    exception when others then
+      dbms_output.put_line('  FAILED to recompile SYS.' || o.object_name || ': ' || sqlerrm);
+    end;
+  end loop;
+end;
+/
+exit
+EOF_SYS
 
 # unlock users
 f="${SCRIPTPATH}/output/unlock_users.sql"

@@ -2,18 +2,24 @@
 -- Inputs on which Oracle misbehaves (raises or returns a non-address) and the translation
 -- was corrected to return NULL. Each row is expected to DIFFER; see known.diff.
 DECLARE
+    -- SQLCODE/SQLERRM may not appear inside a SQL statement (ORA-00984); pass them as arguments.
+    PROCEDURE log_err(p_step VARCHAR2, p_code NUMBER, p_msg VARCHAR2) IS
+    BEGIN
+        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(p_code), SUBSTR(p_msg, 1, 4000));
+    END;
+
     PROCEDURE t_ip2num(p_step VARCHAR2, p_in VARCHAR2) IS
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.ip2num(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_num2ip(p_step VARCHAR2, p_in NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, s) VALUES (p_step, mss.osag_ip.num2ip(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     -- left and right are evaluated separately so a raise in one half does not hide the
@@ -22,21 +28,21 @@ DECLARE
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.ipv6left(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_ipv6right(p_step VARCHAR2, p_in VARCHAR2) IS
     BEGIN
         INSERT INTO diff_probe (step, n) VALUES (p_step, mss.osag_ip.ipv6right(p_in));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE t_num2ipv6(p_step VARCHAR2, p_left NUMBER, p_right NUMBER) IS
     BEGIN
         INSERT INTO diff_probe (step, s) VALUES (p_step, mss.osag_ip.num2ipv6(p_left, p_right));
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 BEGIN
     -- S-IP-008: non-numeric byte -> Oracle ORA-06502, translation NULL

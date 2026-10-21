@@ -2,6 +2,12 @@
 -- After every successful step the ticket's status_id (n) and whether status_valid_until_date
 -- is set (s) are recorded, so intermediate states are compared, not only the end state.
 DECLARE
+    -- SQLCODE/SQLERRM may not appear inside a SQL statement (ORA-00984); pass them as arguments.
+    PROCEDURE log_err(p_step VARCHAR2, p_code NUMBER, p_msg VARCHAR2) IS
+    BEGIN
+        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(p_code), SUBSTR(p_msg, 1, 4000));
+    END;
+
     PROCEDURE record_state(p_step VARCHAR2, p_ticket NUMBER) IS
         v_status NUMBER;
         v_valid  VARCHAR2(10);
@@ -17,7 +23,7 @@ DECLARE
         tt.ticket_interface.change_status(p_ticket, p_status, 950002, p_text);
         record_state(p_step, p_ticket);
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 
     PROCEDURE step_subject(p_step VARCHAR2, p_ticket NUMBER, p_subject VARCHAR2) IS
@@ -25,7 +31,7 @@ DECLARE
         tt.ticket_interface.change_subject(p_ticket, p_subject, 950002);
         record_state(p_step, p_ticket);
     EXCEPTION WHEN OTHERS THEN
-        INSERT INTO diff_probe (step, code, msg) VALUES (p_step, TO_CHAR(SQLCODE), SUBSTR(SQLERRM, 1, 4000));
+        log_err(p_step, SQLCODE, SQLERRM);
     END;
 BEGIN
     record_state('00 initial', 950010);
