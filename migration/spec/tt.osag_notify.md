@@ -685,6 +685,24 @@ this plan's SUMMARY as a Phase 4 (and possibly name-map-generator) decision.
   any kind. Documented for translation completeness only.
 - **source:** `ddl/src/pkgb/tt_osag_notify.sql:1817-1841`
 
+### S-NOTIFY-038
+
+- **routines:** compose_email_msg, compose_sms_msg, compose_local_contact_message (private)
+- **claim:** Every rendered date in the composed messages is followed by the **current
+  Zurich time-zone abbreviation**: the `$#EVENT_DATE#$` and `$#STATUS_VALID_UNTIL#$`
+  placeholders of the SMS template (lines 1269, 1272) and of the email subject/body
+  templates (lines 1178, 1183, 1196), and the `Date:` line of the local-contact message
+  (line 1398), are all built as `TO_CHAR(<date>, 'DD.MM.YYYY HH24:MI') || ' ' ||
+  TO_CHAR(SYSTIMESTAMP AT TIME ZONE 'EUROPE/ZURICH', 'TZD')`. `TZD` is the abbreviation
+  of the zone at the moment of composition — `CET` or `CEST` — **not** of the rendered
+  date itself, and never empty: on the live Oracle container (2026-10-21) a fixed event
+  date `2026-10-20 10:30` rendered as `20.10.2026 10:30 CEST`
+  (`tt__osag_notify__event_notify` differential scenario, the 20003 event text). A
+  translation that produces `20.10.2026 10:30 ` (empty abbreviation) is wrong; PostgreSQL's
+  `to_char(ts, 'TZ')` is empty for a `timestamp without time zone`, which is what
+  `clock_timestamp() AT TIME ZONE 'Europe/Zurich'` yields.
+- **source:** `ddl/src/pkgb/tt_osag_notify.sql:1178, 1183, 1196, 1269, 1272, 1398`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
