@@ -839,3 +839,27 @@ nothing previously asserted changed. They are RED against the translation as com
 GREEN with the `pg_timezone_names` lookup in the following translation commit.
 
 `commit:TEST-ONLY file:migration/test/pgtap/tt__osag_notify__spec.sql reason:A-401 two S-NOTIFY-038 time-zone abbreviation assertions from the live Oracle run; test-only commit`
+
+## A-402 — `tt__ticket_interface__lifecycle.sql`: expire_status hours rendering (S-TICKET-065)
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | differential-harness agent (touches NO translation file) |
+| **File** | `migration/test/pgtap/tt__ticket_interface__lifecycle.sql` |
+| **Assertions affected** | 0 changed; 4 added (`plan(44)` -> `plan(48)`) plus two fixture tickets (905031, 905032) |
+
+The live Oracle-vs-PostgreSQL run of scenario `tt__util__check_jobs` (2026-10-21, Oracle 23.7
+container `mcdb-ora`) showed the private text of every status-expiry event written through
+`TT.UTIL.check_ticket_status` -> `expire_status` as `Status changed to: hot (was waiting for 24
+hours)` on Oracle and `... for 24.00 hours)` on PostgreSQL. Oracle concatenates
+`round(v_time_difference, 2)` with its implicit NUMBER-to-VARCHAR2 conversion
+(`ddl/src/pkgb/tt_ticket_interface.sql:1044-1045`): no trailing zeros, no leading zero below 1
+(`24`, `47.5`, `.5`, verified live); the translation concatenated a `numeric` of scale 2. No spec
+clause named the rendering; S-TICKET-065 was added first. The four assertions added here call
+`expire_status` with fixed timestamps (24.5 h and 0.5 h) on two dedicated fixture tickets and
+encode Oracle's rendering; nothing previously asserted changed. They are RED against the
+translation as committed and go GREEN with the `trim_scale` + leading-zero correction in the
+following translation commit.
+
+`commit:TEST-ONLY file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-402 four S-TICKET-065 expire_status hours-rendering assertions and fixture tickets 905031/905032 from the live Oracle run; test-only commit`

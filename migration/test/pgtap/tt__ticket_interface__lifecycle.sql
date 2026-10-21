@@ -13,7 +13,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(44);
+SELECT plan(48);
 
 -------------------------------------------------------------------------------
 -- Fixtures. Reference rows reused from the template's masterdata (status ids
@@ -71,6 +71,13 @@ UPDATE tt.ticket SET customer_ticket_rating_id = 905023 WHERE id = 905017;
 -- texts (the rate_ticket / merge_tickets call shape) must still write the status header.
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, host_id, last_status_change_date)
     VALUES (905030, 1, 2, 905001, 905002, 905005, now() - interval '1 hour');
+
+-- Tickets P/Q (A-402): waiting / third party, dedicated to S-TICKET-065 -- the hours in
+-- expire_status's private text are rendered the Oracle way (24.5, .5; never 24.50 or 0.5).
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905031, 1, 11, 905001, 905002, now() - interval '1 hour');
+INSERT INTO tt.ticket (id, type_id, status_id, company_id, contact_id, last_status_change_date)
+    VALUES (905032, 1, 12, 905001, 905002, now() - interval '1 hour');
 
 -- Ticket F: no open ticket_flow entry -- the insert-new branch of updateTicketFlow.
 INSERT INTO tt.ticket (id, type_id, status_id, company_id, handled_by_mcc, last_status_change_date)
@@ -401,6 +408,34 @@ SELECT is(
     (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905030 AND e.type_id = 101003),
     'Hot because: customer rating 1' || chr(10),
     'S-TICKET-064: the private text is the hot reason with a trailing newline when p_details_private is NULL -- not NULL'
+);
+
+-------------------------------------------------------------------------------
+-- expire_status hours rendering (S-TICKET-065; TEST-AMENDMENTS.md A-402). Expected
+-- values follow Oracle's implicit NUMBER-to-VARCHAR2 conversion of round(x, 2), verified
+-- live 2026-10-21: no trailing zeros, no leading zero below 1.
+-------------------------------------------------------------------------------
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_expire_status(905031, TIMESTAMP '2026-10-20 10:30:00', TIMESTAMP '2026-10-19 10:00:00', 11, 'waiting', NULL)$$,
+    'S-TICKET-065: expire_status succeeds for a waiting ticket expired 24.5 hours after its last status change'
+);
+
+SELECT is(
+    (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905031 AND e.type_id = 101003),
+    'Status changed to: hot (was waiting for 24.5 hours)',
+    'S-TICKET-065: the hours are rendered without trailing zeros (24.5, not 24.50)'
+);
+
+SELECT lives_ok(
+    $$CALL tt.ticket_interface_expire_status(905032, TIMESTAMP '2026-10-20 10:30:00', TIMESTAMP '2026-10-20 10:00:00', 12, 'third party', NULL)$$,
+    'S-TICKET-065: expire_status succeeds for a third-party ticket expired half an hour after its last status change'
+);
+
+SELECT is(
+    (SELECT e.details_private FROM tt.event e WHERE e.ticket_id = 905032 AND e.type_id = 101003),
+    'Status changed to: hot (was third party for .5 hours)',
+    'S-TICKET-065: a value below 1 is rendered without a leading zero (.5, as Oracle does)'
 );
 
 SELECT * FROM finish();
