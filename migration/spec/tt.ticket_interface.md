@@ -932,7 +932,20 @@ plan's SUMMARY.
   since the base import). The locked assertions (`tt__ticket_interface__lifecycle.sql`,
   S-TICKET-021: `label_id` untouched after `expire_status(..., p_label_id => 1)`) remain
   the pinned behaviour. Unlike Q11 (a)/(b)/(d) this item is NOT a `DEVIATION`.
-- **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:999-1017`
+  **Amended (branch `phoenix/migrate_tt_only`, differential run 2026-10-21, scenario
+  `tt__ticket_interface__status_engine` steps 01-03) — the private text's number
+  rendering.** Line 1046 builds `'Status changed to: hot (was ' || p_status_name || ' for
+  ' || round(v_time_difference,2) || ' hours)'`; the `round(...)` is a `NUMBER` converted
+  implicitly to `VARCHAR2`, and Oracle's default conversion prints the shortest form: no
+  trailing zeros, no trailing decimal point, no leading zero before the point. Observed
+  live: 2.5 hours -> `'... for 2.5 hours)'`, 2 hours -> `'... for 2 hours)'`, 20 minutes
+  -> `'... for .33 hours)'`. A PostgreSQL `round(numeric, 2)::text` keeps scale 2
+  (`2.50`, `2.00`, `0.33`); the translation must render the number Oracle's way (strip
+  trailing zeros and point, drop the leading `0` of a pure fraction). The public text of
+  the status-change event this routine triggers is `'New status: hot' || CHR(10) ||
+  'Previous status: <old>' || CHR(10)` — `expire_status` always passes NULL public
+  details, see S-TICKET-064.
+- **source:** `ddl/src/pkg/tt_ticket_interface.sql:191-208`, `ddl/src/pkgb/tt_ticket_interface.sql:1045-1048`
 
 ### S-TICKET-022
 
@@ -1718,6 +1731,53 @@ plan's SUMMARY.
   The column is new in the 2026-10-20 export (`VARCHAR2(128 BYTE)`); on PostgreSQL it is
   added by `migration/test/schema-fixes/27_oct2026_export_fixes.sql`.
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:204-221`, `ddl/src/pkgb/tt_ticket_interface.sql:731-736`
+
+### S-TICKET-064
+
+- **routines:** change_status_event_id_out, change_status, expire_status
+- **claim:** **The two text builders of `change_status_event_id_out` concatenate
+  caller-supplied NULLs, and Oracle's `||` treats a NULL operand as the empty string
+  (found live, differential run 2026-10-21, scenario `tt__ticket_interface__status_engine`
+  steps 01-03 and 05).** Line 451, `dets_pub := dets_pub || CHR(10) || p_details_public`,
+  runs unconditionally: with `p_details_public = NULL` Oracle's public text is `'New
+  status: <new>' || CHR(10) || 'Previous status: <old>' || CHR(10)` — the status lines plus
+  a trailing newline, never NULL. `expire_status` (line 1048) ALWAYS calls `change_status`
+  with NULL public details, so every status-expiry event in production carries exactly this
+  text. Line 460, `v_details_private := 'Hot because: ' || p_hot_reason || CHR(10) ||
+  p_details_private`, likewise yields `'Hot because: <reason>' || CHR(10)` when the private
+  details are NULL. A literal PostgreSQL `||` propagates the NULL and both texts become
+  NULL (observed: `details_public` NULL on the three expiry events, `details_private` NULL
+  on the hot-with-reason event). The contract is Oracle's text: the translation must
+  concatenate `p_details_public` and `p_details_private` as `COALESCE(x, '')` at these two
+  sites (the other operands — status names from `tt.status`, `p_hot_reason` inside its
+  `IS NOT NULL` guard — cannot be NULL there).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:450-461`, `ddl/src/pkgb/tt_ticket_interface.sql:1048`
+
+### S-TICKET-065
+
+- **routines:** change_status_event_id_out, change_status, expire_status
+- **claim:** **Three-valued logic in the recoverable-status guard (found live, differential
+  run 2026-10-21, scenario `tt__ticket_interface__status_engine` steps 03 and 07).** Line
+  558: `IF (p_status_id IN (2, 3, 4) AND NOT v_last_public_event_type_id IN (30016))`.
+  `v_last_public_event_type_id` is NULL whenever the ticket has no `last_public_event_id`
+  (line 418 sets it NULL, the lookup at 419-423 runs only for a non-NULL id). `NULL IN
+  (30016)` is NULL, `NOT NULL` is NULL, and a NULL condition is FALSE in PL/SQL — so for a
+  ticket WITHOUT a last public event the `ELSE` branch (line 573) runs and
+  `recoverable_status_id` is reset to NULL even for the transitions the `THEN` branch would
+  record (resolved -> open/hot/acknowledged, non-MCC waiting -> hot, deferred with a future
+  valid-until -> hot). Only a ticket whose last public event exists and is not 30016 gets a
+  recoverable status. Observed live: Oracle left `recoverable_status_id` NULL on a resolved
+  -> open ticket and on a non-MCC waiting -> hot (`expire_status`) ticket, both without a
+  last public event; the translation's `IS DISTINCT FROM 30016` (TRUE for NULL) recorded
+  101 and 11. This is Oracle's contract as it stands — it may well be an unintended effect
+  of the NULL comparison, but it is NOT recorded as a CORRECTION: the translation must
+  reproduce it with the same three-valued expression (`NOT (v IN (30016))`, NULL -> the
+  `ELSE` branch), so that a future, deliberate correction (DEVIATION(ORACLE-BUG) + clause)
+  can be taken knowingly. `tt.ticket.last_public_event_id` is not written by
+  `add_history_event` (confirmed by the `status_lifecycle` scenario on both sides), so
+  tickets without a public event — e.g. created without going through
+  `event_interface.addevent_new` — are reachable.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:418-423`, `ddl/src/pkgb/tt_ticket_interface.sql:558-574`
 
 ## Checklist
 
