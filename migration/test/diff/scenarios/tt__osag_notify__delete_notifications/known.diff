@@ -1,0 +1,8 @@
+-100003,958020,1,,,,Notification settings changed\n  -deleted email notification for Alpha Cust\nbecause the user was deleted,,1
+-100003,958020,1,,,,Notification settings changed\n  -deleted email notification for Beta Cust\n,Notification settings changed\n  -deleted SMS notification for Osag Staff\n,1
+-100003,958021,1,,,,Notification settings changed\n  -deleted SMS notification for Alpha Cust\nbecause the user was deleted,,1
+-100003,958022,1,,,,Notification settings changed\n  -deleted email notification for Osag Staff\n,,1
++100003,958020,1,,,958001,Notification settings changed\n  -deleted email notification for Alpha Cust\nbecause the user was deleted,,1
++100003,958020,1,,,958001,Notification settings changed\n  -deleted email notification for Beta Cust\n,Notification settings changed\n  -deleted SMS notification for Osag Staff\n,1
++100003,958021,1,,,958001,Notification settings changed\n  -deleted SMS notification for Alpha Cust\nbecause the user was deleted,,1
++100003,958022,1,,,6,Notification settings changed\n  -deleted email notification for Osag Staff\n,,1
