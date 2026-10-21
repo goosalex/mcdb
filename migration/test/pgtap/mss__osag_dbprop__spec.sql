@@ -22,7 +22,13 @@
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
 
-CREATE OR REPLACE VIEW mss.v_host_key_value (host_id, key_name, scope, object_id, string_value) AS
+-- Since schema-fix 28 (2026-10-21) the REAL mss.v_host_key_value exists in the template,
+-- backed by the materialized views mss.mv_value_host / mss.mv_value_host_default, which
+-- are never refreshed inside a test transaction -- so the transaction-scoped substitute
+-- below is still what makes these assertions observable. DROP (rolled back with the rest)
+-- replaces CREATE OR REPLACE, which cannot change the real view's varchar(4000) columns.
+DROP VIEW mss.v_host_key_value;
+CREATE VIEW mss.v_host_key_value (host_id, key_name, scope, object_id, string_value) AS
 SELECT v.host_id, k.name AS key_name, 'host'::text AS scope, v.host_id AS object_id, v.string_value
 FROM mss.value v JOIN mss.key k ON k.id = v.key_id
 WHERE v.host_id IS NOT NULL;

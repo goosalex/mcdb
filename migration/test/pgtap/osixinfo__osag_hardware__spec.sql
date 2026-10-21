@@ -16,7 +16,7 @@
 
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
-SELECT plan(78);
+SELECT plan(75);
 
 -------------------------------------------------------------------------------
 -- S-HW-001 / S-HW-012: three public PROCEDUREs; one private helper under the __
@@ -133,7 +133,7 @@ INSERT INTO mss.host2service (host_id, service_id) VALUES (931110, 931030);
 INSERT INTO mss.host2service (host_id, service_id) VALUES (931120, 931032);
 INSERT INTO mss.host2service (host_id, service_id) VALUES (931130, 931030);
 INSERT INTO mss.host2service (host_id, service_id) VALUES (931140, 931030);
-INSERT INTO mss.host2service (host_id, service_id) VALUES (931140, 931031);   -- H5: TWO services
+-- H5 (931140): a second host2service row is refused by idx_h2s_host_un -- asserted below (S-HW-006).
 -- H6 (931150) deliberately has NO host2service row.
 INSERT INTO mss.host2service (host_id, service_id) VALUES (931160, 931030);
 INSERT INTO mss.host2service (host_id, service_id) VALUES (931170, 931030);
@@ -423,30 +423,16 @@ SELECT ok(
 );
 
 -------------------------------------------------------------------------------
--- S-HW-006: a host with TWO services -> TOO_MANY_ROWS (P0003) out of BOTH entry points;
--- nothing changed.
+-- S-HW-006 (amended 2026-10-21): a host cannot have two services -- the unique index
+-- idx_h2s_host_un (Oracle MSS.IDX_H2S_HOST_UN, schema-fix 29) refuses the second row, so
+-- the TOO_MANY_ROWS path the clause originally described is unreachable on both engines.
 -------------------------------------------------------------------------------
 
 SELECT throws_ok(
-    $$CALL osixinfo.osag_hardware_check_replaced_hw_for_host(931140, 'AA:BB:CC:00:00:42')$$,
-    'P0003',
+    $$INSERT INTO mss.host2service (host_id, service_id) VALUES (931140, 931031)$$,
+    '23505',
     NULL,
-    'S-HW-006: check_replaced_hw_for_host propagates TOO_MANY_ROWS (P0003) for a matched host mapped to two services -- handled nowhere in the package'
-);
-SELECT throws_ok(
-    $$CALL osixinfo.osag_hardware_replace_hardware(931140, 931241, 931242)$$,
-    'P0003',
-    NULL,
-    'S-HW-006: replace_hardware propagates TOO_MANY_ROWS (P0003) for a host mapped to two services'
-);
-SELECT ok(
-    (SELECT h.hardware_id = 931241 AND h.replacement_hardware_id = 931242 FROM mss.host h WHERE h.id = 931140),
-    'S-HW-006: the two-service host is unchanged after both failures'
-);
-SELECT is(
-    (SELECT count(*) FROM tt.event WHERE host_id = 931140),
-    0::bigint,
-    'S-HW-006: no event for the two-service host'
+    'S-HW-006: a second mss.host2service row for one host is refused by the unique index idx_h2s_host_un (Oracle MSS.IDX_H2S_HOST_UN) -- TOO_MANY_ROWS at the hardware lookup is structurally impossible'
 );
 
 -------------------------------------------------------------------------------

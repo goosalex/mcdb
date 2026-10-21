@@ -1000,3 +1000,37 @@ the merged suites run green (`tt.ticket_interface` 203/203 after the last merge)
 `commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__lifecycle.sql reason:A-023 merge plan() recount (50+4 -> 54) and S-TICKET-065->066 renumbering of six descriptions, assertions unchanged`
 `commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__changes.sql reason:A-023 ledger-id renumbering in comments only (A-201->A-024, A-101/A-102->A-028/A-029), assertions unchanged`
 `commit:504187cb918aceb74af2e9aaef0c99226a2c2067 file:migration/test/pgtap/tt__ticket_interface__selectinto.sql reason:A-023 ledger-id renumbering in comments only (A-302->A-027), assertions unchanged`
+
+## A-033 — `mss__osag_dbprop__spec.sql`: the transaction-scoped substitute view must DROP the real view first
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/mss__osag_dbprop__spec.sql` |
+| **Assertions affected** | 0 changed |
+
+Schema-fix 28 (plan 06-06 agents) made the real `mss.v_host_key_value` exist in the template
+(mview-backed, never refreshed inside a test transaction). The suite's `CREATE OR REPLACE VIEW`
+of its substitute then failed (`cannot change data type of view column "string_value"`) and
+every assertion died (0/10). The suite now `DROP VIEW`s the real view inside its transaction
+(rolled back) and creates the substitute as before. Nothing asserted changes.
+
+`commit:TEST-ONLY file:migration/test/pgtap/mss__osag_dbprop__spec.sql reason:A-033 drop the real view before the substitute, test-only commit`
+
+## A-034 — `osixinfo__osag_hardware__spec.sql`: S-HW-006 asserted a two-services path Oracle cannot take
+
+| | |
+|---|---|
+| **Date** | 2026-10-21 |
+| **Amended by** | orchestrator (touches NO translation file) |
+| **File** | `migration/test/pgtap/osixinfo__osag_hardware__spec.sql` |
+| **Assertions affected** | 4 removed (two `P0003` throws and their two "unchanged" checks), 1 added (`23505` on the second host2service row); `plan(78)` -> `plan(75)` |
+
+Same correction as A-026/A-027: the fixture gave host 931140 two `mss.host2service` rows,
+which `MSS.IDX_H2S_HOST_UN` refuses on Oracle (live, 2026-10-21) and, since schema-fix 29,
+on PostgreSQL -- the fixture itself aborted the suite (7/78). Spec S-HW-006 was amended first;
+the suite now asserts the refusal instead of the unreachable `TOO_MANY_ROWS` path.
+
+`commit:TEST-ONLY file:migration/test/pgtap/osixinfo__osag_hardware__spec.sql reason:A-034 two-services fixture impossible on Oracle, assert the 23505 refusal, test-only commit`
+
