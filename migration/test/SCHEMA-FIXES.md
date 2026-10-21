@@ -101,3 +101,18 @@ masterdata for `AUTH TT MSS MCAUDIT OSAG` only (`fixtures/load_masterdata.py`
 `DEFAULT_SCHEMAS`). `MC.OSAG_MAINTSYNC`'s tests insert the four rows themselves
 (`ON CONFLICT DO NOTHING`) so they pass with or without MC masterdata; the next template
 rebuild should add `MC` to the loaded schemas (open question in 06-01-SUMMARY.md).
+
+## Re-sync with the 2026-10-20 export (`schema-fixes/27_oct2026_export_fixes.sql`)
+
+| # | Gap | Fix | Why it matters |
+|---|---|---|---|
+| 11 | `tt.ticket.worker_zitadel_id` (`VARCHAR2(128 BYTE)` in `ddl/generated/schema.oracle.sql`, absent from `ddl/migrated/tables/tables.pg.sql`) | `ALTER TABLE tt.ticket ADD COLUMN IF NOT EXISTS worker_zitadel_id varchar(128)` + comment | the October `TT.TICKET_INTERFACE` body writes it in `newticket_new` and `change_worker`; without the column the re-synced translation cannot compile its INSERT/UPDATE |
+
+Measured on 2026-10-21 against the running Oracle container (state of the 2026-10-20 export
+plus the 142 post-tag changesets): the TT-closure schemas (`TT AUTH STOP MSS MC MCAUDIT OSAG
+TICKETEVOLUTION ESP`) have **315 columns in 38 tables** that `mcdb_tmpl` lacks -- mostly
+`*_bak_20250714` tables, the AUTH/MSS materialized views, and MC/MSS tables no TT routine
+references. Only `worker_zitadel_id` is used by TT PL/SQL, so only it is fixed here. The
+proper fix is to regenerate the ora2pg output from the Oracle container into a NEW
+directory (Phase 5); `ddl/migrated/` stays the frozen artifact of record.
+

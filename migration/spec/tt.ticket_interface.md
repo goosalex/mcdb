@@ -48,7 +48,7 @@ scope is reduced by this front-matter bookkeeping detail.
 - **Oracle signature:** `PROCEDURE newticket_new(p_ticket_id OUT NUMBER, p_event_id OUT NUMBER, p_ticket_type_id NUMBER, p_subject VARCHAR2, p_event_type_id NUMBER, p_host_id NUMBER, p_details_public VARCHAR2, p_details_private VARCHAR2 DEFAULT NULL, p_contact_id NUMBER DEFAULT NULL, p_worker_id NUMBER DEFAULT NULL, p_public_event BOOLEAN DEFAULT TRUE, p_eventdate DATE DEFAULT sysdate, p_company_id NUMBER DEFAULT NULL, p_service_component_id NUMBER DEFAULT NULL, p_zitadel_contact_id NUMBER DEFAULT NULL)`
 - **PostgreSQL name:** `tt.ticket_interface_newticket_new` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_ticket_interface.sql:33`
-- **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:35-272`
+- **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:35-303` (2026-10-20 export; was 35-272)
 - Opens a brand-new ticket and its first event: resolves company/service context from the
   host and/or contact, decides whether the contact qualifies as a company-wide admin owner,
   decides whether the ticket is auto-confirmed (automatic event source or OSAG-worker-
@@ -57,6 +57,11 @@ scope is reduced by this front-matter bookkeeping detail.
   notifies (`TT.OSAG_NOTIFY.event_notify`), records a history event
   (`tt.event_interface.add_history_event`), runs `exec_event_type_actions`, optionally opens
   a change-request (ServiceNow integration heuristic), and updates the ticket-flow queue.
+  **2026-10-20 export:** the contact used for company resolution, owner check, change request
+  and event contact is the *resolved sender* -- `p_contact_id`, or for a ServiceNow sign-off
+  sender known only by Zitadel user ID the contact of the `auth.login` row carrying that ID
+  (S-TICKET-061, S-TICKET-062); the ticket row also records the worker's Zitadel ID
+  (S-TICKET-063).
   **No procedure-level `EXCEPTION` block at all** — any unhandled error propagates fully to
   the caller (S-TICKET-001).
 
@@ -114,10 +119,12 @@ scope is reduced by this front-matter bookkeeping detail.
 - **Oracle signature:** `PROCEDURE change_worker(p_ticket_id NUMBER, p_worker_id NUMBER, p_contact_id NUMBER, p_handled_by_mcc NUMBER DEFAULT 0, p_is_emergency NUMBER DEFAULT 0, p_reason VARCHAR2 DEFAULT NULL, p_zitadel_contact_id NUMBER DEFAULT NULL)`
 - **PostgreSQL name:** `tt.ticket_interface_change_worker` (from `name-map.csv`)
 - **Declared:** `ddl/src/pkg/tt_ticket_interface.sql:123`
-- **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:653-756`
+- **Defined:** `ddl/src/pkgb/tt_ticket_interface.sql:684-788` (2026-10-20 export; was 653-756)
 - Resolves the new and old worker names (each in its own local `BEGIN...EXCEPTION WHEN
   NO_DATA_FOUND` block, defaulting to a synthetic "MCC" label), updates `worker_id`,
   conditionally updates `handled_by_mcc` (and recomputes the UX timeout if it changed),
+  since the 2026-10-20 export also writes `worker_zitadel_id` in the same UPDATE as
+  `worker_id` (S-TICKET-063),
   builds a private "engineer changed to..." audit event, inserts it directly (not via
   `add_status_change_event`), and updates the ticket-flow queue. **No procedure-level
   `EXCEPTION` block** — everything outside the two local blocks propagates unhandled
@@ -1621,6 +1628,61 @@ plan's SUMMARY.
   shape of the original handler is preserved).
 - **source:** `ddl/src/pkgb/tt_ticket_interface.sql:2003-2006`, `ddl/src/pkgb/tt_ticket_interface.sql:2046-2069`
 
+### S-TICKET-061
+
+- **routines:** newticket_new
+- **claim:** **2026-10-20 export — sign-off senders resolved by Zitadel user ID.** Before
+  resolving company and owner, `v_sign_off_sender := 1` iff `p_event_type_id = 30002` AND
+  `p_zitadel_contact_id` is one of the eight ServiceNow/partner sign-off Zitadel user IDs
+  `260976466693466175, 260976421227212858, 260976444195221562, 249698997185305231,
+  250130937734526554, 250130921494181466, 296895704029212305, 389858629131441574` (the
+  `NUMBER` parameter is compared against string literals, i.e. implicitly converted; the
+  translation compares `p_zitadel_contact_id::text`). `v_sender_contact_id := p_contact_id`;
+  if that is NULL and `v_sign_off_sender = 1`, `v_sender_contact_id := (SELECT MAX(l.contact_id)
+  FROM auth.login l WHERE l.oidc_zitadel_id = TO_CHAR(p_zitadel_contact_id))` — SELECT INTO
+  site #78, an aggregate: never `NO_DATA_FOUND` or `TOO_MANY_ROWS`, NULL when no login
+  carries that ID. From then on `v_sender_contact_id` replaces `p_contact_id` everywhere the
+  old body read it: the company lookup (site #3, `stop.contact` by id — a mapped contact
+  always exists because `auth.login.contact_id` references `stop.contact`), the
+  company-wide-admin owner check (`p_host_id IS NULL AND v_sender_contact_id IS NOT NULL`),
+  the ticket's `contact_id`, and the event-contact fallback (`p_worker_id`, else
+  `v_sender_contact_id`, else NULL). An explicitly passed `p_contact_id` always wins over the
+  Zitadel mapping. Any other `(p_event_type_id, p_zitadel_contact_id)` combination leaves the
+  behaviour exactly as before the export.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:97-146`, `ddl/src/pkgb/tt_ticket_interface.sql:227-233`
+
+### S-TICKET-062
+
+- **routines:** newticket_new
+- **claim:** **2026-10-20 export — change-request rule widened.** The pre-approved
+  change request (state 3, requester = approver = the resolved event contact, ticket type
+  forced to 2) is created iff `p_event_type_id = 30002` AND (`v_sender_contact_id IN
+  (224019, 1150408, 235692, 371508, 458818, 430183, 430181, 3598, 796216)` OR
+  `v_sign_off_sender = 1`). The former `p_contact_id IS NOT NULL AND` guard is gone (an
+  `IN` on NULL is simply false). Consequence: a sign-off Zitadel sender with no `auth.login`
+  row still gets the change request — with `requester_id`/`approver_id` NULL (both nullable
+  in `TT.CHANGE_REQUEST`) and a NULL ticket contact — and the legacy id list is matched
+  against the *resolved* sender, so a Zitadel-mapped contact that is also a legacy id
+  matches either way. `requester_zitadel_id`/`approver_zitadel_id` are still
+  `p_zitadel_contact_id` (S-TICKET-005 unchanged).
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:180-200`
+
+### S-TICKET-063
+
+- **routines:** newticket_new, change_worker
+- **claim:** **2026-10-20 export — `tt.ticket.worker_zitadel_id`.** Both routines write
+  `worker_zitadel_id = (SELECT oidc_zitadel_id FROM auth.login WHERE contact_id = <worker>)`
+  as a scalar subquery: `newticket_new` in its `INSERT INTO ticket` with `p_worker_id`,
+  `change_worker` in the same `UPDATE` that sets `worker_id = v_worker_id` (so an
+  unresolvable new worker — the local `NO_DATA_FOUND` default `v_worker_id := NULL`,
+  S-TICKET-013 — clears both columns). NULL when the worker has no login row, no Zitadel
+  ID, or is NULL itself. A contact owning more than one `auth.login` row raises
+  `ORA-01427` (PostgreSQL `21000`, "more than one row returned by a subquery used as an
+  expression") and propagates unhandled — neither routine has a procedure-level handler.
+  The column is new in the 2026-10-20 export (`VARCHAR2(128 BYTE)`); on PostgreSQL it is
+  added by `migration/test/schema-fixes/27_oct2026_export_fixes.sql`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:204-221`, `ddl/src/pkgb/tt_ticket_interface.sql:731-736`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
@@ -1771,6 +1833,7 @@ rows is structurally impossible (an aggregate query: `COUNT`, `MIN`, `MAX`, or a
 | 75 | `ddl/src/pkgb/tt_ticket_interface.sql:2343` | `v_stats_id` (re-`SELECT` after `MERGE`, inside handler) | structurally near-impossible (row now guaranteed to exist) | no | (inside handler above) | STRICT + handler | S-TICKET-055 |
 | 76 | `ddl/src/pkgb/tt_ticket_interface.sql:2381` | `v_flow_id, v_flow_in_date` (`tt.ticket_flow`, open entry) | yes (expected common case — no open entry) | unverified/assumed-no (see Assumptions) | local `WHEN NO_DATA_FOUND THEN v_flow_id := NULL` (lines 2383-2386) | STRICT + handler | S-TICKET-051 |
 | 77 | `ddl/src/pkgb/tt_ticket_interface.sql:2391` | `v_mcc_flag` etc. (`tt.ticket` by id) | yes (bad `p_ticket_id`) | no (`TICKET_PK`) | none; `updateTicketFlow` has no procedure-level `EXCEPTION` block | STRICT, unhandled | S-TICKET-051 |
+| 78 | `ddl/src/pkgb/tt_ticket_interface.sql:116` | `v_sender_contact_id` (`MAX(contact_id)` over `auth.login` by `oidc_zitadel_id`) | no (an aggregate always returns one row; NULL when no login matches) | no (aggregate) | none; reached only for a sign-off Zitadel sender without `p_contact_id` | plain `INTO` (an aggregate; `STRICT` would be satisfied too) | S-TICKET-061 |
 
 ### 3. Exception codes
 
@@ -1830,6 +1893,13 @@ still choose to make either a `PROCEDURE` with an OUT parameter for consistency 
 rest of the package, independent of whether a COMMIT-reachability hazard exists).
 
 ## Assumptions / Unresolved
+
+- **Line references predate the 2026-10-20 export except where marked.** That export
+  (commit 0e5c990) inserted 32 lines into `newticket_new` after former line 94 and 1 line
+  in its `INSERT` column list, and 1 line into `change_worker`'s `UPDATE`; every
+  `ddl/src/pkgb/tt_ticket_interface.sql:NNN` citation below site #3 in the SELECT INTO table
+  is therefore offset by +32 (sites #3-#8) or +33 (#9 onward) against the current file.
+  S-TICKET-061..063 and site #78 cite current line numbers.
 
 - **The doc/body disagreement in `expire_status`** (S-TICKET-021): the package spec's
   comment claims it "calls change_label() and change_status()"; the body only calls
