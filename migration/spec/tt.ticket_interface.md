@@ -998,13 +998,23 @@ plan's SUMMARY.
   concatenated at all) if the input is `NULL`, so there is no `NULL || 'x'`
   collapsing-vs-not divergence to translate here (unlike
   `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator, which DOES
-  concatenate onto a NULL-seeded variable). If a caller passes `''` instead of `NULL` for
-  either text parameter, the `IS NOT NULL` check is TRUE in both Oracle and PostgreSQL
-  (an empty string is never NULL in either engine, so no `''`≡`NULL` collapsing is
-  relevant to THIS specific check) — the prefix is prepended to `''`, producing a
-  visible-but-otherwise-empty change line in both engines identically. No `EXCEPTION`
-  block of its own; delegates to `add_status_change_event`.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1265-1281`
+  concatenate onto a NULL-seeded variable). **Amended (branch `phoenix/migrate_tt_only`,
+  differential run 2026-10-21, scenario `tt__ticket_interface__change_attributes` step
+  17):** the original text of this clause claimed that a caller-supplied `''` makes the
+  `IS NOT NULL` check TRUE "in both Oracle and PostgreSQL". That misread Oracle: a
+  `VARCHAR2` argument of `''` IS NULL in Oracle (there is no empty string in Oracle's
+  `VARCHAR2`), so `p_change_text_public IS NOT NULL` (line 1305) and
+  `p_change_text_private IS NOT NULL` (line 1309) are FALSE for `''`, the local variable
+  stays NULL, and — when the other text is non-NULL — `add_status_change_event` HIDES the
+  event (`public_event = 0`, `details_public` NULL). Observed live: Oracle
+  `change_notification(t, '', 'x', c)` writes a private event with `details_public` NULL;
+  a literal PostgreSQL `IS NOT NULL` on `''` is TRUE and writes a PUBLIC event whose
+  `details_public` is the bare prefix `'Notification settings changed\n'`. The contract is
+  Oracle's: `''` and `NULL` are the same input for both text parameters; the translation
+  must normalise `''` to NULL at this boundary (`NULLIF(p, '')`), exactly as
+  `change_customer_reference`/`change_partner_reference` already do (S-TICKET-018/022).
+  No `EXCEPTION` block of its own; delegates to `add_status_change_event`.
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1305-1313`
 
 ### S-TICKET-028
 
@@ -1027,14 +1037,26 @@ plan's SUMMARY.
   `TRUE`) whenever either side is `NULL` in standard three-valued SQL logic — identical
   in Oracle and PostgreSQL, so no translation divergence exists in this specific
   condition. `NVL(p_summary_private, '<empty>')`/`NVL(p_summary_public, '<empty>')`
-  (lines 1311, 1324) ARE Oracle-`NVL`-specific but behave identically to PostgreSQL's
-  `orafce` `NVL` or a native `COALESCE` for a NULL input — no divergence, since neither
-  summary column is ever compared against `''` specifically anywhere in this routine
-  (only against `NULL` and against each other). Resetting
+  (lines 1343, 1356) ARE Oracle-`NVL`-specific but behave identically to PostgreSQL's
+  `orafce` `NVL` or a native `COALESCE` for a NULL input. **Amended (branch
+  `phoenix/migrate_tt_only`, differential run 2026-10-21, scenario
+  `tt__ticket_interface__change_attributes` step 22):** the original text concluded "no
+  divergence, since neither summary column is ever compared against `''`". The COLUMNS are
+  never `''` (Oracle cannot store one), but the PARAMETERS can be passed `''` by a caller,
+  and in Oracle a `VARCHAR2` argument of `''` IS NULL: `change_summary(t, '', '', c)` on a
+  ticket whose summaries are both NULL is a complete NO-OP in Oracle (both conditions at
+  lines 1337-1340 and 1350-1353 see `NULL`/`NULL`, the `NOT (old IS NULL AND new IS
+  NULL)` guard is FALSE). Observed live: PostgreSQL, where `''` is a value, took both
+  branches — wrote two audit events (`'private summary changed to:\n'` and `'public
+  summary changed to:\n'`, `COALESCE('', '<empty>')` being `''`), stored `''` in both
+  columns and reset `summary_relevant_events_count`. The contract is Oracle's: `''` and
+  `NULL` are the same input for `p_summary_private`/`p_summary_public`; the translation
+  must normalise `''` to NULL on entry (`NULLIF(p, '')`) so the change-detection, the
+  `<empty>` text and the stored value all follow the NULL path. Resetting
   `summary_relevant_events_count := 0` happens ONLY on the public-summary-changed path
-  (line 1325), never on the private-summary-changed path — a deliberate asymmetry, not an
+  (line 1357), never on the private-summary-changed path — a deliberate asymmetry, not an
   omission.
-- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1305-1333`
+- **source:** `ddl/src/pkgb/tt_ticket_interface.sql:1337-1365`
 
 ### S-TICKET-030
 
@@ -1706,15 +1728,21 @@ plan's SUMMARY.
    actual column (which stores whatever was passed, verbatim, in both engines). Boundary
    normalization decision: `NULLIF(p_x, '')` before the `IS NOT NULL` check (or an
    explicit `p_x IS NOT NULL AND p_x != ''` test) closes the gap.
-2. **`change_notification`'s prefix-only-if-non-NULL pattern (S-TICKET-027) — CORRECTLY
-   handled already, no divergence.** `v_event_details_public`/`_private` are assigned
-   `EVENT_DETAILS_PREFIX || p_change_text_x` ONLY inside an `IF p_change_text_x IS NOT
-   NULL` guard — the variable is left at its declared NULL (never concatenated) when the
-   input is NULL, so there is no `NULL || 'x'`-collapsing-vs-not divergence to translate
-   (unlike `TT.OSAG_NOTIFY.delete_ticket_notifications`'s S-NOTIFY-020 accumulator
-   pattern, which DOES concatenate onto a NULL-seeded variable across multiple `||`
-   calls). A caller-supplied `''` is never NULL in either engine, so the `IS NOT NULL`
-   check behaves identically for that input too.
+2. **`change_notification`'s prefix-only-if-non-NULL pattern (S-TICKET-027, amended) and
+   `change_summary`'s change detection (S-TICKET-029, amended) — the SAME divergence as
+   finding 1, found live, not by static analysis.** `v_event_details_public`/`_private`
+   are assigned `EVENT_DETAILS_PREFIX || p_change_text_x` ONLY inside an `IF
+   p_change_text_x IS NOT NULL` guard, so there is no `NULL || 'x'` accumulator problem
+   (unlike S-NOTIFY-020). But the original text of this item went on to claim that a
+   caller-supplied `''` "is never NULL in either engine" — wrong for Oracle, where a
+   `VARCHAR2` argument of `''` IS NULL and the guard is FALSE. The differential run of
+   2026-10-21 (`migration/test/diff/scenarios/tt__ticket_interface__change_attributes`,
+   steps 17 and 22) showed Oracle hiding the notification event / skipping the summary
+   change for `''` while a literal PostgreSQL port wrote a public event with a bare prefix
+   / two `'... changed to:\n'` events and stored `''`. Same boundary normalisation as
+   finding 1: `NULLIF(p, '')` before the `IS NOT NULL` checks in `change_notification`
+   and on entry to `change_summary` (where the parameters feed the `!=`/`IS NULL`
+   change-detection, the `NVL(..., '<empty>')` text and the stored value alike).
 3. **`add_status_change_event`'s "hide the event" NULL check (its own inline comment,
    `ddl/src/pkgb/tt_ticket_interface.sql:1676-1678`) is EXPLICITLY flagged by Oracle's own
    author as fragile**: `IF (p_public_change_text IS NULL AND p_private_change_text IS
