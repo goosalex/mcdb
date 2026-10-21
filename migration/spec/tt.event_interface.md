@@ -151,17 +151,26 @@ spec — flagged again in this plan's SUMMARY.
   h2s.service_id INTO v_company_id, v_mss_service_id FROM mss.host h, mss.host2service h2s
   WHERE h.id = p_host_id AND h.id = h2s.host_id`. Zero rows is reachable (a host with no
   `host2service` row) and is caught locally: `EXCEPTION WHEN NO_DATA_FOUND THEN
-  plog.warning(...)` (lines 84-85). **`TOO_MANY_ROWS` is ALSO structurally reachable
-  here** — `mss.host2service`'s primary key is `(HOST_ID, SERVICE_ID)`
-  (`ddl/generated/schema.oracle.sql:81`), not unique on `HOST_ID` alone, so a host mapped
-  to more than one service returns more than one row from this join. Because the local
-  handler only names `WHEN NO_DATA_FOUND`, a `TOO_MANY_ROWS` here falls to
-  `WHEN OTHERS THEN RAISE` (lines 86-87) — which **RE-RAISES it**. `newevent_new` has NO
-  procedure-level `EXCEPTION` block of its own, so a re-raised `TOO_MANY_ROWS` from this
-  site propagates fully unhandled straight out of `newevent_new` to whatever called it.
-  This is a genuine, previously-undocumented multi-row hazard (same table and cardinality
-  fact as `migration/spec/tt.osag_notify.md`'s S-NOTIFY-003), not merely theoretical.
-- **source:** `ddl/src/pkgb/tt_event_interface.sql:77-88`
+  plog.warning(...)` (lines 84-85). **`TOO_MANY_ROWS` is structurally IMPOSSIBLE here
+  (amended 2026-10-21).** This clause originally claimed the opposite from
+  `mss.host2service`'s primary key `(HOST_ID, SERVICE_ID)` alone
+  (`ddl/generated/schema.oracle.sql:81`); the same export also carries `CREATE UNIQUE
+  INDEX MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID)`
+  (`ddl/generated/schema.oracle.sql:3700`, created by
+  `changes/changelog-2.archive.sql:1884` after the ora2pg export that `ddl/migrated/` is
+  frozen from), so a host can be mapped to AT MOST ONE service and this join returns at
+  most one row. Confirmed live against the Oracle container by the differential scenario
+  `tt__event_interface__newevent`: the second `mss.host2service` row for one host is
+  refused with `ORA-00001: unique constraint (MSS.IDX_H2S_HOST_UN) violated`. The
+  `WHEN OTHERS THEN RAISE` arm (lines 86-87) stays in the source and the translation
+  (any other error still re-raises, and `newevent_new` has NO procedure-level
+  `EXCEPTION` block of its own, so it would propagate unhandled), but no `TOO_MANY_ROWS`
+  can reach it. The PostgreSQL template lacked the unique index (it is not in the ora2pg
+  output) — `migration/test/schema-fixes/29_host2service_unique_fixes.sql` adds it, so
+  PostgreSQL refuses the second row exactly as Oracle does. (`migration/spec/
+  tt.osag_notify.md`'s S-NOTIFY-003 rests on the same cardinality assumption and should
+  be re-read in this light.)
+- **source:** `ddl/src/pkgb/tt_event_interface.sql:77-88`, `ddl/generated/schema.oracle.sql:81, 3700`
 
 ### S-EVENT-002
 
@@ -797,6 +806,33 @@ spec — flagged again in this plan's SUMMARY.
   unchanged).
 - **source:** `ddl/src/pkg/tt_event_interface.sql:67-74`, `ddl/src/pkgb/tt_event_interface.sql:877-884`
 
+### S-EVENT-048
+
+- **routines:** newevent_new, addevent_new
+- **claim:** **First-line extraction with Oracle `SUBSTR` semantics (added 2026-10-21 from
+  a live differential run).** Four sites cut "the first line" of the public details with
+  `SUBSTR(x, 1, INSTR(x, CHR(10)) - 1)`: `newevent_new`'s ticket subject for event types
+  30002/30009/40002/10014/10002 (lines 352-353), `newevent_new`'s alerting-log
+  `v_msg_firstline` (line 441), `addevent_new`'s `v_msg_firstline` (line 657), and —
+  with a computed length — `newevent_new`'s `eventSubject := SUBSTR(v_details_public, 1,
+  95 - length(subject))` (line 367). When the details contain NO newline, `INSTR` returns
+  0 and the length argument is **-1**; when the subject is longer than 95 characters the
+  length at line 367 is negative too. Oracle's `SUBSTR` returns **NULL** for a length
+  less than 1 (Oracle SQL Language Reference, SUBSTR: "If length is ... less than 1, then
+  Oracle returns null"); the routine continues: the new ticket is created with
+  `subject = NULL` (lines 405/411 insert `subject` as is) and the alerting-log line is
+  written with an empty `msgshort`. Observed live (Oracle container, 2026-10-21):
+  `newevent_new(30002, ..., 'single line mail subject')` opened a ticket whose `subject`
+  is NULL, and `newevent_new(10004, ..., 'single line hardware notification')` appended
+  its event normally. PostgreSQL's `pg_catalog.substr` raises `22011 negative substring
+  length not allowed` for the same arguments; a translation must therefore use a
+  NULL-returning substring (orafce's `oracle.substr`, which returns NULL for length < 1,
+  or an explicit guard) at all four sites. The failure mode of a literal port is worse
+  than an error: inside `addevent_new` the 22011 is swallowed by the outer handler
+  (S-EVENT-032) AFTER `p_event_id` was assigned, so the caller sees a valid event id and
+  **no event row exists** — the event is silently lost.
+- **source:** `ddl/src/pkgb/tt_event_interface.sql:351-353, 367, 405-412, 441, 657`
+
 ## Checklist
 
 ### 1. Empty-string / NULL handling
@@ -852,7 +888,7 @@ package's OWN routines called it; `no STRICT` = zero rows is structurally imposs
 
 | # | ddl/src/pkgb/tt_event_interface.sql:LINE | target(s) | zero rows possible? | multi rows possible? | Oracle handler | PG translation | clause |
 |---|---|---|---|---|---|---|---|
-| 1 | `ddl/src/pkgb/tt_event_interface.sql:79` | `v_company_id, v_mss_service_id` (mss.host x mss.host2service, newevent_new) | yes (no host2service row) | **yes** (`mss.host2service` PK `(host_id,service_id)`, not unique on `host_id`) | local `WHEN NO_DATA_FOUND` (84-85); `WHEN OTHERS THEN RAISE` (86-87) re-raises TOO_MANY_ROWS | STRICT + handler (NDF only; TMR re-raises, then unhandled -- no outer net in newevent_new) | S-EVENT-001 |
+| 1 | `ddl/src/pkgb/tt_event_interface.sql:79` | `v_company_id, v_mss_service_id` (mss.host x mss.host2service, newevent_new) | yes (no host2service row) | **no** (unique index `MSS.IDX_H2S_HOST_UN` on `host_id`, `ddl/generated/schema.oracle.sql:3700`; amended 2026-10-21) | local `WHEN NO_DATA_FOUND` (84-85); `WHEN OTHERS THEN RAISE` (86-87) re-raises anything else | STRICT + handler (NDF arm; the RAISE arm is kept but no TMR can reach it) | S-EVENT-001 |
 | 2 | `ddl/src/pkgb/tt_event_interface.sql:94` | `v_company_id` (stop.contact by id) | yes (bad p_contact_id) | no (CONTACT_PK) | none anywhere in newevent_new | STRICT, unhandled | S-EVENT-002 |
 | 3 | `ddl/src/pkgb/tt_event_interface.sql:104` | `active` (mss.host by id) | yes (bad p_host_id) | no (HOST_PK) | none | STRICT, unhandled | S-EVENT-003 |
 | 4 | `ddl/src/pkgb/tt_event_interface.sql:118` | `v_disable_event_ticket_id` (COUNT) | no (aggregate) | no | n/a | no STRICT | S-EVENT-004 |
@@ -972,14 +1008,21 @@ Unresolved`). `pg_kind` remains PROVISIONAL for all 8 of this package's own rout
   (a `depgraph.py`/`known_cycles.json` maintenance decision, out of scope for this plan)
   — it is flagged here, loudly, again in this plan's SUMMARY, so Phase 4's
   translation-order planning does not miss it.
-- **S-EVENT-001's `TOO_MANY_ROWS` re-raise-then-unhandled path is a genuine, reachable
-  hazard, not a theoretical one.** `mss.host2service`'s primary key `(HOST_ID,
-  SERVICE_ID)` structurally permits a host mapped to more than one service; `newevent_new`
-  has no procedure-level `EXCEPTION` block at all, so a re-raised `TOO_MANY_ROWS` from this
-  site propagates all the way to `newevent_new`'s own caller today. Whether this has ever
-  actually fired in production cannot be determined from static source alone (no live
-  Oracle exists for this phase to check against) — the column-level fact alone (not a
-  unique index on `HOST_ID`) is sufficient to make this a real spec-level finding.
+- **S-EVENT-001's `TOO_MANY_ROWS` path is NOT reachable (resolved 2026-10-21).** The
+  original text of this bullet claimed a "genuine, reachable hazard" from the primary key
+  alone; the unique index `MSS.IDX_H2S_HOST_UN ON MSS.HOST2SERVICE(HOST_ID)`
+  (`ddl/generated/schema.oracle.sql:3700`) makes a host with two services impossible, and
+  the live Oracle container confirmed it (`ORA-00001` on the second row). The `WHEN OTHERS
+  THEN RAISE` arm is kept in the translation for every other error. What WAS real is the
+  schema gap: the PostgreSQL template lacked the index (added by
+  `migration/test/schema-fixes/29_host2service_unique_fixes.sql`).
+- **S-EVENT-048 (first-line `SUBSTR` with a negative length) was found by the live
+  differential run, not by static analysis** — the original Checklist dimension 1 review
+  looked for `''`/`NULL` collapsing at `IS NULL`/`||` sites and did not cover Oracle's
+  "length < 1 returns NULL" `SUBSTR` rule. Other packages that cut a first line the same
+  way (`TT.OSAG_NOTIFY.event_notify`'s `v_event_subject`,
+  `ddl/src/pkgb/tt_osag_notify.sql:371-374`, is guarded by an explicit `INSTR > 0` test;
+  others were not re-audited here) should be checked for the same pattern.
 - **The `ROWNUM=1` -> `LIMIT 1` translation mechanic (S-EVENT-019)** is this pilot's first
   occurrence of an Oracle `ROWNUM` predicate inside a `SELECT INTO`'s `WHERE` clause acting
   as an implicit `TOO_MANY_ROWS` suppressor. Neither `tt.osag_notify.md` nor `tt.util.md`
