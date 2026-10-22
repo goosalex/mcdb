@@ -8,11 +8,14 @@ compiling and behaving: stubs (façade packages with the original signatures), t
 external-call bridge they use, a read replica for the one TT query the Oracle side
 runs itself, and the pruning list.
 
-**Nothing in this directory has been executed against an Oracle instance** (none is
-available to this project — see `.planning/STATE.md`, blocker ORA-01). Every file is
-written to Oracle 19c syntax from the Oracle sources in `ddl/src/`, and must be
-compiled and tested on the Oracle dev instance before use. Treat it as a reviewed draft,
-not as verified code.
+**Nothing in this directory has been executed against an Oracle instance yet.** When it
+was written no Oracle was available (`.planning/STATE.md`, blocker ORA-01); since
+2026-10-20 a local Oracle Free 23.7 container (`mcdb-ora`, built from
+`container/docker_orafree_based/Dockerfile`) exists and is used by the differential
+harness, so these drafts can now be compiled and tested there. Every file is written to
+Oracle 19c syntax from the Oracle sources in `ddl/src/`. Until that test has run, treat
+it as a reviewed draft, not as verified code. Status of the whole sub-project:
+[`../../STATUS_TT.md`](../../STATUS_TT.md).
 
 ## What stays on Oracle and touches TT (from `.planning/reports/tt-callers-2026-10-14.html`)
 

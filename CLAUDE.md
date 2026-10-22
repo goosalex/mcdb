@@ -7,4 +7,6 @@ Folder masterdata contains the content of the tables that we consider master tab
 Folder ddl/migrated contains the already batch-migrated to Postgresql ddl. This was don with "ora2pg" It might contains errors.
 Folder pg_migration contains the naive output of the "ora2pg" conversion of the programmatic elements. It for sure contains errors, ora2pg is not capable of translating the program code. For organization, we chose to put the Oracle package name as a prefix to all elements that were organized in an Oracle package.
 
-Your task is to translate the PL/SQL code into valid Postgres Code so that we can migrate the whole database.   
+Your task is to translate the PL/SQL code into valid Postgres Code so that we can migrate the whole database.
+
+Current focus (since October 2026): the ticketing schemas TT and TICKETEVOLUTION and their dependency closure are translated and verified first; the other schemas stay on Oracle behind a bridge for now. Progress and open decisions for that sub-project: STATUS_TT.md (linked from README.md). All migration output lives under migration/; ddl/ and masterdata/ are read-only (productive Oracle still uses them).   

@@ -27,9 +27,38 @@ The container kaeter module is under [container](container/README.md).
 
 A derived container with additionally activated ARCHIVELOG & FLASHBACK is [osdb/local_ora_mcdb_flashback](https://artifacts.open.ch/central-docker-prod-local/osdb/local_ora_mcdb_flashback). This is only intended for automated tests.
 
-## Migration to PostgreSQL (PoC)
+The container can also be built locally from [container/docker_orafree_based/Dockerfile](container/docker_orafree_based/Dockerfile);
+the build and init scripts detect whether the company artifact mirror is reachable and fall
+back to the public registries otherwise. The init pipeline applies all changesets after the
+last export tag in `changes/changelog-current.sql` and loads the master data in two phases.
+The migration uses this container as the Oracle reference for its differential tests
+(see [STATUS_TT.md](STATUS_TT.md)).
 
-See [pg_migration/README.md](pg_migration/README.md) for a proof of concept migration of the MCDB schema and data to PostgreSQL.
+## Migration to PostgreSQL
+
+The database is being migrated to PostgreSQL 17+. The approach is spec-first: behavioural
+specifications are derived from the Oracle source, PL/pgSQL translations are tested against
+those specs on a local PostgreSQL, and since October 2026 also compared live against an Oracle
+container (differential harness).
+
+**Current focus: TT and TICKETEVOLUTION first.** The ticketing schemas and their dependency
+closure are translated and verified ahead of everything else; the remaining schemas stay on
+Oracle 19c behind a bridge for now. Progress, open decisions and the distance to parity for
+that sub-project are tracked in **[STATUS_TT.md](STATUS_TT.md)**.
+
+- [migration/README.md](migration/README.md): the verified migration tree (inventory, name map,
+  dependency graph, specs, translations, tests).
+- [migration/test/README.md](migration/test/README.md): the test harness (gates, pgTAP, regress
+  goldens) and the PostgreSQL container `migration/db/pg.sh`.
+- [migration/test/diff/README.md](migration/test/diff/README.md): the differential harness that
+  runs the same scenarios on Oracle and PostgreSQL.
+- [migration/oracle_side/README.md](migration/oracle_side/README.md): what the Oracle side needs
+  once TT has moved (stubs, bridge, replicas, pruning).
+- [pg_migration/README.md](pg_migration/README.md): the earlier ora2pg proof of concept. Its
+  output is raw and untrusted; nothing under `pg_migration/` is treated as verified.
+
+`ddl/` and `masterdata/` are read-only inputs for the migration: the productive Oracle system
+still uses them. All migration output lives under `migration/`.
 
 ## Schema CI
 

@@ -1,7 +1,14 @@
 # migration/
 
 This tree is the pipeline for Phase 1 (Inventory & Foundation) of the Oracle → PostgreSQL
-migration, and everything downstream of it in later phases. It is deliberately kept
+migration, and everything downstream of it in later phases: specs (`spec/`), translations
+(`pgsql/`), the test harness (`test/`), the PostgreSQL container (`db/`) and the Oracle-side
+material for the split (`oracle_side/`).
+
+**Current focus (since October 2026): the ticketing schemas `TT` and `TICKETEVOLUTION` and
+their dependency closure are translated and verified first**; the other schemas stay on
+Oracle for now. The progress of that sub-project, its open decisions and its distance to
+parity are tracked in [`../STATUS_TT.md`](../STATUS_TT.md). It is deliberately kept
 separate from `pg_migration/` (ora2pg's raw, untrusted output) — nothing under
 `migration/` is ora2pg output, and nothing under `pg_migration/` is treated as verified.
 

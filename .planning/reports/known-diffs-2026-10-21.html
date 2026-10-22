@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MCDB migration: the four documented Oracle vs PostgreSQL differences (2026-10-21)</title>
+<style>
+  :root { --ink:#1e293b; --muted:#64748b; --line:#cbd5e1; --ora:#b45309; --ora-bg:#fef3c7; --pg:#1d4ed8; --pg-bg:#dbeafe; --bad:#b91c1c; --bad-bg:#fee2e2; --ok:#15803d; --ok-bg:#dcfce7; --panel:#f8fafc; }
+  body { font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); max-width: 960px; margin: 32px auto; padding: 0 20px; }
+  h1 { font-size: 26px; margin-bottom: 4px; } h2 { font-size: 21px; margin-top: 48px; padding-top: 16px; border-top: 2px solid var(--line); } h3 { font-size: 16px; margin: 26px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .sub { color: var(--muted); margin-top: 0; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; margin: 14px 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ora { border-left: 5px solid var(--ora); } .pg { border-left: 5px solid var(--pg); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; margin-right: 6px; }
+  .tag.ora { background: var(--ora-bg); color: var(--ora); border: 0; } .tag.pg { background: var(--pg-bg); color: var(--pg); border: 0; }
+  .tag.bad { background: var(--bad-bg); color: var(--bad); } .tag.ok { background: var(--ok-bg); color: var(--ok); }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; } th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; } th { background: var(--panel); }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #eef2f7; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  svg { display: block; max-width: 100%; height: auto; margin: 10px auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+  svg text { font-family: system-ui, sans-serif; font-size: 12.5px; fill: var(--ink); }
+  svg .box { fill: #fff; stroke: #475569; stroke-width: 1.2; } svg .boxo { fill: var(--ora-bg); stroke: var(--ora); stroke-width: 1.2; } svg .boxp { fill: var(--pg-bg); stroke: var(--pg); stroke-width: 1.2; }
+  svg .boxbad { fill: var(--bad-bg); stroke: var(--bad); } svg .boxok { fill: var(--ok-bg); stroke: var(--ok); }
+  svg .life { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4 4; }
+  svg .msg { stroke: #334155; stroke-width: 1.4; fill: none; marker-end: url(#arr); } svg .ret { stroke: #334155; stroke-width: 1.2; stroke-dasharray: 6 4; fill: none; marker-end: url(#arr); }
+  svg .err { stroke: var(--bad); stroke-width: 1.4; stroke-dasharray: 6 4; fill: none; marker-end: url(#arrBad); }
+  svg .good { stroke: var(--ok); stroke-width: 1.4; fill: none; marker-end: url(#arrOk); }
+  svg .tr { stroke: #334155; stroke-width: 1.4; fill: none; marker-end: url(#arr); }
+  svg .lbl { font-size: 11.5px; } svg .b { font-weight: 600; } svg .m { fill: var(--muted); font-size: 11px; } svg .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; }
+  svg .state { fill: #fff; stroke: #475569; stroke-width: 1.4; rx: 18; }
+  svg .st-o { fill: var(--ora-bg); stroke: var(--ora); } svg .st-p { fill: var(--pg-bg); stroke: var(--pg); }
+  svg .start { fill: #334155; }
+  .legend span { margin-right: 18px; } .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+  .decision { border-left: 5px solid #7c3aed; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute;border:0">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <marker id="arrBad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+    <marker id="arrOk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+  </defs>
+</svg>
+
+<h1>The four documented Oracle vs PostgreSQL differences</h1>
+<p class="sub">MCDB migration, TT closure. Live differential run against the Oracle Free 23.7 container <code>mcdb-ora</code> and the PostgreSQL container <code>mcdb-pg</code>, 2026-10-21. Branch <code>phoenix/tt_container_ora</code>.</p>
+
+<div class="card">
+<p><strong>What this report covers.</strong> The differential harness (<code>migration/test/diff</code>) runs the same scenario script on both databases and compares the resulting rows. Of the 25 scenarios, every difference was either fixed in the translation or turned out to be one of the four behaviours below. These four are <em>not</em> fixed in the translated code. They are frozen as expected differences (<code>known.diff</code> files), so the comparison stays green while still failing loudly if the behaviour drifts. Each needs a human decision, listed in the last section.</p>
+<p class="legend"><i style="background:#fef3c7;border:1px solid #b45309"></i>Oracle behaviour &nbsp; <i style="background:#dbeafe;border:1px solid #1d4ed8"></i>PostgreSQL behaviour &nbsp; <i style="background:#fee2e2;border:1px solid #b91c1c"></i>error path &nbsp; <i style="background:#dcfce7;border:1px solid #15803d"></i>success path</p>
+</div>
+
+<ol class="toc">
+  <li><a href="#c1">A procedure's earlier writes survive a caught error on Oracle but are undone on PostgreSQL</a></li>
+  <li><a href="#c2">Sending email fails on Oracle inside the container, PostgreSQL queues it in an outbox</a></li>
+  <li><a href="#c3">The translation refuses to run configured procedures that Oracle would execute</a></li>
+  <li><a href="#c4">The "recoverable status" is wiped for tickets without a public event, and the translation copies that</a></li>
+  <li><a href="#decisions">Decisions needed</a></li>
+</ol>
+
+<!-- ============================================================ CASE 1 -->
+<h2 id="c1">1. Earlier writes survive a caught error on Oracle, not on PostgreSQL</h2>
+
+<p><strong>Where it shows.</strong> <code>TT.ESCALATION_INTERFACE.escalate_os</code> and <code>escalate_customer</code> called on a ticket that is already closed (status 102). Scenario <code>tt__escalation_interface__closed_ticket</code>.</p>
+
+<p><strong>What happens.</strong> Both routines first update the ticket (escalation status becomes 10, the escalation date is stamped) and only then try to add an event. Adding an event to a closed ticket fails with the "ticket closed" error. Neither routine catches it, so the error reaches the caller. Both databases raise the same error code. The difference is what remains in the ticket row once the <em>caller</em> catches the error and carries on, as the monitoring jobs in MC do.</p>
+
+<div class="two">
+  <div class="card ora"><span class="tag ora">Oracle</span> Undoes only the single statement that failed. The update that ran before it stays. The ticket ends with escalation status <strong>10</strong> and a set escalation date.</div>
+  <div class="card pg"><span class="tag pg">PostgreSQL</span> A caught error undoes everything the failed call did (the exception block is a sub-transaction). The ticket is back to escalation status <strong>0</strong> and no date.</div>
+</div>
+
+<h3>Sequence</h3>
+<svg viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Sequence diagram: caller, escalate_os, tt.ticket, addevent_new; the update survives on Oracle and is undone on PostgreSQL">
+  <!-- participants -->
+  <rect class="box" x="30" y="14" width="160" height="40" rx="6"/><text x="110" y="31" text-anchor="middle" class="b">Caller (e.g. MC job)</text><text x="110" y="46" text-anchor="middle" class="m">has WHEN OTHERS handler</text>
+  <rect class="box" x="250" y="14" width="160" height="40" rx="6"/><text x="330" y="31" text-anchor="middle" class="b">escalation_interface</text><text x="330" y="46" text-anchor="middle" class="m">escalate_os</text>
+  <rect class="box" x="470" y="14" width="160" height="40" rx="6"/><text x="550" y="31" text-anchor="middle" class="b">tt.ticket</text><text x="550" y="46" text-anchor="middle" class="m">row 956911, status 102 (closed)</text>
+  <rect class="box" x="690" y="14" width="180" height="40" rx="6"/><text x="780" y="31" text-anchor="middle" class="b">event_interface</text><text x="780" y="46" text-anchor="middle" class="m">addevent_new</text>
+  <line class="life" x1="110" y1="54" x2="110" y2="330"/><line class="life" x1="330" y1="54" x2="330" y2="330"/><line class="life" x1="550" y1="54" x2="550" y2="330"/><line class="life" x1="780" y1="54" x2="780" y2="330"/>
+  <!-- messages -->
+  <line class="msg" x1="110" y1="90" x2="328" y2="90"/><text x="219" y="84" text-anchor="middle" class="lbl">1. escalate_os(event_id)</text>
+  <line class="msg" x1="330" y1="130" x2="548" y2="130"/><text x="439" y="117" text-anchor="middle" class="lbl">2. UPDATE escalation_status_id := 10,</text><text x="439" y="129" text-anchor="middle" class="lbl mono">last_escalation_date := now</text>
+  <rect class="boxok" x="545" y="136" width="10" height="14"/><text x="562" y="148" class="m">row changed: 0 → 10</text>
+  <line class="msg" x1="330" y1="180" x2="778" y2="180"/><text x="555" y="174" text-anchor="middle" class="lbl">3. addevent_new(ticket_id, event_type, …)</text>
+  <rect class="boxbad" x="700" y="196" width="160" height="30" rx="4"/><text x="780" y="209" text-anchor="middle" class="lbl">4. ticket is closed</text><text x="780" y="221" text-anchor="middle" class="m">raise ticket_closed</text>
+  <line class="err" x1="778" y1="250" x2="332" y2="250"/><text x="555" y="244" text-anchor="middle" class="lbl">5. ORA-20980 / OS980 (no handler here)</text>
+  <line class="err" x1="328" y1="285" x2="112" y2="285"/><text x="219" y="279" text-anchor="middle" class="lbl">6. error propagates to the caller</text>
+  <rect class="box" x="30" y="300" width="160" height="30" rx="4"/><text x="110" y="313" text-anchor="middle" class="lbl">7. WHEN OTHERS: log,</text><text x="110" y="325" text-anchor="middle" class="m">continue with next event</text>
+  <!-- outcomes -->
+  <text x="450" y="362" text-anchor="middle" class="b">What is left in tt.ticket after step 7</text>
+  <rect class="boxo" x="40" y="375" width="400" height="80" rx="8"/>
+  <text x="60" y="397" class="b" fill="#b45309">Oracle</text><text x="60" y="415" class="lbl">Only statement 3 is undone. Statement 2 stands.</text><text x="60" y="433" class="mono">escalation_status_id = 10, last_escalation_date = now</text><text x="60" y="448" class="m">known.diff line: 956911,…,102,10,1</text>
+  <rect class="boxp" x="460" y="375" width="400" height="80" rx="8"/>
+  <text x="480" y="397" class="b" fill="#1d4ed8">PostgreSQL</text><text x="480" y="415" class="lbl">The handler's sub-transaction rolls back the whole CALL,</text><text x="480" y="433" class="lbl">statement 2 included.</text><text x="480" y="448" class="mono">escalation_status_id = 0, last_escalation_date = NULL</text>
+</svg>
+
+<h3>State of the ticket's escalation status</h3>
+<svg viewBox="0 0 900 230" width="900" height="230" role="img" aria-label="State diagram of escalation_status_id on both engines">
+  <text x="20" y="28" class="b" fill="#b45309">Oracle</text>
+  <circle class="start" cx="60" cy="70" r="6"/><line class="tr" x1="66" y1="70" x2="118" y2="70"/>
+  <rect class="state st-o" x="120" y="50" width="130" height="40"/><text x="185" y="75" text-anchor="middle" class="mono">0 / NULL</text>
+  <line class="tr" x1="250" y1="70" x2="398" y2="70"/><text x="324" y="62" text-anchor="middle" class="lbl">UPDATE (step 2)</text>
+  <rect class="state st-o" x="400" y="50" width="130" height="40"/><text x="465" y="75" text-anchor="middle" class="mono">10 / now</text>
+  <line class="tr" x1="530" y1="70" x2="638" y2="70"/><text x="700" y="40" text-anchor="middle" class="lbl">ticket_closed caught by caller</text><text x="700" y="54" text-anchor="middle" class="m">only the failed INSERT is undone, state stays</text>
+  <rect class="boxo" x="640" y="56" width="230" height="28" rx="6"/><text x="755" y="75" text-anchor="middle" class="lbl b">final: 10 / now</text>
+
+  <text x="20" y="138" class="b" fill="#1d4ed8">PostgreSQL</text>
+  <circle class="start" cx="60" cy="180" r="6"/><line class="tr" x1="66" y1="180" x2="118" y2="180"/>
+  <rect class="state st-p" x="120" y="160" width="130" height="40"/><text x="185" y="185" text-anchor="middle" class="mono">0 / NULL</text>
+  <line class="tr" x1="250" y1="172" x2="398" y2="172"/><text x="324" y="164" text-anchor="middle" class="lbl">UPDATE (step 2)</text>
+  <rect class="state st-p" x="400" y="160" width="130" height="40"/><text x="465" y="185" text-anchor="middle" class="mono">10 / now</text>
+  <line class="err" x1="400" y1="192" x2="252" y2="192"/><text x="324" y="212" text-anchor="middle" class="lbl">ticket_closed caught by caller: sub-transaction rolled back</text>
+  <rect class="boxp" x="640" y="166" width="230" height="28" rx="6"/><text x="755" y="185" text-anchor="middle" class="lbl b">final: 0 / NULL</text>
+</svg>
+
+<div class="card">
+<p><strong>Why it is not fixed in the translation.</strong> This is how each engine handles a caught error. To make PostgreSQL keep the update, the translation would have to commit it separately (an autonomous transaction, which PostgreSQL does not have) or restructure the routine so the update happens after the event is added, which changes the order Oracle users see. The spec records this under XCUT-05 and notes that the PostgreSQL outcome is arguably the saner one: a ticket should not be marked "escalated" if the escalation event was never written.</p>
+<p><strong>Scope.</strong> Only static calls are affected. When the same routine is reached through <code>exec_event_type_actions</code> (dynamic dispatch, case 3), Oracle also undoes the whole call, so both engines agree there. Confirmed live in scenario <code>tt__event_interface__exec_actions</code>, step 09.</p>
+<p><strong>Evidence.</strong> <code>migration/test/diff/scenarios/tt__escalation_interface__closed_ticket/{meta.env,known.diff}</code>, spec clause S-ESC-009 and "Assumptions / Unresolved" XCUT-05 in <code>migration/spec/tt.escalation_interface.md</code>.</p>
+</div>
+
+<!-- ============================================================ CASE 2 -->
+<h2 id="c2">2. Email fails on Oracle inside the container, PostgreSQL queues it</h2>
+
+<p><strong>Where it shows.</strong> <code>TT.OSAG_NOTIFY.send_test_notification</code> for the EMAIL notification type. Scenario <code>tt__osag_notify__send_test</code>, steps 02 and 03.</p>
+
+<p><strong>What happens.</strong> On Oracle, sending mail goes through the built-in <code>UTL_SMTP</code> package, which opens a network connection to a mail server. The test container has no mail server and no network permission for the TT user, so Oracle raises ORA-24247 ("network access denied by access control list"). <code>send_mail</code> logs that and re-raises, and <code>send_test_notification</code> has no handler, so the caller sees the error. The SMS variant swallows the error and reports success.</p>
+<p>PostgreSQL has no built-in mail client at all. The translated <code>OSAG.OSAG_MSG</code> therefore writes the message into the table <code>osag.msg_outbox</code> and returns normally. Something outside the database has to pick the rows up and send them.</p>
+
+<h3>Sequence</h3>
+<svg viewBox="0 0 900 300" width="900" height="300" role="img" aria-label="Sequence diagram on Oracle: send_test_notification calls send_mail, UTL_SMTP fails with ORA-24247, error propagates">
+  <text x="20" y="22" class="b" fill="#b45309">Oracle (container, no mail server, no network ACL)</text>
+  <rect class="box" x="30" y="34" width="150" height="40" rx="6"/><text x="105" y="51" text-anchor="middle" class="b">Caller</text><text x="105" y="66" text-anchor="middle" class="m">test step 02</text>
+  <rect class="box" x="230" y="34" width="170" height="40" rx="6"/><text x="315" y="51" text-anchor="middle" class="b">osag_notify</text><text x="315" y="66" text-anchor="middle" class="m">send_test_notification</text>
+  <rect class="box" x="450" y="34" width="160" height="40" rx="6"/><text x="530" y="51" text-anchor="middle" class="b">osag_msg.send_mail</text><text x="530" y="66" text-anchor="middle" class="m">OSAG schema</text>
+  <rect class="boxo" x="670" y="34" width="200" height="40" rx="6"/><text x="770" y="51" text-anchor="middle" class="b">UTL_SMTP</text><text x="770" y="66" text-anchor="middle" class="m">open_connection('localhost', 25)</text>
+  <line class="life" x1="105" y1="74" x2="105" y2="285"/><line class="life" x1="315" y1="74" x2="315" y2="285"/><line class="life" x1="530" y1="74" x2="530" y2="285"/><line class="life" x1="770" y1="74" x2="770" y2="285"/>
+  <line class="msg" x1="105" y1="105" x2="313" y2="105"/><text x="209" y="99" text-anchor="middle" class="lbl">1. send_test_notification(101002, EMAIL)</text>
+  <line class="msg" x1="315" y1="140" x2="528" y2="140"/><text x="422" y="134" text-anchor="middle" class="lbl">2. send_mail(to, subject, body)</text>
+  <line class="msg" x1="530" y1="175" x2="768" y2="175"/><text x="650" y="169" text-anchor="middle" class="lbl">3. open connection</text>
+  <line class="err" x1="768" y1="205" x2="532" y2="205"/><text x="650" y="199" text-anchor="middle" class="lbl">4. ORA-24247 network access denied</text>
+  <rect class="boxbad" x="455" y="214" width="150" height="26" rx="4"/><text x="530" y="231" text-anchor="middle" class="lbl">5. plog.err, then RE-RAISE</text>
+  <line class="err" x1="528" y1="262" x2="317" y2="262"/><text x="422" y="256" text-anchor="middle" class="lbl">6. no handler</text>
+  <line class="err" x1="313" y1="280" x2="107" y2="280"/><text x="209" y="274" text-anchor="middle" class="lbl">7. step records -24247</text>
+</svg>
+
+<svg viewBox="0 0 900 300" width="900" height="300" role="img" aria-label="Sequence diagram on PostgreSQL: send_test_notification calls send_mail, which inserts an outbox row and returns; an external drainer sends later">
+  <text x="20" y="22" class="b" fill="#1d4ed8">PostgreSQL (translation, platform deviation S-MSG-013)</text>
+  <rect class="box" x="30" y="34" width="150" height="40" rx="6"/><text x="105" y="51" text-anchor="middle" class="b">Caller</text><text x="105" y="66" text-anchor="middle" class="m">test step 02</text>
+  <rect class="box" x="230" y="34" width="170" height="40" rx="6"/><text x="315" y="51" text-anchor="middle" class="b">osag_notify_</text><text x="315" y="66" text-anchor="middle" class="m">send_test_notification</text>
+  <rect class="box" x="450" y="34" width="160" height="40" rx="6"/><text x="530" y="51" text-anchor="middle" class="b">osag_msg_send_mail</text><text x="530" y="66" text-anchor="middle" class="m">osag schema</text>
+  <rect class="boxp" x="670" y="34" width="200" height="40" rx="6"/><text x="770" y="51" text-anchor="middle" class="b">osag.msg_outbox</text><text x="770" y="66" text-anchor="middle" class="m">table, drained outside the DB</text>
+  <line class="life" x1="105" y1="74" x2="105" y2="285"/><line class="life" x1="315" y1="74" x2="315" y2="285"/><line class="life" x1="530" y1="74" x2="530" y2="285"/><line class="life" x1="770" y1="74" x2="770" y2="285"/>
+  <line class="msg" x1="105" y1="105" x2="313" y2="105"/><text x="209" y="99" text-anchor="middle" class="lbl">1. send_test_notification(101002, EMAIL)</text>
+  <line class="msg" x1="315" y1="140" x2="528" y2="140"/><text x="422" y="134" text-anchor="middle" class="lbl">2. send_mail(to, subject, body)</text>
+  <line class="good" x1="530" y1="175" x2="768" y2="175"/><text x="650" y="169" text-anchor="middle" class="lbl">3. INSERT one outbox row (status queued)</text>
+  <line class="ret" x1="528" y1="205" x2="317" y2="205"/><text x="422" y="199" text-anchor="middle" class="lbl">4. return</text>
+  <line class="ret" x1="313" y1="235" x2="107" y2="235"/><text x="209" y="229" text-anchor="middle" class="lbl">5. step records ok</text>
+  <rect class="box" x="640" y="246" width="250" height="36" rx="6"/><text x="765" y="261" text-anchor="middle" class="lbl">6. later: external drainer reads the row</text><text x="765" y="275" text-anchor="middle" class="m">and talks SMTP (not part of the database)</text>
+</svg>
+
+<h3>State of one test message</h3>
+<svg viewBox="0 0 900 220" width="900" height="220" role="img" aria-label="State diagram of a test email message on both engines">
+  <circle class="start" cx="40" cy="110" r="6"/><line class="tr" x1="46" y1="110" x2="78" y2="110"/>
+  <rect class="state" x="80" y="90" width="120" height="40"/><text x="140" y="115" text-anchor="middle">composed</text>
+  <!-- oracle branch -->
+  <path class="tr" d="M200,100 C260,60 300,50 338,50"/><text x="270" y="42" text-anchor="middle" class="lbl" fill="#b45309">Oracle: UTL_SMTP</text>
+  <rect class="state st-o" x="340" y="30" width="170" height="40"/><text x="425" y="55" text-anchor="middle">connection attempt</text>
+  <line class="err" x1="510" y1="42" x2="668" y2="42"/><text x="589" y="34" text-anchor="middle" class="lbl">container: ORA-24247</text>
+  <rect class="state boxbad" x="670" y="22" width="200" height="40"/><text x="770" y="47" text-anchor="middle">error to caller, not sent</text>
+  <line class="good" x1="510" y1="60" x2="668" y2="78"/><text x="600" y="80" text-anchor="middle" class="lbl">production with a mail relay</text>
+  <rect class="state boxok" x="670" y="72" width="200" height="40"/><text x="770" y="97" text-anchor="middle">sent</text>
+  <!-- pg branch -->
+  <path class="tr" d="M200,120 C260,160 300,170 338,170"/><text x="270" y="190" text-anchor="middle" class="lbl" fill="#1d4ed8">PostgreSQL: INSERT</text>
+  <rect class="state st-p" x="340" y="150" width="170" height="40"/><text x="425" y="175" text-anchor="middle">queued in msg_outbox</text>
+  <line class="good" x1="510" y1="170" x2="668" y2="170"/><text x="589" y="162" text-anchor="middle" class="lbl">drainer delivers</text>
+  <rect class="state boxok" x="670" y="150" width="200" height="40"/><text x="770" y="175" text-anchor="middle">sent (outside the DB)</text>
+  <text x="425" y="208" text-anchor="middle" class="m">the routine returns ok at "queued"; delivery failures are the drainer's business</text>
+</svg>
+
+<div class="card">
+<p><strong>Why it is not fixed in the translation.</strong> Two separate causes stack here. First, the Oracle error is an artefact of the test container: production Oracle has a mail relay and the network permission, so the step would succeed there. Second, the outbox is a deliberate platform decision (spec S-MSG-013, deviation class PLATFORM): PostgreSQL cannot speak SMTP from inside a transaction, and an outbox also survives rollbacks correctly. The visible contract changes slightly: <code>send_test_notification</code> can no longer fail because of mail delivery.</p>
+<p><strong>Evidence.</strong> <code>migration/test/diff/scenarios/tt__osag_notify__send_test/{meta.env,known.diff}</code>; Oracle source <code>ddl/src/pkgb/osag_osag_msg.sql</code> lines 60-70 (re-raise) and 91-94 (SMS swallow); spec clauses S-NOTIFY-018 and S-MSG-013.</p>
+</div>
+
+<!-- ============================================================ CASE 3 -->
+<h2 id="c3">3. The translation refuses configured procedures that Oracle would run</h2>
+
+<p><strong>Where it shows.</strong> <code>TT.EVENT_INTERFACE.exec_event_type_actions</code>. Scenario <code>tt__event_interface__exec_actions</code>, step 05.</p>
+
+<p><strong>What happens.</strong> When an event arrives, this routine looks up the event type in the configuration table <code>tt.event_action</code>, reads a <em>procedure name</em> from it, and runs that procedure with the event id. It is the only place in the whole code base where SQL is assembled and executed at run time. On Oracle, any name in that column is executed. In the translation I put a safety list in front of the call: only the four known escalation procedures may run, anything else raises a clear error instead of executing. The test configured a real but unlisted procedure, <code>clear_customer_escalation</code>. Oracle ran it and reset the ticket's escalation status from 20 to 0. PostgreSQL refused and left the ticket at 20.</p>
+
+<h3>Sequence</h3>
+<svg viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Sequence diagram of exec_event_type_actions dispatching a configured procedure name on Oracle and PostgreSQL">
+  <rect class="box" x="30" y="14" width="170" height="40" rx="6"/><text x="115" y="31" text-anchor="middle" class="b">event_interface</text><text x="115" y="46" text-anchor="middle" class="m">exec_event_type_actions</text>
+  <rect class="box" x="250" y="14" width="160" height="40" rx="6"/><text x="330" y="31" text-anchor="middle" class="b">tt.event_action</text><text x="330" y="46" text-anchor="middle" class="m">configuration row</text>
+  <rect class="box" x="460" y="14" width="170" height="40" rx="6"/><text x="545" y="31" text-anchor="middle" class="b">dispatch gate</text><text x="545" y="46" text-anchor="middle" class="m">Oracle: none / PG: allowlist</text>
+  <rect class="box" x="680" y="14" width="200" height="40" rx="6"/><text x="780" y="31" text-anchor="middle" class="b">clear_customer_escalation</text><text x="780" y="46" text-anchor="middle" class="m">real procedure, not on the list</text>
+  <line class="life" x1="115" y1="54" x2="115" y2="300"/><line class="life" x1="330" y1="54" x2="330" y2="300"/><line class="life" x1="545" y1="54" x2="545" y2="300"/><line class="life" x1="780" y1="54" x2="780" y2="300"/>
+  <line class="msg" x1="115" y1="90" x2="328" y2="90"/><text x="222" y="84" text-anchor="middle" class="lbl">1. which action for event type 956305?</text>
+  <line class="ret" x1="328" y1="120" x2="117" y2="120"/><text x="222" y="114" text-anchor="middle" class="mono">2. procedure_name = tt.escalation_interface.clear_customer_escalation</text>
+  <line class="msg" x1="115" y1="160" x2="543" y2="160"/><text x="330" y="154" text-anchor="middle" class="lbl">3. run "that name"(event_id)</text>
+  <!-- oracle path -->
+  <rect class="boxo" x="440" y="172" width="210" height="44" rx="4"/><text x="545" y="189" text-anchor="middle" class="lbl b">Oracle: EXECUTE IMMEDIATE</text><text x="545" y="205" text-anchor="middle" class="m">'BEGIN name(:1); END;' no check</text>
+  <line class="msg" x1="545" y1="232" x2="778" y2="232"/><text x="662" y="226" text-anchor="middle" class="lbl">4a. call</text>
+  <rect class="boxok" x="690" y="240" width="180" height="30" rx="4"/><text x="780" y="253" text-anchor="middle" class="lbl">UPDATE ticket 956105</text><text x="780" y="265" text-anchor="middle" class="mono">escalation 20 → 0</text>
+  <line class="ret" x1="543" y1="290" x2="117" y2="290"/><text x="330" y="284" text-anchor="middle" class="lbl">5a. step 05 = ok</text>
+  <!-- pg path -->
+  <line class="life" x1="115" y1="300" x2="115" y2="410"/><line class="life" x1="545" y1="300" x2="545" y2="410"/>
+  <rect class="boxp" x="440" y="312" width="210" height="58" rx="4"/><text x="545" y="329" text-anchor="middle" class="lbl b">PostgreSQL: name on allowlist?</text><text x="545" y="344" text-anchor="middle" class="m">escalate_os, escalate_customer,</text><text x="545" y="357" text-anchor="middle" class="m">escalate_isp_outage_to_os, nop → no match</text>
+  <line class="err" x1="543" y1="395" x2="117" y2="395"/><text x="330" y="389" text-anchor="middle" class="lbl">4b. RAISE EXCEPTION P0001 "not on the allowlist, refusing to execute"</text>
+  <text x="330" y="408" text-anchor="middle" class="m">raised outside the swallowing WHEN OTHERS on purpose; step 05 = P0001; ticket 956105 stays at 20</text>
+  <text x="780" y="360" text-anchor="middle" class="m">never called</text>
+</svg>
+
+<h3>Decision flow and resulting ticket state</h3>
+<svg viewBox="0 0 900 250" width="900" height="250" role="img" aria-label="Decision flow of the dynamic dispatch: on allowlist both engines execute, off allowlist Oracle executes and PostgreSQL refuses">
+  <circle class="start" cx="40" cy="60" r="6"/><line class="tr" x1="46" y1="60" x2="78" y2="60"/>
+  <rect class="state" x="80" y="40" width="200" height="40"/><text x="180" y="65" text-anchor="middle">procedure_name resolved</text>
+  <line class="tr" x1="280" y1="60" x2="338" y2="60"/>
+  <polygon class="box" points="340,60 420,25 500,60 420,95"/><text x="420" y="57" text-anchor="middle" class="lbl">on the</text><text x="420" y="70" text-anchor="middle" class="lbl">allowlist?</text>
+  <line class="good" x1="500" y1="60" x2="668" y2="60"/><text x="584" y="52" text-anchor="middle" class="lbl">yes (4 names)</text>
+  <rect class="state boxok" x="670" y="40" width="210" height="40"/><text x="775" y="65" text-anchor="middle">both engines execute it</text>
+  <line x1="420" y1="95" x2="420" y2="118" stroke="#334155" stroke-width="1.4"/><text x="440" y="112" class="lbl">no (e.g. clear_customer_escalation)</text>
+  <line x1="420" y1="118" x2="350" y2="118" stroke="#334155" stroke-width="1.4"/><line class="tr" x1="350" y1="118" x2="350" y2="138"/>
+  <line x1="420" y1="118" x2="710" y2="118" stroke="#334155" stroke-width="1.4"/><line class="tr" x1="710" y1="118" x2="710" y2="138"/>
+  <rect class="state st-o" x="200" y="140" width="300" height="40"/><text x="350" y="157" text-anchor="middle" class="b" fill="#b45309">Oracle executes anyway</text><text x="350" y="172" text-anchor="middle" class="mono">ticket 956105: escalation 20 → 0</text>
+  <rect class="state st-p" x="540" y="140" width="340" height="40"/><text x="710" y="157" text-anchor="middle" class="b" fill="#1d4ed8">PostgreSQL refuses (P0001)</text><text x="710" y="172" text-anchor="middle" class="mono">ticket 956105: escalation stays 20</text>
+  <text x="450" y="215" text-anchor="middle" class="m">The gate exists to stop a mis-edited or injected procedure_name from running arbitrary code with TT's privileges (threats T-02-44/45 in DYNAMIC-SQL-TRACE.md).</text>
+  <text x="450" y="232" text-anchor="middle" class="m">The open question is not whether to gate, but which names belong on the list.</text>
+</svg>
+
+<div class="card">
+<p><strong>Why it is not fixed in the translation.</strong> This difference is intentional hardening. Reproducing Oracle exactly would mean executing any string found in a configuration table. The list currently contains the procedures that the master data and the spec name. If the production <code>tt.event_action</code> rows name anything else, the translation would start raising P0001 for those event types in production, so the list must be checked against production configuration before go-live.</p>
+<p><strong>Evidence.</strong> <code>migration/test/diff/scenarios/tt__event_interface__exec_actions/{meta.env,known.diff}</code>; translation <code>migration/pgsql/tt/event_interface.sql</code> around line 453-470; spec S-EVENT-038 and <code>migration/spec/DYNAMIC-SQL-TRACE.md</code> step 2.</p>
+</div>
+
+<!-- ============================================================ CASE 4 -->
+<h2 id="c4">4. The "recoverable status" is wiped for tickets without a public event</h2>
+
+<p><strong>Where it shows.</strong> <code>TT.TICKET_INTERFACE.change_status</code>, <code>change_status_event_id_out</code> and <code>expire_status</code>. Scenario <code>tt__ticket_interface__status_engine</code>, steps 03 and 07. This one is <em>not</em> in a <code>known.diff</code> any more: the translation was changed to match Oracle, and the behaviour is now spec clause S-TICKET-065.</p>
+
+<p><strong>What happens.</strong> When a ticket moves in certain ways (resolved back to open, hot or acknowledged; a non-MCC waiting ticket expiring to hot; a deferred ticket with a future valid-until going hot), Oracle remembers the previous status in <code>recoverable_status_id</code> so it can be restored later. The condition that decides whether to remember it is:</p>
+<pre>IF (p_status_id IN (2, 3, 4) AND NOT v_last_public_event_type_id IN (30016)) THEN
+   -- remember the current status
+ELSE
+   UPDATE tt.ticket SET recoverable_status_id = NULL ...
+END IF;</pre>
+<p>For a ticket that has <em>no</em> last public event, <code>v_last_public_event_type_id</code> is NULL. In SQL, <code>NULL IN (30016)</code> is neither true nor false, and <code>NOT</code> of that is still unknown. An unknown condition counts as false, so Oracle takes the ELSE branch and wipes the recoverable status instead of recording it. The author almost certainly meant "any event type except 30016", which would include "no event at all".</p>
+
+<h3>Sequence (resolved ticket without a public event is reopened)</h3>
+<svg viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="Sequence diagram of change_status evaluating the three-valued recoverable-status guard">
+  <rect class="box" x="30" y="14" width="150" height="40" rx="6"/><text x="105" y="31" text-anchor="middle" class="b">Caller</text><text x="105" y="46" text-anchor="middle" class="m">reopen: status 101 → 2</text>
+  <rect class="box" x="240" y="14" width="170" height="40" rx="6"/><text x="325" y="31" text-anchor="middle" class="b">ticket_interface</text><text x="325" y="46" text-anchor="middle" class="m">change_status</text>
+  <rect class="box" x="470" y="14" width="160" height="40" rx="6"/><text x="550" y="31" text-anchor="middle" class="b">tt.ticket</text><text x="550" y="46" text-anchor="middle" class="m">last_public_event_id = NULL</text>
+  <rect class="box" x="690" y="14" width="190" height="40" rx="6"/><text x="785" y="31" text-anchor="middle" class="b">guard expression</text><text x="785" y="46" text-anchor="middle" class="m">three-valued logic</text>
+  <line class="life" x1="105" y1="54" x2="105" y2="385"/><line class="life" x1="325" y1="54" x2="325" y2="385"/><line class="life" x1="550" y1="54" x2="550" y2="385"/><line class="life" x1="785" y1="54" x2="785" y2="385"/>
+  <line class="msg" x1="105" y1="90" x2="323" y2="90"/><text x="214" y="84" text-anchor="middle" class="lbl">1. change_status(ticket, 2, …)</text>
+  <line class="msg" x1="325" y1="125" x2="548" y2="125"/><text x="437" y="119" text-anchor="middle" class="lbl">2. read last_public_event_id</text>
+  <line class="ret" x1="548" y1="150" x2="327" y2="150"/><text x="437" y="144" text-anchor="middle" class="mono">3. NULL (never had a public event)</text>
+  <rect class="box" x="245" y="160" width="160" height="26" rx="4"/><text x="325" y="177" text-anchor="middle" class="mono">4. v_last_public_event_type_id := NULL</text>
+  <line class="msg" x1="325" y1="215" x2="783" y2="215"/><text x="555" y="209" text-anchor="middle" class="mono">5. 2 IN (2,3,4) AND NOT (NULL IN (30016))</text>
+  <rect class="boxo" x="650" y="225" width="235" height="58" rx="4"/><text x="767" y="242" text-anchor="middle" class="mono">NULL IN (30016)  → UNKNOWN</text><text x="767" y="257" text-anchor="middle" class="mono">NOT UNKNOWN      → UNKNOWN</text><text x="767" y="272" text-anchor="middle" class="mono">TRUE AND UNKNOWN → UNKNOWN</text>
+  <line class="ret" x1="783" y1="300" x2="327" y2="300"/><text x="555" y="294" text-anchor="middle" class="lbl">6. condition is not TRUE → ELSE branch</text>
+  <line class="msg" x1="325" y1="335" x2="548" y2="335"/><text x="437" y="329" text-anchor="middle" class="mono">7. UPDATE recoverable_status_id = NULL</text>
+  <rect class="boxbad" x="470" y="345" width="160" height="26" rx="4"/><text x="550" y="362" text-anchor="middle" class="lbl">previous status 101 is forgotten</text>
+  <line class="ret" x1="323" y1="380" x2="107" y2="380"/><text x="214" y="374" text-anchor="middle" class="lbl">8. ok (both engines, today)</text>
+</svg>
+
+<h3>State of recoverable_status_id on the resolved → open transition</h3>
+<svg viewBox="0 0 900 300" width="900" height="300" role="img" aria-label="State diagram: with a last public event the recoverable status is recorded; without one Oracle wipes it, the first translation recorded it, the current translation wipes it like Oracle">
+  <text x="20" y="26" class="b">Ticket WITH a last public event (type ≠ 30016)</text>
+  <circle class="start" cx="60" cy="62" r="6"/><line class="tr" x1="66" y1="62" x2="118" y2="62"/>
+  <rect class="state" x="120" y="42" width="190" height="40"/><text x="215" y="67" text-anchor="middle" class="mono">status 101, recoverable NULL</text>
+  <line class="good" x1="310" y1="62" x2="568" y2="62"/><text x="439" y="54" text-anchor="middle" class="lbl">change_status(2): guard TRUE</text>
+  <rect class="state boxok" x="570" y="42" width="300" height="40"/><text x="720" y="67" text-anchor="middle" class="mono">status 2, recoverable 101  (both engines)</text>
+
+  <text x="20" y="126" class="b">Ticket WITHOUT a last public event</text>
+  <circle class="start" cx="60" cy="172" r="6"/><line class="tr" x1="66" y1="172" x2="118" y2="172"/>
+  <rect class="state" x="120" y="152" width="190" height="40"/><text x="215" y="177" text-anchor="middle" class="mono">status 101, recoverable NULL</text>
+  <line class="tr" x1="310" y1="162" x2="568" y2="162"/><text x="439" y="154" text-anchor="middle" class="lbl" fill="#b45309">Oracle: guard UNKNOWN → ELSE</text>
+  <rect class="state st-o" x="570" y="142" width="300" height="40"/><text x="720" y="167" text-anchor="middle" class="mono">status 2, recoverable NULL</text>
+  <line class="tr" x1="310" y1="182" x2="568" y2="212"/><text x="430" y="212" text-anchor="middle" class="lbl" fill="#1d4ed8">current translation: NOT (v IN (30016)) → ELSE</text>
+  <rect class="state st-p" x="570" y="192" width="300" height="40"/><text x="720" y="217" text-anchor="middle" class="mono">status 2, recoverable NULL  (matches)</text>
+  <line class="err" x1="310" y1="190" x2="568" y2="262"/><text x="400" y="268" text-anchor="middle" class="lbl">first translation: IS DISTINCT FROM 30016 → TRUE</text>
+  <rect class="state boxbad" x="570" y="242" width="300" height="40"/><text x="720" y="259" text-anchor="middle" class="mono">status 2, recoverable 101</text><text x="720" y="274" text-anchor="middle" class="m">DIFF on 2026-10-21, removed; the probable intent</text>
+</svg>
+
+<table>
+  <tr><th>v_last_public_event_type_id</th><th>NULL IN (30016)</th><th>NOT …</th><th>branch taken</th><th>recoverable_status_id</th></tr>
+  <tr><td>30001 (some other public event)</td><td>FALSE</td><td>TRUE</td><td>THEN</td><td>recorded (e.g. 101)</td></tr>
+  <tr><td>30016</td><td>TRUE</td><td>FALSE</td><td>ELSE</td><td>NULL</td></tr>
+  <tr><td>NULL (no public event)</td><td>UNKNOWN</td><td>UNKNOWN</td><td>ELSE</td><td>NULL (the surprising row)</td></tr>
+</table>
+
+<div class="card">
+<p><strong>Why it is reproduced rather than corrected.</strong> The migration's rule is that every translated routine behaves like Oracle unless a deviation is deliberately recorded. The first translation did the intuitive thing and recorded the status; the live Oracle run showed Oracle leaves it empty on exactly these tickets. I changed the translation to use the same three-valued expression so the behaviour matches, and wrote it down as S-TICKET-065 with a note that it may be unintended. Correcting it is a one-line change plus a new clause and tests, but it changes production behaviour for every ticket created without going through <code>addevent_new</code>, so it should be a conscious decision, not a side effect of the migration.</p>
+<p><strong>Evidence.</strong> Oracle source <code>ddl/src/pkgb/tt_ticket_interface.sql</code> lines 418-423 and 558-574; spec S-TICKET-065 in <code>migration/spec/tt.ticket_interface.md</code>; translation <code>migration/pgsql/tt/ticket_interface.sql</code> around lines 789-801; scenario <code>tt__ticket_interface__status_engine</code> (now PASS).</p>
+</div>
+
+<!-- ============================================================ DECISIONS -->
+<h2 id="decisions">5. Decisions needed</h2>
+
+<table>
+  <tr><th>#</th><th>Difference</th><th>Nature</th><th>Decision</th><th>Recommendation</th></tr>
+  <tr><td>1</td><td>Earlier writes survive a caught error on Oracle only</td><td>Engine semantics; cannot be emulated without restructuring</td><td>XCUT-05: accept the PostgreSQL rollback, or require Oracle-like partial state for specific callers?</td><td>Accept PostgreSQL. A ticket should not be flagged "escalated" when the escalation event was never written. Tell the MC job owners that a swallowed error now leaves the ticket untouched.</td></tr>
+  <tr><td>2</td><td>Email: ORA-24247 in the container, outbox on PostgreSQL</td><td>Test-environment artefact plus a planned platform change</td><td>Confirm the outbox design and who drains it in production.</td><td>Keep the outbox. Plan the drainer (a small job reading <code>osag.msg_outbox</code>) as a go-live dependency; without it, no mail or SMS leaves PostgreSQL.</td></tr>
+  <tr><td>3</td><td>Dynamic dispatch refuses off-list procedures</td><td>Deliberate security hardening</td><td>Which procedure names belong on the allowlist?</td><td>Run <code>SELECT DISTINCT procedure_name FROM tt.event_action</code> on production and give me the result. Every name there goes on the list; anything else keeps being refused.</td></tr>
+  <tr><td>4</td><td>Recoverable status wiped for tickets without a public event</td><td>Probable Oracle bug, reproduced faithfully (S-TICKET-065)</td><td>Keep Oracle's behaviour or correct it?</td><td>Keep it for the migration itself so the two systems agree while both exist. Decide the correction as a separate, recorded change (DEVIATION ORACLE-BUG) after cut-over, or now if you confirm the intent.</td></tr>
+</table>
+
+<footer>
+Generated 2026-10-21 from the differential run documented in <code>migration/test/diff/README.md</code> and the scenario notes under <code>migration/test/diff/scenarios/</code>. Oracle capture: <code>migration/test/diff/tests/fixtures/oracle-capture-2026-10-21/</code>. All diagrams are inline SVG; the file has no external dependencies.
+</footer>
+</body>
+</html>
