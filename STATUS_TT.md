@@ -112,8 +112,9 @@ The larger half, and architecture rather than translation.
 - **Data migration** of the 37 tables plus sequences has not been attempted. The ora2pg
   sequence gap is a known item.
 - **Schema baseline.** `ddl/migrated` (ora2pg output) predates the October export and is
-  patched by 29 files under `migration/test/schema-fixes/`. Regenerate from the current
-  export and carry the post-tag changesets to PostgreSQL.
+  patched by the fix files under `migration/test/schema-fixes/` (10 files, ledger in
+  `migration/test/SCHEMA-FIXES.md`). Regenerate from the current export and carry the
+  post-tag changesets to PostgreSQL.
 - **Client renames.** `migration/mapping/rewrite_names.py`, `client-rename.sed` (346 rows) and
   the in-database twin `pgmig.*` are verified against all Oracle package bodies and the names
   stored in data, not yet against the Java and Perl clients.
